@@ -1,12 +1,9 @@
 module.exports = {
-  'src/**/*.{ts,tsx}': [
-    'prettier --write',
+  'src/**/*.{ts,tsx,js,jsx,json}': [
+    'biome check --apply --no-errors-on-unmatched',
     'tsc --noEmit'
   ],
-  'src/**/*.{js,jsx,json}': [
-    'prettier --write'
-  ],
   '*.{json,md}': [
-    'prettier --write'
+    'biome format --write --no-errors-on-unmatched'
   ]
 }
