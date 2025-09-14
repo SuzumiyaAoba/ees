@@ -6,6 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a TypeScript Node.js library built with Hono web framework, featuring modern development tooling and strict type safety. The project builds as both ES modules and CommonJS library output.
 
+## Quick Setup
+
+### Using Nix (Recommended)
+```bash
+nix-shell
+```
+This will automatically:
+- Install Node.js 20 and required development tools
+- Install npm dependencies if needed
+- Setup git hooks with Husky
+- Display available commands
+
+### Manual Setup
+Ensure you have Node.js 18+ installed, then:
+```bash
+npm install
+npm run prepare  # Setup git hooks
+```
+
 ## Development Commands
 
 ### Core Development
