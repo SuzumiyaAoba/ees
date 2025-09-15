@@ -34,7 +34,7 @@ EES - Embeddings API Service
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "example.txt",
+    "uri": "file://example.txt",
     "text": "This is a sample text for embedding generation."
   }'
 ```
@@ -45,7 +45,7 @@ curl -X POST http://localhost:3001/embeddings \
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "custom-example.txt",
+    "uri": "file://custom-example.txt",
     "text": "Advanced text processing example.",
     "model_name": "embeddinggemma:300m"
   }'
@@ -57,7 +57,7 @@ curl -X POST http://localhost:3001/embeddings \
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "japanese-text.txt",
+    "uri": "file://japanese-text.txt",
     "text": "これは日本語のテキストです。自然言語処理の技術を使用してベクトル化されます。"
   }'
 ```
@@ -66,7 +66,7 @@ curl -X POST http://localhost:3001/embeddings \
 ```json
 {
   "id": 1,
-  "file_path": "example.txt",
+  "uri": "file://example.txt",
   "model_name": "embeddinggemma:300m",
   "message": "Embedding created successfully"
 }
@@ -86,7 +86,7 @@ curl http://localhost:3001/embeddings
   "embeddings": [
     {
       "id": 1,
-      "file_path": "example.txt",
+      "uri": "file://example.txt",
       "model_name": "embeddinggemma:300m",
       "embedding": [0.1, 0.2, 0.3, ...],
       "created_at": "2024-01-01T00:00:00.000Z",
@@ -97,17 +97,17 @@ curl http://localhost:3001/embeddings
 }
 ```
 
-#### 特定のファイルパスで取得
+#### 特定のURIで取得
 
 ```bash
-curl http://localhost:3001/embeddings/example.txt
+curl http://localhost:3001/embeddings/file%3A%2F%2Fexample.txt
 ```
 
 **期待レスポンス:**
 ```json
 {
   "id": 1,
-  "file_path": "example.txt",
+  "uri": "file://example.txt",
   "model_name": "embeddinggemma:300m",
   "embedding": [0.1, 0.2, 0.3, ...],
   "created_at": "2024-01-01T00:00:00.000Z",
@@ -249,4 +249,4 @@ curl -X DELETE http://localhost:3001/embeddings/999
 1. **初回実行時**: Ollamaモデル（embeddinggemma:300m）のダウンロードが発生するため、時間がかかる場合があります
 2. **ポート設定**: デフォルトはポート3001です。環境変数 `PORT` で変更可能
 3. **モデル指定**: `model_name` を省略した場合、デフォルトで `embeddinggemma:300m` が使用されます
-4. **ファイルパス**: `file_path` は一意である必要があります。同じパスで再送信すると既存データが更新されます
+4. **URI**: `uri` は一意である必要があります。同じURIで再送信すると既存データが更新されます。ファイルパス、URL、任意の識別子など、データのロケーションを表す任意の文字列を指定可能

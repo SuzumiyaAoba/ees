@@ -35,7 +35,7 @@ echo "リクエスト: POST /embeddings"
 RESPONSE1=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "example.txt",
+    "uri": "file://example.txt",
     "text": "This is a sample text for embedding generation."
   }')
 
@@ -49,7 +49,7 @@ echo "リクエスト: POST /embeddings (with custom model)"
 RESPONSE2=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "custom-model-example.txt",
+    "uri": "file://custom-model-example.txt",
     "text": "Advanced text processing with custom embedding model.",
     "model_name": "embeddinggemma:300m"
   }')
@@ -64,7 +64,7 @@ echo "リクエスト: POST /embeddings (Japanese text)"
 RESPONSE3=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "japanese-example.txt",
+    "uri": "file://japanese-example.txt",
     "text": "これは日本語のテキストをベクトル化するためのサンプルです。自然言語処理の技術を使用しています。"
   }')
 
@@ -83,8 +83,8 @@ echo ""
 # 5. 特定のファイルパスで埋め込みを取得
 echo -e "${BLUE}5. 特定のファイルパスで埋め込みを取得${NC}"
 echo "----------------------------"
-echo "リクエスト: GET /embeddings/example.txt"
-RESPONSE5=$(curl -s "${API_BASE}/embeddings/example.txt")
+echo "リクエスト: GET /embeddings/file://example.txt"
+RESPONSE5=$(curl -s "${API_BASE}/embeddings/$(echo 'file://example.txt' | sed 's|://|%3A%2F%2F|g')")
 
 echo -e "レスポンス: ${GREEN}${RESPONSE5}${NC}"
 echo ""
@@ -96,7 +96,7 @@ echo "リクエスト: POST /embeddings (update existing)"
 RESPONSE6=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "example.txt",
+    "uri": "file://example.txt",
     "text": "This is an updated version of the sample text with new content."
   }')
 
@@ -130,7 +130,7 @@ echo ""
 echo -e "${YELLOW}📋 利用可能なAPIエンドポイント:${NC}"
 echo "• POST   /embeddings          - 新しい埋め込みを作成"
 echo "• GET    /embeddings          - すべての埋め込みを取得"
-echo "• GET    /embeddings/:filePath - 特定ファイルの埋め込みを取得"
+echo "• GET    /embeddings/:uri     - 特定URIの埋め込みを取得"
 echo "• DELETE /embeddings/:id      - IDで埋め込みを削除"
 echo ""
 echo -e "${YELLOW}📖 詳細なドキュメント: README.md を参照${NC}"

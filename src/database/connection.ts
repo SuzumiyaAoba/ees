@@ -57,7 +57,7 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE TABLE IF NOT EXISTS embeddings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          file_path TEXT NOT NULL UNIQUE,
+          uri TEXT NOT NULL UNIQUE,
           model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m',
           embedding BLOB NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -66,7 +66,7 @@ const make = Effect.gen(function* () {
       `)
 
       await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_embeddings_file_path ON embeddings(file_path)
+        CREATE INDEX IF NOT EXISTS idx_embeddings_uri ON embeddings(uri)
       `)
 
       await client.execute(`
