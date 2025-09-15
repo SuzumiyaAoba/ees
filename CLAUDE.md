@@ -28,7 +28,33 @@ npm install
 npm run prepare  # Setup git hooks
 ```
 
-## Development Commands
+## Development Workflow
+
+### Branch Management (IMPORTANT)
+Before starting any development work, always follow this workflow:
+
+1. **Check current branch**: Verify you're on the appropriate branch for your work
+2. **Switch to main if needed**: If not on the correct branch, checkout main first
+3. **Update main branch**: Pull the latest changes from remote
+4. **Create/checkout feature branch**: Switch to an appropriate branch for your development
+5. **Start development**: Begin your work on the correct, up-to-date branch
+
+```bash
+# Check current branch
+git branch --show-current
+
+# If not on correct branch, go to main and update
+git checkout main
+git pull origin main
+
+# Create and checkout new feature branch (or checkout existing one)
+git checkout -b feature/your-feature-name
+# OR checkout existing branch: git checkout feature/existing-branch
+
+# Now start development work
+```
+
+This ensures you're always working with the latest code and on an appropriate branch.
 
 ### Core Development
 - `npm run dev` - Start development server using Vite
