@@ -144,6 +144,9 @@
           echo "🚀 Starting EES API Server..."
           echo ""
 
+          # Set up data directory in current working directory
+          export EES_DATA_DIR="$(pwd)/data"
+
           # Check if Ollama is available
           if ! command -v ollama &> /dev/null; then
             echo "❌ Ollama is not available. Please install Ollama first."
@@ -158,9 +161,9 @@
           fi
 
           # Create data directory if it doesn't exist
-          if [ ! -d "data" ]; then
-            echo "🗄️  Creating data directory..."
-            mkdir -p data
+          if [ ! -d "$EES_DATA_DIR" ]; then
+            echo "🗄️  Creating data directory at $EES_DATA_DIR..."
+            mkdir -p "$EES_DATA_DIR"
           fi
 
           # Check if required model is available
@@ -172,6 +175,7 @@
 
           echo ""
           echo "✅ All dependencies ready!"
+          echo "🗄️  Database will be stored at: $EES_DATA_DIR/embeddings.db"
           echo "🌐 Starting EES API server on http://localhost:''${PORT:-3001}"
           echo ""
 
