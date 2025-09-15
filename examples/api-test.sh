@@ -1,37 +1,37 @@
 #!/bin/bash
 
-# EES API テスト用サンプルリクエスト
-# 使用方法: ./examples/api-test.sh
+# EES API Test Sample Requests
+# Usage: ./examples/api-test.sh
 
-# カラー出力用の設定
+# Color output settings
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# APIエンドポイントの設定
+# API endpoint configuration
 API_BASE="http://localhost:3001"
 
-echo -e "${BLUE}🚀 EES API テストスクリプト${NC}"
+echo -e "${BLUE}🚀 EES API Test Script${NC}"
 echo "=================================="
-echo -e "API エンドポイント: ${YELLOW}${API_BASE}${NC}"
+echo -e "API Endpoint: ${YELLOW}${API_BASE}${NC}"
 echo ""
 
-# サーバーが起動しているかチェック
-echo -e "${YELLOW}📡 サーバー接続確認...${NC}"
+# Check if server is running
+echo -e "${YELLOW}📡 Checking server connection...${NC}"
 if ! curl -s "${API_BASE}/" > /dev/null 2>&1; then
-    echo -e "${RED}❌ サーバーに接続できません。${NC}"
-    echo -e "${YELLOW}💡 サーバーを起動してください: nix run${NC}"
+    echo -e "${RED}❌ Cannot connect to server.${NC}"
+    echo -e "${YELLOW}💡 Please start the server: nix run${NC}"
     exit 1
 fi
-echo -e "${GREEN}✅ サーバー接続OK${NC}"
+echo -e "${GREEN}✅ Server connection OK${NC}"
 echo ""
 
-# 1. 基本的な埋め込み作成
-echo -e "${BLUE}1. 基本的な埋め込み作成${NC}"
+# 1. Basic embedding creation
+echo -e "${BLUE}1. Basic Embedding Creation${NC}"
 echo "----------------------------"
-echo "リクエスト: POST /embeddings"
+echo "Request: POST /embeddings"
 RESPONSE1=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
@@ -39,13 +39,13 @@ RESPONSE1=$(curl -s -X POST "${API_BASE}/embeddings" \
     "text": "This is a sample text for embedding generation."
   }')
 
-echo -e "レスポンス: ${GREEN}${RESPONSE1}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE1}${NC}"
 echo ""
 
-# 2. カスタムモデルでの埋め込み作成
-echo -e "${BLUE}2. カスタムモデルでの埋め込み作成${NC}"
+# 2. Custom model embedding creation
+echo -e "${BLUE}2. Custom Model Embedding Creation${NC}"
 echo "----------------------------"
-echo "リクエスト: POST /embeddings (with custom model)"
+echo "Request: POST /embeddings (with custom model)"
 RESPONSE2=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
@@ -54,13 +54,13 @@ RESPONSE2=$(curl -s -X POST "${API_BASE}/embeddings" \
     "model_name": "embeddinggemma:300m"
   }')
 
-echo -e "レスポンス: ${GREEN}${RESPONSE2}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE2}${NC}"
 echo ""
 
-# 3. 日本語テキストの埋め込み作成
-echo -e "${BLUE}3. 日本語テキストの埋め込み作成${NC}"
+# 3. Japanese text embedding creation
+echo -e "${BLUE}3. Japanese Text Embedding Creation${NC}"
 echo "----------------------------"
-echo "リクエスト: POST /embeddings (Japanese text)"
+echo "Request: POST /embeddings (Japanese text)"
 RESPONSE3=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
@@ -68,31 +68,31 @@ RESPONSE3=$(curl -s -X POST "${API_BASE}/embeddings" \
     "text": "これは日本語のテキストをベクトル化するためのサンプルです。自然言語処理の技術を使用しています。"
   }')
 
-echo -e "レスポンス: ${GREEN}${RESPONSE3}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE3}${NC}"
 echo ""
 
-# 4. すべての埋め込みを取得
-echo -e "${BLUE}4. すべての埋め込みを取得${NC}"
+# 4. Get all embeddings
+echo -e "${BLUE}4. Get All Embeddings${NC}"
 echo "----------------------------"
-echo "リクエスト: GET /embeddings"
+echo "Request: GET /embeddings"
 RESPONSE4=$(curl -s "${API_BASE}/embeddings")
 
-echo -e "レスポンス: ${GREEN}${RESPONSE4}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE4}${NC}"
 echo ""
 
-# 5. 特定のファイルパスで埋め込みを取得
-echo -e "${BLUE}5. 特定のファイルパスで埋め込みを取得${NC}"
+# 5. Get embedding by specific URI
+echo -e "${BLUE}5. Get Embedding by Specific URI${NC}"
 echo "----------------------------"
-echo "リクエスト: GET /embeddings/file://example.txt"
+echo "Request: GET /embeddings/file://example.txt"
 RESPONSE5=$(curl -s "${API_BASE}/embeddings/$(echo 'file://example.txt' | sed 's|://|%3A%2F%2F|g')")
 
-echo -e "レスポンス: ${GREEN}${RESPONSE5}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE5}${NC}"
 echo ""
 
-# 6. 埋め込みの更新（同じファイルパスで異なるテキスト）
-echo -e "${BLUE}6. 埋め込みの更新${NC}"
+# 6. Update embedding (same URI with different text)
+echo -e "${BLUE}6. Update Embedding${NC}"
 echo "----------------------------"
-echo "リクエスト: POST /embeddings (update existing)"
+echo "Request: POST /embeddings (update existing)"
 RESPONSE6=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
@@ -100,37 +100,37 @@ RESPONSE6=$(curl -s -X POST "${API_BASE}/embeddings" \
     "text": "This is an updated version of the sample text with new content."
   }')
 
-echo -e "レスポンス: ${GREEN}${RESPONSE6}${NC}"
+echo -e "Response: ${GREEN}${RESPONSE6}${NC}"
 echo ""
 
-# 7. エラーケース: 無効なリクエスト
-echo -e "${BLUE}7. エラーケース: 無効なリクエスト${NC}"
+# 7. Error case: Invalid request
+echo -e "${BLUE}7. Error Case: Invalid Request${NC}"
 echo "----------------------------"
-echo "リクエスト: POST /embeddings (invalid data)"
+echo "Request: POST /embeddings (invalid data)"
 RESPONSE7=$(curl -s -X POST "${API_BASE}/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
     "invalid_field": "This should cause an error"
   }')
 
-echo -e "レスポンス: ${RED}${RESPONSE7}${NC}"
+echo -e "Response: ${RED}${RESPONSE7}${NC}"
 echo ""
 
-# 8. 埋め込みの削除（IDが必要）
-echo -e "${BLUE}8. 埋め込みの削除${NC}"
+# 8. Embedding deletion (ID required)
+echo -e "${BLUE}8. Embedding Deletion${NC}"
 echo "----------------------------"
-echo -e "${YELLOW}💡 削除するにはまず埋め込みのIDを確認してください${NC}"
-echo "リクエスト例: DELETE /embeddings/1"
-echo -e "${YELLOW}⚠️  実際の削除はIDを確認してから手動で実行してください${NC}"
+echo -e "${YELLOW}💡 First check the embedding ID for deletion${NC}"
+echo "Request example: DELETE /embeddings/1"
+echo -e "${YELLOW}⚠️  Please manually execute actual deletion after confirming ID${NC}"
 echo ""
 
-echo -e "${GREEN}🎉 テスト完了！${NC}"
+echo -e "${GREEN}🎉 Test Complete!${NC}"
 echo "=================================="
 echo ""
-echo -e "${YELLOW}📋 利用可能なAPIエンドポイント:${NC}"
-echo "• POST   /embeddings          - 新しい埋め込みを作成"
-echo "• GET    /embeddings          - すべての埋め込みを取得"
-echo "• GET    /embeddings/:uri     - 特定URIの埋め込みを取得"
-echo "• DELETE /embeddings/:id      - IDで埋め込みを削除"
+echo -e "${YELLOW}📋 Available API Endpoints:${NC}"
+echo "• POST   /embeddings          - Create new embedding"
+echo "• GET    /embeddings          - Get all embeddings"
+echo "• GET    /embeddings/:uri     - Get embedding by specific URI"
+echo "• DELETE /embeddings/:id      - Delete embedding by ID"
 echo ""
-echo -e "${YELLOW}📖 詳細なドキュメント: README.md を参照${NC}"
+echo -e "${YELLOW}📖 Detailed Documentation: See README.md${NC}"

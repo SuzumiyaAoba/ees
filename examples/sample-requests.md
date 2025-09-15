@@ -1,34 +1,34 @@
-# EES API サンプルリクエスト
+# EES API Sample Requests
 
-## 前提条件
+## Prerequisites
 
-EES APIサーバーが起動している必要があります：
+The EES API server must be running:
 
 ```bash
-# Nix flakesを使用
+# Using Nix flakes
 nix run
 
-# または開発環境で
+# Or in development environment
 nix develop
 npm run dev
 ```
 
-## 基本的なAPIリクエスト例
+## Basic API Request Examples
 
-### 1. サーバー接続確認
+### 1. Server Connection Check
 
 ```bash
 curl http://localhost:3001/
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```
 EES - Embeddings API Service
 ```
 
-### 2. 埋め込み作成
+### 2. Embedding Creation
 
-#### 基本的な埋め込み作成
+#### Basic Embedding Creation
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
@@ -39,7 +39,7 @@ curl -X POST http://localhost:3001/embeddings \
   }'
 ```
 
-#### カスタムモデルを指定
+#### Custom Model Specification
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
@@ -51,7 +51,7 @@ curl -X POST http://localhost:3001/embeddings \
   }'
 ```
 
-#### 日本語テキストの埋め込み
+#### Japanese Text Embedding
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
@@ -62,7 +62,7 @@ curl -X POST http://localhost:3001/embeddings \
   }'
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "id": 1,
@@ -72,15 +72,15 @@ curl -X POST http://localhost:3001/embeddings \
 }
 ```
 
-### 3. 埋め込み取得
+### 3. Embedding Retrieval
 
-#### すべての埋め込みを取得
+#### Get All Embeddings
 
 ```bash
 curl http://localhost:3001/embeddings
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "embeddings": [
@@ -97,13 +97,13 @@ curl http://localhost:3001/embeddings
 }
 ```
 
-#### 特定のURIで取得
+#### Get by Specific URI
 
 ```bash
 curl http://localhost:3001/embeddings/file%3A%2F%2Fexample.txt
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "id": 1,
@@ -115,76 +115,76 @@ curl http://localhost:3001/embeddings/file%3A%2F%2Fexample.txt
 }
 ```
 
-### 4. 埋め込み削除
+### 4. Embedding Deletion
 
 ```bash
 curl -X DELETE http://localhost:3001/embeddings/1
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "message": "Embedding deleted successfully"
 }
 ```
 
-## 高度な使用例
+## Advanced Usage Examples
 
-### 1. 埋め込みの更新
+### 1. Embedding Updates
 
-同じ `file_path` で新しいテキストを送信すると、既存の埋め込みが更新されます：
+Sending new text with the same `uri` updates the existing embedding:
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "example.txt",
+    "uri": "file://example.txt",
     "text": "This is an updated version of the text with new content."
   }'
 ```
 
-### 2. 複数のテキストを一括作成
+### 2. Bulk Creation of Multiple Texts
 
 ```bash
-# ファイル1
+# Document 1
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "document1.txt",
+    "uri": "file://document1.txt",
     "text": "First document content for vector search."
   }'
 
-# ファイル2
+# Document 2
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "document2.txt",
+    "uri": "file://document2.txt",
     "text": "Second document with different content for comparison."
   }'
 
-# ファイル3
+# Web page
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "document3.txt",
+    "uri": "https://example.com/page1",
     "text": "Third document containing technical information about machine learning."
   }'
 ```
 
-### 3. 長いテキストの処理
+### 3. Long Text Processing
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "long-document.txt",
+    "uri": "file://long-document.txt",
     "text": "This is a longer document that contains multiple sentences and paragraphs. It demonstrates how the embedding API handles larger texts and generates comprehensive vector representations. The system uses advanced natural language processing techniques to understand the semantic meaning of the content and create high-quality embeddings suitable for various AI applications including semantic search, content recommendation, and text classification tasks."
   }'
 ```
 
-## エラーハンドリング例
+## Error Handling Examples
 
-### 1. 無効なリクエスト形式
+### 1. Invalid Request Format
 
 ```bash
 curl -X POST http://localhost:3001/embeddings \
@@ -194,59 +194,59 @@ curl -X POST http://localhost:3001/embeddings \
   }'
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "error": "Failed to create embedding"
 }
 ```
 
-### 2. 存在しないファイルパスの取得
+### 2. Non-existent URI Retrieval
 
 ```bash
-curl http://localhost:3001/embeddings/nonexistent.txt
+curl http://localhost:3001/embeddings/file%3A%2F%2Fnonexistent.txt
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "error": "Embedding not found"
 }
 ```
 
-### 3. 無効なIDでの削除
+### 3. Invalid ID Deletion
 
 ```bash
 curl -X DELETE http://localhost:3001/embeddings/999
 ```
 
-**期待レスポンス:**
+**Expected Response:**
 ```json
 {
   "error": "Embedding not found"
 }
 ```
 
-## 自動テストスクリプト
+## Automated Test Script
 
-完全なテストスイートを実行する場合：
+To run the complete test suite:
 
 ```bash
 ./examples/api-test.sh
 ```
 
-このスクリプトは以下を実行します：
-- サーバー接続確認
-- 基本的な埋め込み作成
-- カスタムモデルでの作成
-- 日本語テキストの処理
-- 埋め込み取得（全件・個別）
-- 埋め込み更新
-- エラーケースの確認
+This script executes the following:
+- Server connection check
+- Basic embedding creation
+- Custom model creation
+- Japanese text processing
+- Embedding retrieval (all/individual)
+- Embedding updates
+- Error case verification
 
-## 注意事項
+## Notes
 
-1. **初回実行時**: Ollamaモデル（embeddinggemma:300m）のダウンロードが発生するため、時間がかかる場合があります
-2. **ポート設定**: デフォルトはポート3001です。環境変数 `PORT` で変更可能
-3. **モデル指定**: `model_name` を省略した場合、デフォルトで `embeddinggemma:300m` が使用されます
-4. **URI**: `uri` は一意である必要があります。同じURIで再送信すると既存データが更新されます。ファイルパス、URL、任意の識別子など、データのロケーションを表す任意の文字列を指定可能
+1. **First Execution**: Ollama model (embeddinggemma:300m) download occurs, which may take time
+2. **Port Configuration**: Default is port 3001. Changeable via `PORT` environment variable
+3. **Model Specification**: If `model_name` is omitted, `embeddinggemma:300m` is used by default
+4. **URI**: `uri` must be unique. Resending with the same URI updates existing data. File paths, URLs, arbitrary identifiers - any data location identifier string can be specified

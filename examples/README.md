@@ -1,98 +1,98 @@
-# EES API サンプル・テスト例
+# EES API Sample Tests and Examples
 
-このディレクトリには、EES (Embeddings API Service) をテストするためのサンプルリクエストとクライアント例が含まれています。
+This directory contains sample requests and client examples for testing EES (Embeddings API Service).
 
-## 📋 ファイル一覧
+## 📋 File List
 
-### 🔧 テストスクリプト
+### 🔧 Test Scripts
 
-- **`api-test.sh`** - 包括的なAPIテストスクリプト（Bash）
-- **`sample-requests.md`** - cURLコマンドでのリクエスト例集
+- **`api-test.sh`** - Comprehensive API test script (Bash)
+- **`sample-requests.md`** - cURL command examples collection
 
-## 🚀 使用方法
+## 🚀 Usage
 
-### 前提条件
+### Prerequisites
 
-EES APIサーバーが起動している必要があります：
+The EES API server must be running:
 
 ```bash
-# Nix flakesを使用（推奨）
+# Using Nix flakes (recommended)
 nix run
 
-# または開発環境で
+# Or in development environment
 nix develop
 npm run dev
 ```
 
-### 1. Bashスクリプトでの包括テスト
+### 1. Comprehensive Testing with Bash Script
 
 ```bash
-# 実行権限を付与（初回のみ）
+# Grant execute permission (first time only)
 chmod +x examples/api-test.sh
 
-# テスト実行
+# Run tests
 ./examples/api-test.sh
 ```
 
-**このスクリプトの機能:**
-- ✅ サーバー接続確認
-- 📝 基本的な埋め込み作成
-- 🔧 カスタムモデル指定
-- 🌏 日本語テキスト処理
-- 📖 埋め込み取得（全件・個別）
-- 🔄 埋め込み更新
-- ❌ エラーケースの確認
+**Script features:**
+- ✅ Server connection check
+- 📝 Basic embedding creation
+- 🔧 Custom model specification
+- 🌏 Japanese text processing
+- 📖 Embedding retrieval (all/individual)
+- 🔄 Embedding updates
+- ❌ Error case verification
 
-### 2. 手動テスト（cURL）
+### 2. Manual Testing (cURL)
 
-詳細なcURLコマンド例は `sample-requests.md` を参照してください。
+See `sample-requests.md` for detailed cURL command examples.
 
 ```bash
-# 基本的な例
+# Basic example
 curl -X POST http://localhost:3001/embeddings \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "test.txt",
+    "uri": "file://test.txt",
     "text": "Sample text for embedding"
   }'
 ```
 
-## 📊 テストカバレッジ
+## 📊 Test Coverage
 
-各テストスクリプトは以下の機能をカバーしています：
+Each test script covers the following functionality:
 
-### ✅ 正常ケース
-- 埋め込み作成（基本）
-- 埋め込み作成（カスタムモデル）
-- 日本語テキスト処理
-- すべての埋め込み取得
-- ファイルパス指定での取得
-- 埋め込み更新（上書き）
-- 埋め込み削除
+### ✅ Normal Cases
+- Embedding creation (basic)
+- Embedding creation (custom model)
+- Japanese text processing
+- All embeddings retrieval
+- URI-specific retrieval
+- Embedding updates (overwrite)
+- Embedding deletion
 
-### ❌ エラーケース
-- 無効なリクエスト形式
-- 存在しないファイルパスでの取得
-- 無効なIDでの削除
-- サーバー接続エラー
+### ❌ Error Cases
+- Invalid request format
+- Non-existent URI retrieval
+- Invalid ID deletion
+- Server connection errors
 
-## 🔍 レスポンス例
+## 🔍 Response Examples
 
-### 成功時の埋め込み作成
+### Successful Embedding Creation
 ```json
 {
   "id": 1,
-  "file_path": "example.txt",
+  "uri": "file://example.txt",
   "model_name": "embeddinggemma:300m",
   "message": "Embedding created successfully"
 }
 ```
 
-### 埋め込み取得
+### Embedding Retrieval
 ```json
 {
   "id": 1,
-  "file_path": "example.txt",
+  "uri": "file://example.txt",
   "model_name": "embeddinggemma:300m",
   "embedding": [0.1, 0.2, 0.3, ...],
   "created_at": "2024-01-01T00:00:00.000Z",
@@ -100,66 +100,66 @@ curl -X POST http://localhost:3001/embeddings \
 }
 ```
 
-### エラー時
+### Error Response
 ```json
 {
   "error": "Failed to create embedding"
 }
 ```
 
-## 💡 使用のヒント
+## 💡 Usage Tips
 
-### 1. モデルについて
-- デフォルト: `embeddinggemma:300m`
-- 初回実行時はモデルのダウンロードが発生します（数分かかる場合があります）
-- モデル指定は `model_name` パラメータで行います
+### 1. About Models
+- Default: `embeddinggemma:300m`
+- First execution triggers model download (may take several minutes)
+- Model specification via `model_name` parameter
 
-### 2. ファイルパスについて
-- `file_path` は一意である必要があります
-- 同じパスで再送信すると既存データが更新されます
-- 任意の文字列を指定可能（実際のファイルである必要はありません）
+### 2. About URI
+- `uri` must be unique
+- Resending with same URI updates existing data
+- File paths, URLs, arbitrary identifiers - any data location identifier can be specified
 
-### 3. テキスト制限
-- 長いテキストも処理可能です
-- 日本語を含む多言語対応
-- 特殊文字やUnicode文字も処理されます
+### 3. Text Limitations
+- Long texts are also processable
+- Multilingual support including Japanese
+- Special characters and Unicode characters are processed
 
-### 4. ポート設定
-- デフォルト: ポート3001
-- 環境変数 `PORT` で変更可能
-- 他のアプリケーションとのポート競合に注意
+### 4. Port Configuration
+- Default: Port 3001
+- Changeable via `PORT` environment variable
+- Watch for port conflicts with other applications
 
-## 🐛 トラブルシューティング
+## 🐛 Troubleshooting
 
-### サーバーに接続できない
+### Cannot Connect to Server
 ```bash
-# サーバーが起動しているか確認
+# Check if server is running
 curl http://localhost:3001/
 
-# ポートを確認
+# Check port usage
 lsof -i :3001
 
-# EESサーバーを起動
+# Start EES server
 nix run
 ```
 
-### モデルのダウンロードが遅い
+### Slow Model Download
 ```bash
-# Ollamaサービスを手動で確認
+# Manually check Ollama service
 ollama list
 
-# モデルを事前ダウンロード
+# Pre-download model
 ollama pull embeddinggemma:300m
 ```
 
-### 権限エラー
+### Permission Errors
 ```bash
-# スクリプトに実行権限を付与
+# Grant execute permission to scripts
 chmod +x examples/*.sh
 ```
 
-## 📚 参考資料
+## 📚 References
 
-- [EES API ドキュメント](../README.md)
-- [Ollama ドキュメント](https://ollama.ai/)
-- [Nix Flakes ガイド](https://nixos.wiki/wiki/Flakes)
+- [EES API Documentation](../README.md)
+- [Ollama Documentation](https://ollama.ai/)
+- [Nix Flakes Guide](https://nixos.wiki/wiki/Flakes)
