@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation Standards
+
+**Important**: All documentation, comments, and user-facing text must be written in English only. This includes:
+- README files
+- API documentation
+- Code comments
+- Commit messages
+- Error messages
+- Log messages
+- User interface text
+
+Japanese or other languages should only be used in test cases or example data where specifically needed for testing internationalization features.
+
 ## Development Commands
 
 ### Environment Setup
