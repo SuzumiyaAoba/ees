@@ -3,6 +3,7 @@ import {
   CreateEmbeddingRequestSchema,
   CreateEmbeddingResponseSchema,
   DeleteEmbeddingResponseSchema,
+  EmbeddingQuerySchema,
   EmbeddingSchema,
   EmbeddingsListResponseSchema,
   ErrorResponseSchema,
@@ -115,7 +116,11 @@ export const getAllEmbeddingsRoute = createRoute({
   path: "/embeddings",
   tags: ["Embeddings"],
   summary: "Get all embeddings",
-  description: "Retrieve a list of all stored embeddings",
+  description:
+    "Retrieve a list of all stored embeddings with optional filtering by URI or model name",
+  request: {
+    query: EmbeddingQuerySchema,
+  },
   responses: {
     200: {
       description: "Embeddings retrieved successfully",

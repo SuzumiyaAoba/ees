@@ -80,9 +80,21 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 // Get all embeddings
 app.openapi(getAllEmbeddingsRoute, async (c) => {
   try {
+    const { uri, model_name } = c.req.valid("query")
+    const filters = {}
+
+    if (uri) {
+      filters.uri = uri
+    }
+    if (model_name) {
+      filters.model_name = model_name
+    }
+
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.getAllEmbeddings()
+      return yield* embeddingService.getAllEmbeddings(
+        Object.keys(filters).length > 0 ? filters : undefined
+      )
     })
 
     const embeddings = await Effect.runPromise(

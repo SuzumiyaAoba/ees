@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import { DatabaseService, DatabaseServiceLive } from "../database/connection"
 import { embeddings } from "../database/schema"
@@ -21,7 +21,10 @@ export interface EmbeddingService {
     uri: string
   ) => Effect.Effect<any | null, DatabaseQueryError>
 
-  readonly getAllEmbeddings: () => Effect.Effect<any[], DatabaseQueryError>
+  readonly getAllEmbeddings: (filters?: {
+    uri?: string
+    model_name?: string
+  }) => Effect.Effect<any[], DatabaseQueryError>
 
   readonly deleteEmbedding: (
     id: number
@@ -116,10 +119,31 @@ const make = Effect.gen(function* () {
       }
     })
 
-  const getAllEmbeddings = () =>
+  const getAllEmbeddings = (filters?: { uri?: string; model_name?: string }) =>
     Effect.gen(function* () {
+      // Build where conditions based on filters
+      const whereConditions = []
+      if (filters?.uri) {
+        whereConditions.push(eq(embeddings.uri, filters.uri))
+      }
+      if (filters?.model_name) {
+        whereConditions.push(eq(embeddings.modelName, filters.model_name))
+      }
+
       const result = yield* Effect.tryPromise({
-        try: () => db.select().from(embeddings).orderBy(embeddings.createdAt),
+        try: () => {
+          let query = db.select().from(embeddings)
+
+          if (whereConditions.length > 0) {
+            query = query.where(
+              whereConditions.length === 1
+                ? whereConditions[0]!
+                : and(...whereConditions)
+            )
+          }
+
+          return query.orderBy(embeddings.createdAt)
+        },
         catch: (error) =>
           new DatabaseQueryError({
             message: "Failed to get embeddings from database",

@@ -37,6 +37,25 @@ export const IdParamSchema = z.object({
     }),
 })
 
+export const EmbeddingQuerySchema = z.object({
+  uri: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "uri", in: "query" },
+      description: "Filter by URI (exact match)",
+      example: "file://document.txt",
+    }),
+  model_name: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "model_name", in: "query" },
+      description: "Filter by model name (exact match)",
+      example: "embeddinggemma:300m",
+    }),
+})
+
 // Response schemas
 export const CreateEmbeddingResponseSchema = z
   .object({
