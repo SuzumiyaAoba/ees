@@ -1,19 +1,27 @@
+import { swaggerUI } from "@hono/swagger-ui"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
-import { Hono } from "hono"
 import { AppLayer } from "./layers/main"
-import { CreateEmbeddingSchema } from "./schemas/embedding"
+import {
+  createEmbeddingRoute,
+  deleteEmbeddingRoute,
+  getAllEmbeddingsRoute,
+  getEmbeddingByUriRoute,
+  rootRoute,
+} from "./routes/openapi"
 import { EmbeddingService } from "./services/embedding"
 
-const app = new Hono()
+const app = new OpenAPIHono()
 
-app.get("/", (c) => {
+// Root endpoint
+app.openapi(rootRoute, (c) => {
   return c.text("EES - Embeddings API Service")
 })
 
-app.post("/embeddings", async (c) => {
+// Create embedding
+app.openapi(createEmbeddingRoute, async (c) => {
   try {
-    const body = await c.req.json()
-    const { uri, text, model_name } = CreateEmbeddingSchema.parse(body)
+    const { uri, text, model_name } = c.req.valid("json")
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
@@ -37,13 +45,15 @@ app.post("/embeddings", async (c) => {
   }
 })
 
-app.get("/embeddings/:uri", async (c) => {
+// Get embedding by URI
+app.openapi(getEmbeddingByUriRoute, async (c) => {
   try {
-    const uri = decodeURIComponent(c.req.param("uri"))
+    const { uri } = c.req.valid("param")
+    const decodedUri = decodeURIComponent(uri)
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.getEmbedding(uri)
+      return yield* embeddingService.getEmbedding(decodedUri)
     })
 
     const embedding = await Effect.runPromise(
@@ -67,7 +77,8 @@ app.get("/embeddings/:uri", async (c) => {
   }
 })
 
-app.get("/embeddings", async (c) => {
+// Get all embeddings
+app.openapi(getAllEmbeddingsRoute, async (c) => {
   try {
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
@@ -85,9 +96,11 @@ app.get("/embeddings", async (c) => {
   }
 })
 
-app.delete("/embeddings/:id", async (c) => {
+// Delete embedding
+app.openapi(deleteEmbeddingRoute, async (c) => {
   try {
-    const id = Number(c.req.param("id"))
+    const { id: idStr } = c.req.valid("param")
+    const id = Number(idStr)
 
     if (Number.isNaN(id)) {
       return c.json({ error: "Invalid ID parameter" }, 400)
@@ -112,6 +125,40 @@ app.delete("/embeddings/:id", async (c) => {
     return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })
+
+// OpenAPI documentation endpoints
+app.doc("/openapi.json", {
+  openapi: "3.0.0",
+  info: {
+    version: "1.0.0",
+    title: "EES - Embeddings API Service",
+    description:
+      "API for generating, storing, and retrieving text embeddings using Ollama models",
+    license: {
+      name: "MIT",
+      url: "https://opensource.org/licenses/MIT",
+    },
+  },
+  servers: [
+    {
+      url: "http://localhost:3000",
+      description: "Development server",
+    },
+  ],
+  tags: [
+    {
+      name: "Health",
+      description: "Health check endpoints",
+    },
+    {
+      name: "Embeddings",
+      description: "Embedding generation and management endpoints",
+    },
+  ],
+})
+
+// Swagger UI
+app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
