@@ -1,7 +1,8 @@
 import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 import { Context, Effect, Layer } from "effect"
-import { resolve } from "path"
+import { existsSync, mkdirSync } from "fs"
+import { dirname, resolve } from "path"
 import { DatabaseConnectionError } from "../errors/database"
 import * as schema from "./schema"
 
@@ -14,9 +15,27 @@ export const DatabaseService =
 
 const make = Effect.gen(function* () {
   const isTest = process.env["NODE_ENV"] === "test"
-  const DB_PATH = isTest
-    ? ":memory:"
-    : resolve(process.cwd(), "data", "embeddings.db")
+
+  // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
+  const dataDir = process.env["EES_DATA_DIR"] || resolve(process.cwd(), "data")
+  const DB_PATH = isTest ? ":memory:" : resolve(dataDir, "embeddings.db")
+
+  // Ensure data directory exists for non-test environments
+  if (!isTest) {
+    yield* Effect.try({
+      try: () => {
+        if (!existsSync(dataDir)) {
+          mkdirSync(dataDir, { recursive: true })
+          console.log(`📁 Created data directory: ${dataDir}`)
+        }
+      },
+      catch: (error) =>
+        new DatabaseConnectionError({
+          message: `Failed to create data directory: ${dataDir}`,
+          cause: error,
+        }),
+    })
+  }
 
   const client = yield* Effect.try({
     try: () =>
@@ -38,7 +57,7 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE TABLE IF NOT EXISTS embeddings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          file_path TEXT NOT NULL UNIQUE,
+          uri TEXT NOT NULL UNIQUE,
           model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m',
           embedding BLOB NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -47,7 +66,7 @@ const make = Effect.gen(function* () {
       `)
 
       await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_embeddings_file_path ON embeddings(file_path)
+        CREATE INDEX IF NOT EXISTS idx_embeddings_uri ON embeddings(uri)
       `)
 
       await client.execute(`

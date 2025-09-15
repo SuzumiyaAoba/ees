@@ -13,15 +13,11 @@ app.get("/", (c) => {
 app.post("/embeddings", async (c) => {
   try {
     const body = await c.req.json()
-    const { file_path, text, model_name } = CreateEmbeddingSchema.parse(body)
+    const { uri, text, model_name } = CreateEmbeddingSchema.parse(body)
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.createEmbedding(
-        file_path,
-        text,
-        model_name
-      )
+      return yield* embeddingService.createEmbedding(uri, text, model_name)
     })
 
     const result = await Effect.runPromise(
@@ -41,13 +37,13 @@ app.post("/embeddings", async (c) => {
   }
 })
 
-app.get("/embeddings/:filePath", async (c) => {
+app.get("/embeddings/:uri", async (c) => {
   try {
-    const filePath = c.req.param("filePath")
+    const uri = decodeURIComponent(c.req.param("uri"))
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.getEmbedding(filePath)
+      return yield* embeddingService.getEmbedding(uri)
     })
 
     const embedding = await Effect.runPromise(
@@ -116,5 +112,23 @@ app.delete("/embeddings/:id", async (c) => {
     return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })
+
+// Start server if this is the main module
+if (require.main === module) {
+  const port = Number(process.env.PORT) || 3000
+  console.log(`🚀 EES API Server starting on port ${port}`)
+
+  // Use Hono's serve method for Node.js
+  const { serve } = require("@hono/node-server")
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    () => {
+      console.log(`✅ EES API Server running on http://localhost:${port}`)
+    }
+  )
+}
 
 export default app

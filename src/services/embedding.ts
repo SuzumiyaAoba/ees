@@ -9,7 +9,7 @@ import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {
   readonly createEmbedding: (
-    filePath: string,
+    uri: string,
     text: string,
     modelName?: string
   ) => Effect.Effect<
@@ -18,7 +18,7 @@ export interface EmbeddingService {
   >
 
   readonly getEmbedding: (
-    filePath: string
+    uri: string
   ) => Effect.Effect<any | null, DatabaseQueryError>
 
   readonly getAllEmbeddings: () => Effect.Effect<any[], DatabaseQueryError>
@@ -36,7 +36,7 @@ const make = Effect.gen(function* () {
   const ollamaService = yield* OllamaService
 
   const createEmbedding = (
-    filePath: string,
+    uri: string,
     text: string,
     modelName = "embeddinggemma:300m"
   ) =>
@@ -53,12 +53,12 @@ const make = Effect.gen(function* () {
           db
             .insert(embeddings)
             .values({
-              filePath,
+              uri,
               modelName,
               embedding: embeddingBuffer,
             })
             .onConflictDoUpdate({
-              target: embeddings.filePath,
+              target: embeddings.uri,
               set: {
                 modelName,
                 embedding: embeddingBuffer,
@@ -75,21 +75,17 @@ const make = Effect.gen(function* () {
 
       return {
         id: result[0]!.id,
-        file_path: filePath,
+        uri,
         model_name: modelName,
         message: "Embedding created successfully",
       }
     })
 
-  const getEmbedding = (filePath: string) =>
+  const getEmbedding = (uri: string) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: () =>
-          db
-            .select()
-            .from(embeddings)
-            .where(eq(embeddings.filePath, filePath))
-            .limit(1),
+          db.select().from(embeddings).where(eq(embeddings.uri, uri)).limit(1),
         catch: (error) =>
           new DatabaseQueryError({
             message: "Failed to get embedding from database",
@@ -109,7 +105,7 @@ const make = Effect.gen(function* () {
 
       return {
         id: row.id,
-        file_path: row.filePath,
+        uri: row.uri,
         model_name: row.modelName,
         embedding,
         created_at: row.createdAt,
@@ -136,7 +132,7 @@ const make = Effect.gen(function* () {
 
         return {
           id: row.id,
-          file_path: row.filePath,
+          uri: row.uri,
           model_name: row.modelName,
           embedding,
           created_at: row.createdAt,

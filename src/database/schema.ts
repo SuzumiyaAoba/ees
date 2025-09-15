@@ -11,14 +11,14 @@ export const embeddings = sqliteTable(
   "embeddings",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    filePath: text("file_path").notNull().unique(),
+    uri: text("uri").notNull().unique(),
     modelName: text("model_name").notNull().default("embeddinggemma:300m"),
     embedding: blob("embedding").notNull(),
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
-    filePathIdx: index("idx_embeddings_file_path").on(table.filePath),
+    uriIdx: index("idx_embeddings_uri").on(table.uri),
     createdAtIdx: index("idx_embeddings_created_at").on(table.createdAt),
     modelNameIdx: index("idx_embeddings_model_name").on(table.modelName),
   })

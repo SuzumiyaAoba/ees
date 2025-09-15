@@ -1,6 +1,6 @@
 export interface Embedding {
   id: number
-  file_path: string
+  uri: string
   model_name: string
   embedding: number[]
   created_at: string
@@ -8,19 +8,19 @@ export interface Embedding {
 }
 
 export interface CreateEmbeddingRequest {
-  file_path: string
+  uri: string
   text: string
   model_name?: string
 }
 
 export interface CreateEmbeddingResponse {
   id: number
-  file_path: string
+  uri: string
   model_name: string
   message: string
 }
 
 export interface EmbeddingSearchResult {
-  file_path: string
+  uri: string
   similarity: number
 }
