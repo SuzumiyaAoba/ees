@@ -20,7 +20,7 @@ export class EmbeddingService {
   async createEmbedding(
     filePath: string,
     text: string,
-    modelName = "gemma:300m"
+    modelName = "embeddinggemma:300m"
   ): Promise<CreateEmbeddingResponse> {
     // Generate embedding using Ollama
     const embedding = await this.ollamaService.generateEmbedding(

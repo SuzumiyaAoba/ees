@@ -22,7 +22,7 @@ export class OllamaService {
 
   async generateEmbedding(
     text: string,
-    modelName = "gemma:300m"
+    modelName = "embeddinggemma:300m"
   ): Promise<number[]> {
     try {
       const response = await ollama.embeddings({
@@ -39,7 +39,7 @@ export class OllamaService {
     }
   }
 
-  async isModelAvailable(modelName = "gemma:300m"): Promise<boolean> {
+  async isModelAvailable(modelName = "embeddinggemma:300m"): Promise<boolean> {
     try {
       const models = await ollama.list()
       return models.models.some((model) => model.name.includes(modelName))
@@ -49,7 +49,7 @@ export class OllamaService {
     }
   }
 
-  async pullModel(modelName = "gemma:300m"): Promise<void> {
+  async pullModel(modelName = "embeddinggemma:300m"): Promise<void> {
     try {
       console.log(`Pulling model ${modelName}...`)
       await ollama.pull({ model: modelName })

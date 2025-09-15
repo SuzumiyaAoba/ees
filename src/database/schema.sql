@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS embeddings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path TEXT NOT NULL UNIQUE,
-    model_name TEXT NOT NULL DEFAULT 'gemma:300m',
+    model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m',
     embedding BLOB NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
