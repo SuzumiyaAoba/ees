@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a TypeScript Node.js library built with Hono web framework, featuring modern development tooling and strict type safety. The project builds as both ES modules and CommonJS library output.
+This is a TypeScript Node.js library built with Hono web framework, featuring modern development tooling and strict type safety. The project includes embeddings functionality using libSQL for vector storage and Ollama for AI model inference. The project builds as both ES modules and CommonJS library output.
 
 ## Quick Setup
 
@@ -14,8 +14,11 @@ nix-shell
 ```
 This will automatically:
 - Install Node.js 20 and required development tools
+- Install libSQL CLI and SQLite for database operations
+- Install and start Ollama service for AI model inference
 - Install npm dependencies if needed
 - Setup git hooks with Husky
+- Create data directory for libSQL databases
 - Display available commands
 
 ### Manual Setup
@@ -49,6 +52,8 @@ All format and lint commands use `npm-run-all2` to run multiple tasks sequential
 ### Core Stack
 - **Hono**: Lightweight web framework for the HTTP server
 - **Zod**: Runtime type validation and schema definition
+- **libSQL**: SQLite-compatible database with vector embeddings support
+- **Ollama**: Local AI model inference for embeddings generation
 - **TypeScript**: Configured with `@tsconfig/strictest` for maximum type safety
 - **Vite**: Build tool configured for Node.js library builds
 
@@ -119,9 +124,24 @@ app.post('/users', async (c) => {
 - Both unit tests for schemas and integration tests for Hono app
 - Node.js environment for testing
 
+## Database & AI Integration
+
+### libSQL Setup
+- Database files stored in `data/` directory (auto-created by Nix shell)
+- SQLite-compatible with vector extensions for embeddings
+- Use `libsql` CLI for database operations
+
+### Ollama Setup
+- Service automatically started when entering Nix shell
+- Default API endpoint: `http://localhost:11434`
+- Use `ollama pull <model>` to download models
+- Common models for embeddings: `nomic-embed-text`, `all-minilm`
+
 ## Notes
 
 - Uses `ts-reset` to improve TypeScript's built-in types
 - Git hooks prevent commits with formatting/type errors
 - Library builds to both ES modules and CommonJS for compatibility
 - Biome handles all formatting, linting, and import organization in a single tool
+- Ollama service runs in background for AI model inference
+- libSQL provides vector storage capabilities for embeddings
