@@ -1,10 +1,10 @@
+import * as fs from "node:fs"
 import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
-import { Effect, Exit, Layer } from "effect"
-import * as fs from "fs"
+import { Effect, Exit } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DatabaseService, DatabaseServiceLive } from "../database/connection"
-import { DatabaseConnectionError, DatabaseQueryError } from "../errors/database"
+import { DatabaseConnectionError } from "../errors/database"
 
 // Mock fs module for directory creation tests
 vi.mock("fs", () => ({

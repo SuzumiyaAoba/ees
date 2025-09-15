@@ -12,7 +12,7 @@ export default defineConfig({
       formats: ['es', 'cjs']
     },
     rollupOptions: {
-      external: ['hono', 'zod', 'effect', 'drizzle-orm', '@libsql/client', 'ollama', 'ml-distance', 'path', 'fs']
+      external: ['hono', 'zod', 'effect', 'drizzle-orm', '@libsql/client', 'ollama', 'ml-distance', 'path', 'fs', 'node:path', 'node:fs']
     },
     target: 'node18',
     minify: false

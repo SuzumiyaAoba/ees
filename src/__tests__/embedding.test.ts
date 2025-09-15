@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm"
-import { Context, Effect, Exit, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DatabaseService } from "../database/connection"
 import { embeddings } from "../database/schema"

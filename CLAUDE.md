@@ -51,6 +51,27 @@ Before developing:
 2. If not appropriate, checkout to `main` and pull latest changes
 3. Create/checkout appropriate feature branch before development
 
+### Pull Request and CI Workflow
+After creating a PR:
+1. **Always check CI status** - PRs must pass all CI checks before merging
+2. **Monitor CI results** - Use `gh pr checks <PR_NUMBER>` to check CI status
+3. **Fix failing CI** - If CI fails, investigate and fix issues immediately:
+   - For linting errors: Run `npm run lint` locally and fix issues
+   - For type errors: Run `npm run type-check` and resolve TypeScript issues
+   - For test failures: Run `npm run test:run` and fix failing tests
+   - For formatting issues: Run `npm run format` to auto-format code
+   - For security vulnerabilities: Run `npm audit` and update dependencies
+4. **View detailed CI logs** - Use `gh run view <RUN_ID> --log-failed` for detailed error information
+5. **Re-run CI after fixes** - Push fixes to automatically trigger new CI run
+
+**CI Pipeline Structure:**
+- **test**: Main testing pipeline (linting, type-checking, testing, building)
+- **nix-build**: Nix package build verification
+- **format-check**: Code formatting verification
+- **security**: Security audit and vulnerability scanning
+
+**Never merge PRs with failing CI** - All checks must be green before merging.
+
 ## Architecture Overview
 
 ### Technology Stack

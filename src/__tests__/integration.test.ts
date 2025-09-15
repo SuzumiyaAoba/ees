@@ -2,7 +2,6 @@ import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DatabaseService } from "../database/connection"
 import app from "../index"
-import { AppLayer } from "../layers/main"
 import { EmbeddingService } from "../services/embedding"
 import { OllamaService } from "../services/ollama"
 
@@ -269,7 +268,7 @@ describe("Integration Tests", () => {
     })
 
     it("should handle long text content", async () => {
-      const longText = "Long content: " + "a".repeat(10000)
+      const longText = `Long content: ${"a".repeat(10000)}`
 
       const response = await app.request("/embeddings", {
         method: "POST",
@@ -431,7 +430,7 @@ describe("Integration Tests", () => {
           EmbeddingService,
           Effect.gen(function* () {
             const { db } = yield* DatabaseService
-            const ollamaService = yield* OllamaService
+            const _ollamaService = yield* OllamaService
 
             return {
               createEmbedding: () =>
@@ -478,7 +477,7 @@ describe("Integration Tests", () => {
             return {
               createEmbedding: (
                 uri: string,
-                text: string,
+                _text: string,
                 modelName?: string
               ) =>
                 Effect.succeed({
