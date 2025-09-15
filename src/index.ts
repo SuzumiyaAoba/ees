@@ -1,19 +1,80 @@
-import { Hono } from 'hono'
-import { CreateUserSchema } from './schemas/user'
+import { Hono } from "hono"
+import { initializeDatabase } from "./database/connection"
+import { CreateEmbeddingSchema } from "./schemas/embedding"
+import { EmbeddingService } from "./services/embedding"
 
 const app = new Hono()
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
+// Initialize database on startup
+initializeDatabase().catch(console.error)
+
+const embeddingService = EmbeddingService.getInstance()
+
+app.get("/", (c) => {
+  return c.text("EES - Embeddings API Service")
 })
 
-app.post('/users', async (c) => {
+app.post("/embeddings", async (c) => {
   try {
     const body = await c.req.json()
-    const user = CreateUserSchema.parse(body)
-    return c.json({ message: 'User created', user })
+    const { file_path, text, model_name } = CreateEmbeddingSchema.parse(body)
+
+    const result = await embeddingService.createEmbedding(
+      file_path,
+      text,
+      model_name
+    )
+    return c.json(result)
   } catch (error) {
-    return c.json({ error: 'Invalid request data' }, 400)
+    console.error("Embedding creation error:", error)
+    return c.json({ error: "Failed to create embedding" }, 500)
+  }
+})
+
+app.get("/embeddings/:filePath", async (c) => {
+  try {
+    const filePath = c.req.param("filePath")
+    const embedding = await embeddingService.getEmbedding(filePath)
+
+    if (!embedding) {
+      return c.json({ error: "Embedding not found" }, 404)
+    }
+
+    return c.json(embedding)
+  } catch (error) {
+    console.error("Embedding retrieval error:", error)
+    return c.json({ error: "Failed to retrieve embedding" }, 500)
+  }
+})
+
+app.get("/embeddings", async (c) => {
+  try {
+    const embeddings = await embeddingService.getAllEmbeddings()
+    return c.json({ embeddings, count: embeddings.length })
+  } catch (error) {
+    console.error("Embeddings retrieval error:", error)
+    return c.json({ error: "Failed to retrieve embeddings" }, 500)
+  }
+})
+
+app.delete("/embeddings/:id", async (c) => {
+  try {
+    const id = Number(c.req.param("id"))
+
+    if (isNaN(id)) {
+      return c.json({ error: "Invalid ID parameter" }, 400)
+    }
+
+    const deleted = await embeddingService.deleteEmbedding(id)
+
+    if (!deleted) {
+      return c.json({ error: "Embedding not found" }, 404)
+    }
+
+    return c.json({ message: "Embedding deleted successfully" })
+  } catch (error) {
+    console.error("Embedding deletion error:", error)
+    return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })
 
