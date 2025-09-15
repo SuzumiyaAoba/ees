@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import { Hono } from "hono"
 import { AppLayer } from "./layers/main"
 import { CreateEmbeddingSchema } from "./schemas/embedding"
-import { EmbeddingService } from "./services/embedding-effect"
+import { EmbeddingService } from "./services/embedding"
 
 const app = new Hono()
 

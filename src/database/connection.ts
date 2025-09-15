@@ -2,8 +2,8 @@ import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 import { Context, Effect, Layer } from "effect"
 import { resolve } from "path"
-import * as schema from "../database/schema"
 import { DatabaseConnectionError } from "../errors/database"
+import * as schema from "./schema"
 
 export interface DatabaseService {
   readonly db: ReturnType<typeof drizzle>

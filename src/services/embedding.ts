@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
+import { DatabaseService, DatabaseServiceLive } from "../database/connection"
 import { embeddings } from "../database/schema"
 import { DatabaseQueryError } from "../errors/database"
 import type { OllamaModelError } from "../errors/ollama"
 import type { CreateEmbeddingResponse } from "../types/embedding"
-import { DatabaseService, DatabaseServiceLive } from "./database"
-import { OllamaService, OllamaServiceLive } from "./ollama-effect"
+import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {
   readonly createEmbedding: (
