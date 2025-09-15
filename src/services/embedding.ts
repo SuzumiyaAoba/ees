@@ -19,10 +19,14 @@ export class EmbeddingService {
 
   async createEmbedding(
     filePath: string,
-    text: string
+    text: string,
+    modelName = "gemma:300m"
   ): Promise<CreateEmbeddingResponse> {
     // Generate embedding using Ollama
-    const embedding = await this.ollamaService.generateEmbedding(text)
+    const embedding = await this.ollamaService.generateEmbedding(
+      text,
+      modelName
+    )
 
     // Convert embedding array to binary data for storage
     const embeddingBuffer = Buffer.from(JSON.stringify(embedding))
@@ -31,18 +35,20 @@ export class EmbeddingService {
       // Insert or update embedding in database
       const result = await db.execute({
         sql: `
-          INSERT INTO embeddings (file_path, embedding)
-          VALUES (?, ?)
+          INSERT INTO embeddings (file_path, model_name, embedding)
+          VALUES (?, ?, ?)
           ON CONFLICT(file_path) DO UPDATE SET
+            model_name = excluded.model_name,
             embedding = excluded.embedding,
             updated_at = CURRENT_TIMESTAMP
         `,
-        args: [filePath, embeddingBuffer],
+        args: [filePath, modelName, embeddingBuffer],
       })
 
       return {
         id: Number(result.lastInsertRowid),
         file_path: filePath,
+        model_name: modelName,
         message: "Embedding created successfully",
       }
     } catch (error) {
@@ -71,6 +77,7 @@ export class EmbeddingService {
       return {
         id: Number(row.id),
         file_path: row.file_path as string,
+        model_name: row.model_name as string,
         embedding,
         created_at: row.created_at as string,
         updated_at: row.updated_at as string,
@@ -96,6 +103,7 @@ export class EmbeddingService {
         return {
           id: Number(row.id),
           file_path: row.file_path as string,
+          model_name: row.model_name as string,
           embedding,
           created_at: row.created_at as string,
           updated_at: row.updated_at as string,
@@ -107,11 +115,11 @@ export class EmbeddingService {
     }
   }
 
-  async deleteEmbedding(filePath: string): Promise<boolean> {
+  async deleteEmbedding(id: number): Promise<boolean> {
     try {
       const result = await db.execute({
-        sql: "DELETE FROM embeddings WHERE file_path = ?",
-        args: [filePath],
+        sql: "DELETE FROM embeddings WHERE id = ?",
+        args: [id],
       })
 
       return result.rowsAffected > 0

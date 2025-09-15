@@ -17,9 +17,13 @@ app.get("/", (c) => {
 app.post("/embeddings", async (c) => {
   try {
     const body = await c.req.json()
-    const { file_path, text } = CreateEmbeddingSchema.parse(body)
+    const { file_path, text, model_name } = CreateEmbeddingSchema.parse(body)
 
-    const result = await embeddingService.createEmbedding(file_path, text)
+    const result = await embeddingService.createEmbedding(
+      file_path,
+      text,
+      model_name
+    )
     return c.json(result)
   } catch (error) {
     console.error("Embedding creation error:", error)
@@ -53,10 +57,15 @@ app.get("/embeddings", async (c) => {
   }
 })
 
-app.delete("/embeddings/:filePath", async (c) => {
+app.delete("/embeddings/:id", async (c) => {
   try {
-    const filePath = c.req.param("filePath")
-    const deleted = await embeddingService.deleteEmbedding(filePath)
+    const id = Number(c.req.param("id"))
+
+    if (isNaN(id)) {
+      return c.json({ error: "Invalid ID parameter" }, 400)
+    }
+
+    const deleted = await embeddingService.deleteEmbedding(id)
 
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)

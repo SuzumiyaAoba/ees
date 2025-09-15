@@ -2,10 +2,13 @@ import { createClient } from "@libsql/client"
 import { readFileSync } from "fs"
 import { resolve } from "path"
 
-const DB_PATH = resolve(process.cwd(), "data", "embeddings.db")
+const isTest = process.env.NODE_ENV === "test"
+const DB_PATH = isTest
+  ? ":memory:"
+  : resolve(process.cwd(), "data", "embeddings.db")
 
 export const db = createClient({
-  url: `file:${DB_PATH}`,
+  url: isTest ? ":memory:" : `file:${DB_PATH}`,
 })
 
 export async function initializeDatabase() {
