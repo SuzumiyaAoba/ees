@@ -2,172 +2,108 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Development Commands
 
-This is a TypeScript Node.js library built with Hono web framework, featuring modern development tooling and strict type safety. The project includes embeddings functionality using libSQL for vector storage and Ollama for AI model inference. The project builds as both ES modules and CommonJS library output.
+### Environment Setup
+- `nix-shell` - Enter development environment with all dependencies (Node.js 20, libSQL, Ollama, etc.)
+- The shell.nix automatically starts Ollama service and sets up the development environment
 
-## Quick Setup
-
-### Using Nix (Recommended)
-```bash
-nix-shell
-```
-This will automatically:
-- Install Node.js 20 and required development tools
-- Install libSQL CLI and SQLite for database operations
-- Install and start Ollama service for AI model inference
-- Install npm dependencies if needed
-- Setup git hooks with Husky
-- Create data directory for libSQL databases
-- Display available commands
-
-### Manual Setup
-Ensure you have Node.js 18+ installed, then:
-```bash
-npm install
-npm run prepare  # Setup git hooks
-```
-
-## Development Workflow
-
-### Branch Management (IMPORTANT)
-Before starting any development work, always follow this workflow:
-
-1. **Check current branch**: Verify you're on the appropriate branch for your work
-2. **Switch to main if needed**: If not on the correct branch, checkout main first
-3. **Update main branch**: Pull the latest changes from remote
-4. **Create/checkout feature branch**: Switch to an appropriate branch for your development
-5. **Start development**: Begin your work on the correct, up-to-date branch
-
-```bash
-# Check current branch
-git branch --show-current
-
-# If not on correct branch, go to main and update
-git checkout main
-git pull origin main
-
-# Create and checkout new feature branch (or checkout existing one)
-git checkout -b feature/your-feature-name
-# OR checkout existing branch: git checkout feature/existing-branch
-
-# Now start development work
-```
-
-This ensures you're always working with the latest code and on an appropriate branch.
-
-### Core Development
-- `npm run dev` - Start development server using Vite
-- `npm run build` - Build library for production (ES + CJS formats)
-- `npm start` - Run the built application
-- `npm run preview` - Preview the built application
-
-### Testing
-- `npm test` - Run tests in watch mode with Vitest
-- `npm run test:run` - Run tests once and exit
+### Core Commands
+- `npm run dev` - Start development server with Vite
+- `npm run build` - Build for production using Vite
+- `npm start` - Run production build
+- `npm test` - Run tests with Vitest (watch mode)
+- `npm run test:run` - Run tests once
 
 ### Code Quality
-- `npm run format` - Format all code using Biome
-- `npm run lint` - Lint all code using Biome
-- `npm run type-check` - Run TypeScript type checking without emitting files
+- `npm run lint` - Check code with Biome linter
+- `npm run format` - Format code with Biome
+- `npm run type-check` - TypeScript type checking without emitting files
 
-All format and lint commands use `npm-run-all2` to run multiple tasks sequentially (`run-s format:*`, `run-s lint:*`).
+### Git Workflow
+Before developing:
+1. Ensure you're on the correct branch (check current branch name)
+2. If not appropriate, checkout to `main` and pull latest changes
+3. Create/checkout appropriate feature branch before development
 
-## Architecture & Key Technologies
+## Architecture Overview
 
-### Core Stack
-- **Hono**: Lightweight web framework for the HTTP server
-- **Zod**: Runtime type validation and schema definition
-- **libSQL**: SQLite-compatible database with vector embeddings support
-- **Ollama**: Local AI model inference for embeddings generation
-- **TypeScript**: Configured with `@tsconfig/strictest` for maximum type safety
-- **Vite**: Build tool configured for Node.js library builds
+### Technology Stack
+- **Framework**: Hono (lightweight web framework)
+- **Runtime**: Node.js with TypeScript
+- **Database**: libSQL with Drizzle ORM for type safety
+- **AI/ML**: Ollama for local embedding generation (default model: `embeddinggemma:300m`)
+- **Functional Programming**: Effect library for composable, type-safe operations
+- **Validation**: Zod schemas for runtime type checking
+- **Testing**: Vitest with Node.js environment
+- **Build**: Vite configured for Node.js library builds
 
-### Development Tools
-- **Biome**: Unified formatter, linter, and import organizer (replaces Prettier + ESLint)
-- **Vitest**: Testing framework with Node.js environment
-- **Husky + lint-staged**: Pre-commit hooks for code quality
+### Application Architecture
 
-### Project Structure
-```
-src/
-├── index.ts          # Main Hono app export
-├── schemas/          # Zod validation schemas
-│   └── user.ts       # User-related schemas
-├── __tests__/        # Test files
-└── types/            # TypeScript type definitions
-```
+**Effect-based API Implementation**:
+- `src/index.ts` - Effect-based Hono API with functional programming paradigm and type-safe error handling
 
-## Build Configuration
+**Effect-based Service Layer**:
+- `src/services/database.ts` - Database connection with Effect wrappers
+- `src/services/ollama-effect.ts` - Ollama integration with Effect error handling
+- `src/services/embedding-effect.ts` - Core embedding business logic
+- `src/layers/main.ts` - Effect dependency injection layer composition
 
-### Vite (vite.config.ts)
-- Builds as Node.js library with ES modules and CommonJS outputs
-- External dependencies: `hono`, `zod` (not bundled)
-- Target: Node.js 18+
-- No minification for library builds
+**Error Handling**:
+- Tagged error types in `src/errors/` for domain-specific error handling
+- `DatabaseError`, `DatabaseConnectionError`, `DatabaseQueryError`
+- `OllamaError`, `OllamaConnectionError`, `OllamaModelError`
 
-### TypeScript
-- Extends `@tsconfig/strictest` for maximum type safety
-- Module resolution: `bundler` (Vite-compatible)
-- Outputs to `dist/` with declarations and source maps
-- Includes `@total-typescript/ts-reset` for improved built-in types
+**Data Layer**:
+- `src/database/schema.ts` - Drizzle ORM schema definitions
+- Database uses libSQL with automatic schema initialization
+- Test environment uses in-memory database (`:memory:`)
 
-### Code Quality
-- **Biome**: Configured for 2-space indentation, 80-char line width, double quotes
-- **Pre-commit hooks**: Auto-format with Biome + TypeScript type checking
-- **lint-staged**: Uses `.lintstagedrc.json` (not package.json config due to node_modules conflicts)
+### API Endpoints
 
-## Key Patterns
+**Embeddings API**:
+- `POST /embeddings` - Create embedding from text
+- `GET /embeddings` - List all embeddings
+- `GET /embeddings/:filePath` - Get embedding by file path
+- `DELETE /embeddings/:id` - Delete embedding by ID
 
-### Schema Validation
-All API endpoints use Zod schemas for request validation:
+**Request/Response Types**:
+- Input validation via Zod schemas in `src/schemas/`
+- Type definitions in `src/types/embedding.ts`
+
+### Development Environment
+
+**Nix Shell**:
+- Provides reproducible development environment
+- Auto-installs dependencies and sets up git hooks
+- Starts Ollama service automatically
+- Creates data directory for libSQL
+
+**Code Quality Tools**:
+- Biome for formatting and linting (replaces Prettier + ESLint)
+- Husky + lint-staged for pre-commit hooks
+- TypeScript with strictest configuration
+
+### Effect Programming Patterns
+
+**Service Dependencies**:
 ```typescript
-export const CreateUserSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email format'),
-  age: z.number().min(0, 'Age must be positive').optional(),
+const program = Effect.gen(function* () {
+  const embeddingService = yield* EmbeddingService
+  return yield* embeddingService.createEmbedding(filePath, text, modelName)
 })
+
+const result = await Effect.runPromise(
+  program.pipe(Effect.provide(AppLayer))
+)
 ```
 
-### Hono Route Structure
-Routes follow pattern of schema validation + JSON responses:
-```typescript
-app.post('/users', async (c) => {
-  try {
-    const body = await c.req.json()
-    const user = CreateUserSchema.parse(body)
-    return c.json({ message: 'User created', user })
-  } catch (error) {
-    return c.json({ error: 'Invalid request data' }, 400)
-  }
-})
-```
+**Error Handling**:
+- Use tagged errors for domain-specific failures
+- Compose error types in Effect signatures
+- Use `Effect.tryPromise` for async operations that may fail
 
-## Testing
-
-- Tests use Vitest with global APIs enabled
-- Test files in `src/__tests__/` directory
-- Both unit tests for schemas and integration tests for Hono app
-- Node.js environment for testing
-
-## Database & AI Integration
-
-### libSQL Setup
-- Database files stored in `data/` directory (auto-created by Nix shell)
-- SQLite-compatible with vector extensions for embeddings
-- Use `libsql` CLI for database operations
-
-### Ollama Setup
-- Service automatically started when entering Nix shell
-- Default API endpoint: `http://localhost:11434`
-- Use `ollama pull <model>` to download models
-- Common models for embeddings: `nomic-embed-text`, `all-minilm`
-
-## Notes
-
-- Uses `ts-reset` to improve TypeScript's built-in types
-- Git hooks prevent commits with formatting/type errors
-- Library builds to both ES modules and CommonJS for compatibility
-- Biome handles all formatting, linting, and import organization in a single tool
-- Ollama service runs in background for AI model inference
-- libSQL provides vector storage capabilities for embeddings
+**Testing Strategy**:
+- Tests run with NODE_ENV=test for in-memory database
+- Vitest configured for Node.js environment
+- Effect programs can be tested in isolation using mock layers
