@@ -5,7 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Environment Setup
-- `nix-shell` - Enter development environment with all dependencies (Node.js 20, libSQL, Ollama, etc.)
+
+**Nix Flakes (Recommended):**
+- `nix develop` - Enter development environment with all dependencies (Node.js 20, Ollama, SQLite, etc.)
+- `nix run` - Build and run the EES API server directly
+- `nix run .#dev` - Start development server with hot reload
+- `nix build` - Build the EES application package
+
+**Legacy Nix:**
+- `nix-shell` - Enter development environment using shell.nix
 - The shell.nix automatically starts Ollama service and sets up the development environment
 
 ### Core Commands
@@ -73,8 +81,15 @@ Before developing:
 
 ### Development Environment
 
-**Nix Shell**:
-- Provides reproducible development environment
+**Nix Flakes**:
+- Modern, declarative approach for reproducible environments
+- Provides isolated development shell with all dependencies
+- Automatic Ollama service startup and data directory creation
+- Cross-platform support (Linux, macOS)
+- Lock file ensures reproducible builds across machines
+
+**Legacy Nix Shell**:
+- Traditional shell.nix for compatibility
 - Auto-installs dependencies and sets up git hooks
 - Starts Ollama service automatically
 - Creates data directory for libSQL
@@ -107,3 +122,49 @@ const result = await Effect.runPromise(
 - Tests run with NODE_ENV=test for in-memory database
 - Vitest configured for Node.js environment
 - Effect programs can be tested in isolation using mock layers
+
+## Quick Start with Nix Flakes
+
+### Prerequisites
+- Nix package manager with flakes enabled
+- Git
+
+### Getting Started
+
+1. **Clone and enter development environment:**
+   ```bash
+   git clone <repository-url>
+   cd ees
+   nix develop
+   ```
+
+2. **Run API server directly:**
+   ```bash
+   nix run
+   ```
+
+3. **Start development server:**
+   ```bash
+   nix run .#dev
+   ```
+
+4. **Build the application:**
+   ```bash
+   nix build
+   ```
+
+### Flake Outputs
+
+- `packages.default` - EES application package
+- `packages.server` - Production server script with dependencies
+- `apps.default` - Run the API server
+- `apps.dev` - Development server with hot reload
+- `devShells.default` - Development environment with all tools
+
+### Benefits
+
+- **Zero-config setup**: No need to install Node.js, Ollama, or other dependencies
+- **Reproducible builds**: Lock file ensures identical environments across machines
+- **Isolated environment**: No conflicts with system packages
+- **Cross-platform**: Works on Linux and macOS
+- **Easy deployment**: Built packages can be deployed anywhere Nix is available
