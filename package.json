@@ -36,6 +36,8 @@
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.5",
     "hono": "^4.9.7",
     "ml-distance": "^4.0.1",
     "ollama": "^0.5.17",

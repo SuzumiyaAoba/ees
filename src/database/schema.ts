@@ -1,0 +1,28 @@
+import { sql } from "drizzle-orm"
+import {
+  blob,
+  index,
+  integer,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core"
+
+export const embeddings = sqliteTable(
+  "embeddings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    filePath: text("file_path").notNull().unique(),
+    modelName: text("model_name").notNull().default("embeddinggemma:300m"),
+    embedding: blob("embedding").notNull(),
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    filePathIdx: index("idx_embeddings_file_path").on(table.filePath),
+    createdAtIdx: index("idx_embeddings_created_at").on(table.createdAt),
+    modelNameIdx: index("idx_embeddings_model_name").on(table.modelName),
+  })
+)
+
+export type Embedding = typeof embeddings.$inferSelect
+export type NewEmbedding = typeof embeddings.$inferInsert
