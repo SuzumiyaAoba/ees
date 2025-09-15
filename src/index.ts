@@ -1,7 +1,6 @@
 import { Hono } from "hono"
 import { initializeDatabase } from "./database/connection"
 import { CreateEmbeddingSchema } from "./schemas/embedding"
-import { CreateUserSchema } from "./schemas/user"
 import { EmbeddingService } from "./services/embedding"
 
 const app = new Hono()
@@ -12,17 +11,7 @@ initializeDatabase().catch(console.error)
 const embeddingService = EmbeddingService.getInstance()
 
 app.get("/", (c) => {
-  return c.text("Hello Hono!")
-})
-
-app.post("/users", async (c) => {
-  try {
-    const body = await c.req.json()
-    const user = CreateUserSchema.parse(body)
-    return c.json({ message: "User created", user })
-  } catch (error) {
-    return c.json({ error: "Invalid request data" }, 400)
-  }
+  return c.text("EES - Embeddings API Service")
 })
 
 app.post("/embeddings", async (c) => {
