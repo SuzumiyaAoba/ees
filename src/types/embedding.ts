@@ -1,6 +1,7 @@
 export interface Embedding {
   id: number
   uri: string
+  text: string
   model_name: string
   embedding: number[]
   created_at: string

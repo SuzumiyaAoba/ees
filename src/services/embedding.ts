@@ -54,12 +54,14 @@ const make = Effect.gen(function* () {
             .insert(embeddings)
             .values({
               uri,
+              text,
               modelName,
               embedding: embeddingBuffer,
             })
             .onConflictDoUpdate({
               target: embeddings.uri,
               set: {
+                text,
                 modelName,
                 embedding: embeddingBuffer,
                 updatedAt: new Date().toISOString(),
@@ -106,6 +108,7 @@ const make = Effect.gen(function* () {
       return {
         id: row.id,
         uri: row.uri,
+        text: row.text,
         model_name: row.modelName,
         embedding,
         created_at: row.createdAt,
@@ -133,6 +136,7 @@ const make = Effect.gen(function* () {
         return {
           id: row.id,
           uri: row.uri,
+          text: row.text,
           model_name: row.modelName,
           embedding,
           created_at: row.createdAt,

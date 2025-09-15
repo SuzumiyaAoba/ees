@@ -1,0 +1,841 @@
+import { eq } from "drizzle-orm"
+import { Context, Effect, Exit, Layer } from "effect"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { DatabaseService } from "../database/connection"
+import { embeddings } from "../database/schema"
+import { DatabaseQueryError } from "../errors/database"
+import { OllamaModelError } from "../errors/ollama"
+import { EmbeddingService, EmbeddingServiceLive } from "../services/embedding"
+import { OllamaService } from "../services/ollama"
+
+// Mock dependencies
+const mockDb = {
+  insert: vi.fn(),
+  select: vi.fn(),
+  delete: vi.fn(),
+}
+
+const mockOllamaService = {
+  generateEmbedding: vi.fn(),
+  isModelAvailable: vi.fn(),
+  pullModel: vi.fn(),
+}
+
+const MockDatabaseServiceLive = Layer.succeed(DatabaseService, {
+  db: mockDb as any,
+})
+
+const MockOllamaServiceLive = Layer.succeed(OllamaService, mockOllamaService)
+
+const TestEmbeddingServiceLive = EmbeddingServiceLive.pipe(
+  Layer.provide(MockOllamaServiceLive),
+  Layer.provide(MockDatabaseServiceLive)
+)
+
+describe("EmbeddingService", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Setup default successful responses
+    mockOllamaService.generateEmbedding.mockReturnValue(
+      Effect.succeed([0.1, 0.2, 0.3])
+    )
+
+    // Mock database insert chain
+    const mockInsert = {
+      values: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+    }
+    mockDb.insert.mockReturnValue(mockInsert)
+
+    // Mock database select chain
+    const mockSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+      orderBy: vi.fn().mockResolvedValue([]),
+    }
+    mockDb.select.mockReturnValue(mockSelect)
+
+    // Mock database delete chain
+    const mockDelete = {
+      where: vi.fn().mockResolvedValue({ rowsAffected: 1 }),
+    }
+    mockDb.delete.mockReturnValue(mockDelete)
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe("createEmbedding", () => {
+    it("should create embedding successfully with default model", async () => {
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test document content"
+        )
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toEqual({
+        id: 1,
+        uri: "file://test.txt",
+        model_name: "embeddinggemma:300m",
+        message: "Embedding created successfully",
+      })
+
+      expect(mockOllamaService.generateEmbedding).toHaveBeenCalledWith(
+        "Test document content",
+        "embeddinggemma:300m"
+      )
+    })
+
+    it("should create embedding with custom model", async () => {
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test content",
+          "custom-model:latest"
+        )
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.model_name).toBe("custom-model:latest")
+      expect(mockOllamaService.generateEmbedding).toHaveBeenCalledWith(
+        "Test content",
+        "custom-model:latest"
+      )
+    })
+
+    it("should store embedding with text in database", async () => {
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Original document text"
+        )
+      })
+
+      await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(mockDb.insert).toHaveBeenCalledWith(embeddings)
+
+      const insertMock = mockDb.insert().values
+      expect(insertMock).toHaveBeenCalledWith({
+        uri: "file://test.txt",
+        text: "Original document text",
+        modelName: "embeddinggemma:300m",
+        embedding: expect.any(Buffer),
+      })
+    })
+
+    it("should handle embedding update on conflict", async () => {
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://existing.txt",
+          "Updated content"
+        )
+      })
+
+      await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      const onConflictMock = mockDb.insert().values().onConflictDoUpdate
+      expect(onConflictMock).toHaveBeenCalledWith({
+        target: embeddings.uri,
+        set: {
+          text: "Updated content",
+          modelName: "embeddinggemma:300m",
+          embedding: expect.any(Buffer),
+          updatedAt: expect.any(String),
+        },
+      })
+    })
+
+    it("should convert embedding array to buffer correctly", async () => {
+      const testEmbedding = [1.1, 2.2, 3.3]
+      mockOllamaService.generateEmbedding.mockReturnValue(
+        Effect.succeed(testEmbedding)
+      )
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test content"
+        )
+      })
+
+      await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      const insertMock = mockDb.insert().values
+      const callArgs = insertMock.mock.calls[0][0]
+      const embeddingBuffer = callArgs.embedding
+
+      expect(embeddingBuffer).toBeInstanceOf(Buffer)
+      expect(JSON.parse(embeddingBuffer.toString())).toEqual(testEmbedding)
+    })
+
+    it("should handle Ollama service errors", async () => {
+      const ollamaError = new OllamaModelError({
+        message: "Model not found",
+        modelName: "nonexistent-model",
+      })
+
+      mockOllamaService.generateEmbedding.mockReturnValue(
+        Effect.fail(ollamaError)
+      )
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test content",
+          "nonexistent-model"
+        )
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) {
+        expect(result.cause._tag).toBe("Fail")
+        expect(result.cause.error).toBe(ollamaError)
+      }
+    })
+
+    it("should handle database insertion errors", async () => {
+      mockDb
+        .insert()
+        .values()
+        .onConflictDoUpdate()
+        .returning.mockRejectedValue(new Error("Database constraint violation"))
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test content"
+        )
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) {
+        expect(result.cause._tag).toBe("Fail")
+        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
+        expect(result.cause.error.message).toBe(
+          "Failed to save embedding to database"
+        )
+      }
+    })
+
+    it("should handle empty embedding array from Ollama", async () => {
+      mockOllamaService.generateEmbedding.mockReturnValue(Effect.succeed([]))
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://test.txt",
+          "Test content"
+        )
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.id).toBe(1)
+
+      const insertMock = mockDb.insert().values
+      const callArgs = insertMock.mock.calls[0][0]
+      const embeddingBuffer = callArgs.embedding
+      expect(JSON.parse(embeddingBuffer.toString())).toEqual([])
+    })
+
+    it("should handle long text input", async () => {
+      const longText = "a".repeat(10000)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://long.txt",
+          longText
+        )
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.id).toBe(1)
+      expect(mockOllamaService.generateEmbedding).toHaveBeenCalledWith(
+        longText,
+        "embeddinggemma:300m"
+      )
+    })
+
+    it("should handle Unicode text correctly", async () => {
+      const unicodeText = "こんにちは世界! 🌍 Émojis and spëcial chars"
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.createEmbedding(
+          "file://unicode.txt",
+          unicodeText
+        )
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.id).toBe(1)
+
+      const insertMock = mockDb.insert().values
+      const callArgs = insertMock.mock.calls[0][0]
+      expect(callArgs.text).toBe(unicodeText)
+    })
+  })
+
+  describe("getEmbedding", () => {
+    it("should retrieve existing embedding successfully", async () => {
+      const mockEmbeddingData = {
+        id: 1,
+        uri: "file://test.txt",
+        text: "Test document content",
+        modelName: "embeddinggemma:300m",
+        embedding: Buffer.from(JSON.stringify([0.1, 0.2, 0.3])),
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      }
+
+      mockDb
+        .select()
+        .from()
+        .where()
+        .limit.mockResolvedValue([mockEmbeddingData])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding("file://test.txt")
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toEqual({
+        id: 1,
+        uri: "file://test.txt",
+        text: "Test document content",
+        model_name: "embeddinggemma:300m",
+        embedding: [0.1, 0.2, 0.3],
+        created_at: "2024-01-01T00:00:00.000Z",
+        updated_at: "2024-01-01T00:00:00.000Z",
+      })
+
+      expect(mockDb.select).toHaveBeenCalled()
+      expect(mockDb.select().from).toHaveBeenCalledWith(embeddings)
+      expect(mockDb.select().from().where).toHaveBeenCalledWith(
+        eq(embeddings.uri, "file://test.txt")
+      )
+      expect(mockDb.select().from().where().limit).toHaveBeenCalledWith(1)
+    })
+
+    it("should return null for non-existent embedding", async () => {
+      mockDb.select().from().where().limit.mockResolvedValue([])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding("file://nonexistent.txt")
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it("should handle database query errors", async () => {
+      mockDb
+        .select()
+        .from()
+        .where()
+        .limit.mockRejectedValue(new Error("Database connection lost"))
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding("file://test.txt")
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) {
+        expect(result.cause._tag).toBe("Fail")
+        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
+        expect(result.cause.error.message).toBe(
+          "Failed to get embedding from database"
+        )
+      }
+    })
+
+    it("should handle malformed embedding data in database", async () => {
+      const mockEmbeddingData = {
+        id: 1,
+        uri: "file://test.txt",
+        text: "Test content",
+        modelName: "embeddinggemma:300m",
+        embedding: Buffer.from("invalid json"),
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      }
+
+      mockDb
+        .select()
+        .from()
+        .where()
+        .limit.mockResolvedValue([mockEmbeddingData])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding("file://test.txt")
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+    })
+
+    it("should handle special characters in URI", async () => {
+      const specialUri = "file://path/with/特殊文字/and-symbols@#$.txt"
+      const mockEmbeddingData = {
+        id: 1,
+        uri: specialUri,
+        text: "Special content",
+        modelName: "embeddinggemma:300m",
+        embedding: Buffer.from(JSON.stringify([0.1, 0.2])),
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      }
+
+      mockDb
+        .select()
+        .from()
+        .where()
+        .limit.mockResolvedValue([mockEmbeddingData])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding(specialUri)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).not.toBeNull()
+      expect(result?.uri).toBe(specialUri)
+    })
+
+    it("should preserve embedding precision", async () => {
+      const preciseEmbedding = [0.123456789, -0.987654321, 1e-10, 1e10]
+      const mockEmbeddingData = {
+        id: 1,
+        uri: "file://precise.txt",
+        text: "Precise content",
+        modelName: "embeddinggemma:300m",
+        embedding: Buffer.from(JSON.stringify(preciseEmbedding)),
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-01T00:00:00.000Z",
+      }
+
+      mockDb
+        .select()
+        .from()
+        .where()
+        .limit.mockResolvedValue([mockEmbeddingData])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getEmbedding("file://precise.txt")
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result?.embedding).toEqual(preciseEmbedding)
+    })
+  })
+
+  describe("getAllEmbeddings", () => {
+    it("should retrieve all embeddings in order", async () => {
+      const mockEmbeddings = [
+        {
+          id: 1,
+          uri: "file://first.txt",
+          text: "First document",
+          modelName: "embeddinggemma:300m",
+          embedding: Buffer.from(JSON.stringify([0.1, 0.2])),
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          id: 2,
+          uri: "file://second.txt",
+          text: "Second document",
+          modelName: "custom-model",
+          embedding: Buffer.from(JSON.stringify([0.3, 0.4])),
+          createdAt: "2024-01-01T01:00:00.000Z",
+          updatedAt: "2024-01-01T01:00:00.000Z",
+        },
+      ]
+
+      mockDb.select().from().orderBy.mockResolvedValue(mockEmbeddings)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual({
+        id: 1,
+        uri: "file://first.txt",
+        text: "First document",
+        model_name: "embeddinggemma:300m",
+        embedding: [0.1, 0.2],
+        created_at: "2024-01-01T00:00:00.000Z",
+        updated_at: "2024-01-01T00:00:00.000Z",
+      })
+      expect(result[1]).toEqual({
+        id: 2,
+        uri: "file://second.txt",
+        text: "Second document",
+        model_name: "custom-model",
+        embedding: [0.3, 0.4],
+        created_at: "2024-01-01T01:00:00.000Z",
+        updated_at: "2024-01-01T01:00:00.000Z",
+      })
+
+      expect(mockDb.select().from().orderBy).toHaveBeenCalledWith(
+        embeddings.createdAt
+      )
+    })
+
+    it("should return empty array when no embeddings exist", async () => {
+      mockDb.select().from().orderBy.mockResolvedValue([])
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toEqual([])
+    })
+
+    it("should handle database query errors", async () => {
+      mockDb
+        .select()
+        .from()
+        .orderBy.mockRejectedValue(new Error("Database timeout"))
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) {
+        expect(result.cause._tag).toBe("Fail")
+        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
+        expect(result.cause.error.message).toBe(
+          "Failed to get embeddings from database"
+        )
+      }
+    })
+
+    it("should handle mixed embedding data corruption gracefully", async () => {
+      const mockEmbeddings = [
+        {
+          id: 1,
+          uri: "file://valid.txt",
+          text: "Valid content",
+          modelName: "embeddinggemma:300m",
+          embedding: Buffer.from(JSON.stringify([0.1, 0.2])),
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          id: 2,
+          uri: "file://invalid.txt",
+          text: "Invalid content",
+          modelName: "embeddinggemma:300m",
+          embedding: Buffer.from("corrupted data"),
+          createdAt: "2024-01-01T01:00:00.000Z",
+          updatedAt: "2024-01-01T01:00:00.000Z",
+        },
+      ]
+
+      mockDb.select().from().orderBy.mockResolvedValue(mockEmbeddings)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+    })
+
+    it("should handle large number of embeddings", async () => {
+      const largeEmbeddingSet = Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        uri: `file://document-${i}.txt`,
+        text: `Document ${i} content`,
+        modelName: "embeddinggemma:300m",
+        embedding: Buffer.from(JSON.stringify([i * 0.1, i * 0.2])),
+        createdAt: `2024-01-01T${String(i % 24).padStart(2, "0")}:00:00.000Z`,
+        updatedAt: `2024-01-01T${String(i % 24).padStart(2, "0")}:00:00.000Z`,
+      }))
+
+      mockDb.select().from().orderBy.mockResolvedValue(largeEmbeddingSet)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toHaveLength(1000)
+      expect(result[0].uri).toBe("file://document-0.txt")
+      expect(result[999].uri).toBe("file://document-999.txt")
+    })
+  })
+
+  describe("deleteEmbedding", () => {
+    it("should delete existing embedding successfully", async () => {
+      mockDb.delete().where.mockResolvedValue({ rowsAffected: 1 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(1)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBe(true)
+      expect(mockDb.delete).toHaveBeenCalledWith(embeddings)
+      expect(mockDb.delete().where).toHaveBeenCalledWith(eq(embeddings.id, 1))
+    })
+
+    it("should return false for non-existent embedding", async () => {
+      mockDb.delete().where.mockResolvedValue({ rowsAffected: 0 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(999)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBe(false)
+    })
+
+    it("should handle database deletion errors", async () => {
+      mockDb
+        .delete()
+        .where.mockRejectedValue(new Error("Foreign key constraint violation"))
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(1)
+      })
+
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result)) {
+        expect(result.cause._tag).toBe("Fail")
+        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
+        expect(result.cause.error.message).toBe(
+          "Failed to delete embedding from database"
+        )
+      }
+    })
+
+    it("should handle very large ID numbers", async () => {
+      const largeId = Number.MAX_SAFE_INTEGER
+      mockDb.delete().where.mockResolvedValue({ rowsAffected: 0 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(largeId)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBe(false)
+      expect(mockDb.delete().where).toHaveBeenCalledWith(
+        eq(embeddings.id, largeId)
+      )
+    })
+
+    it("should handle zero ID", async () => {
+      mockDb.delete().where.mockResolvedValue({ rowsAffected: 0 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(0)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBe(false)
+      expect(mockDb.delete().where).toHaveBeenCalledWith(eq(embeddings.id, 0))
+    })
+
+    it("should handle negative ID", async () => {
+      mockDb.delete().where.mockResolvedValue({ rowsAffected: 0 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.deleteEmbedding(-1)
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result).toBe(false)
+      expect(mockDb.delete().where).toHaveBeenCalledWith(eq(embeddings.id, -1))
+    })
+
+    it("should handle multiple deletions with different results", async () => {
+      // First deletion succeeds
+      mockDb
+        .delete()
+        .where.mockResolvedValueOnce({ rowsAffected: 1 })
+        .mockResolvedValueOnce({ rowsAffected: 0 })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        const result1 = yield* embeddingService.deleteEmbedding(1)
+        const result2 = yield* embeddingService.deleteEmbedding(2)
+        return { result1, result2 }
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.result1).toBe(true)
+      expect(result.result2).toBe(false)
+    })
+  })
+
+  describe("Service dependencies and integration", () => {
+    it("should work with provided dependencies", async () => {
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return embeddingService
+      })
+
+      const service = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(service).toHaveProperty("createEmbedding")
+      expect(service).toHaveProperty("getEmbedding")
+      expect(service).toHaveProperty("getAllEmbeddings")
+      expect(service).toHaveProperty("deleteEmbedding")
+    })
+
+    it("should fail without required dependencies", async () => {
+      const program = Effect.gen(function* () {
+        yield* EmbeddingService
+      })
+
+      const result = await Effect.runPromiseExit(program)
+
+      expect(Exit.isFailure(result)).toBe(true)
+    })
+
+    it("should handle concurrent operations correctly", async () => {
+      const programs = Array.from({ length: 5 }, (_, i) =>
+        Effect.gen(function* () {
+          const embeddingService = yield* EmbeddingService
+          return yield* embeddingService.createEmbedding(
+            `file://concurrent-${i}.txt`,
+            `Concurrent content ${i}`
+          )
+        }).pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      const results = await Promise.all(programs.map(Effect.runPromise))
+
+      results.forEach((result, i) => {
+        expect(result.uri).toBe(`file://concurrent-${i}.txt`)
+        expect(result.id).toBe(1) // All will have same ID due to mocking
+      })
+
+      expect(mockOllamaService.generateEmbedding).toHaveBeenCalledTimes(5)
+    })
+  })
+})
