@@ -21,17 +21,18 @@
 
           src = ./.;
 
-          npmDepsHash = pkgs.lib.fakeHash;
+          npmDepsHash = "sha256-Rd3rHasxABdH7bDkktkH3jNJSvyzA9vQoC1tE9i29Zw=";
 
-          buildPhase = ''
-            npm run build
-          '';
+          # Don't run build in buildPhase, it will be handled automatically
+          dontNpmBuild = false;
 
           installPhase = ''
             mkdir -p $out/bin $out/lib/ees
+
+            # Copy built application and dependencies
             cp -r dist $out/lib/ees/
-            cp package.json $out/lib/ees/
             cp -r node_modules $out/lib/ees/
+            cp package.json $out/lib/ees/
 
             # Create wrapper script
             cat > $out/bin/ees << EOF
@@ -56,7 +57,7 @@
             corepack
 
             # Database and AI tools
-            # libsql  # Not available in nixpkgs, use sqlite for development
+            # Note: libsql not available in nixpkgs, using sqlite for development
             ollama
             sqlite
 
@@ -171,12 +172,12 @@
 
           echo ""
           echo "✅ All dependencies ready!"
-          echo "🌐 Starting EES API server on http://localhost:3000"
+          echo "🌐 Starting EES API server on http://localhost:''${PORT:-3001}"
           echo ""
 
           # Start the server
           export NODE_ENV=production
-          export PORT=''${PORT:-3000}
+          export PORT=''${PORT:-3001}
 
           ${ees-app}/bin/ees
         '';

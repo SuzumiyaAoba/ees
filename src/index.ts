@@ -117,4 +117,22 @@ app.delete("/embeddings/:id", async (c) => {
   }
 })
 
+// Start server if this is the main module
+if (require.main === module) {
+  const port = Number(process.env.PORT) || 3000
+  console.log(`🚀 EES API Server starting on port ${port}`)
+
+  // Use Hono's serve method for Node.js
+  const { serve } = require("@hono/node-server")
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    () => {
+      console.log(`✅ EES API Server running on http://localhost:${port}`)
+    }
+  )
+}
+
 export default app
