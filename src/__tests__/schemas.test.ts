@@ -402,7 +402,7 @@ describe("Validation Schemas", () => {
       })
 
       it("should accept very long model names", () => {
-        const longModelName = "very-long-model-name-".repeat(10) + ":latest"
+        const longModelName = `${"very-long-model-name-".repeat(10)}:latest`
         const validData = {
           uri: "file://test.txt",
           text: "Test content",

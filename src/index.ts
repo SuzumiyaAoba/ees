@@ -89,7 +89,7 @@ app.delete("/embeddings/:id", async (c) => {
   try {
     const id = Number(c.req.param("id"))
 
-    if (isNaN(id)) {
+    if (Number.isNaN(id)) {
       return c.json({ error: "Invalid ID parameter" }, 400)
     }
 

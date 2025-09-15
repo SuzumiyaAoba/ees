@@ -180,8 +180,7 @@ describe("Error Classes", () => {
     })
 
     it("should handle very long queries", () => {
-      const longQuery =
-        "SELECT * FROM embeddings WHERE " + "condition ".repeat(1000)
+      const longQuery = `SELECT * FROM embeddings WHERE ${"condition ".repeat(1000)}`
       const error = new DatabaseQueryError({
         message: "Query too complex",
         query: longQuery,

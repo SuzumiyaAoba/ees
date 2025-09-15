@@ -76,7 +76,7 @@ const make = Effect.gen(function* () {
       })
 
       return {
-        id: result[0]!.id,
+        id: result[0]?.id,
         uri,
         model_name: modelName,
         message: "Embedding created successfully",

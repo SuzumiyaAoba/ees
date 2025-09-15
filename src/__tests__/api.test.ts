@@ -4,7 +4,7 @@ import app from "../index"
 import type { EmbeddingService } from "../services/embedding"
 
 // Mock embedding service for isolated API testing
-const mockEmbeddingService: EmbeddingService = {
+const _mockEmbeddingService: EmbeddingService = {
   createEmbedding: vi.fn(),
   getEmbedding: vi.fn(),
   getAllEmbeddings: vi.fn(),
@@ -595,7 +595,7 @@ describe("API Endpoints", () => {
     })
 
     it("should handle extremely long URIs", async () => {
-      const longUri = "file://" + "a".repeat(1000) + ".txt"
+      const longUri = `file://${"a".repeat(1000)}.txt`
       const mockResponse = {
         id: 1,
         uri: longUri,
