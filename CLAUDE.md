@@ -40,9 +40,8 @@ Before developing:
 
 ### Application Architecture
 
-**Dual API Implementation**:
-- `src/index.ts` - Traditional Hono API with try/catch error handling
-- `src/index-effect.ts` - Effect-based API with functional programming paradigm
+**Effect-based API Implementation**:
+- `src/index.ts` - Effect-based Hono API with functional programming paradigm and type-safe error handling
 
 **Effect-based Service Layer**:
 - `src/services/database.ts` - Database connection with Effect wrappers

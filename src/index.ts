@@ -1,14 +1,10 @@
+import { Effect } from "effect"
 import { Hono } from "hono"
-import { initializeDatabase } from "./database/connection"
+import { AppLayer } from "./layers/main"
 import { CreateEmbeddingSchema } from "./schemas/embedding"
-import { EmbeddingService } from "./services/embedding"
+import { EmbeddingService } from "./services/embedding-effect"
 
 const app = new Hono()
-
-// Initialize database on startup
-initializeDatabase().catch(console.error)
-
-const embeddingService = EmbeddingService.getInstance()
 
 app.get("/", (c) => {
   return c.text("EES - Embeddings API Service")
@@ -19,11 +15,25 @@ app.post("/embeddings", async (c) => {
     const body = await c.req.json()
     const { file_path, text, model_name } = CreateEmbeddingSchema.parse(body)
 
-    const result = await embeddingService.createEmbedding(
-      file_path,
-      text,
-      model_name
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.createEmbedding(
+        file_path,
+        text,
+        model_name
+      )
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(AppLayer),
+        Effect.catchAll((error) => {
+          console.error("Embedding creation error:", error)
+          return Effect.fail(new Error("Failed to create embedding"))
+        })
+      )
     )
+
     return c.json(result)
   } catch (error) {
     console.error("Embedding creation error:", error)
@@ -34,7 +44,21 @@ app.post("/embeddings", async (c) => {
 app.get("/embeddings/:filePath", async (c) => {
   try {
     const filePath = c.req.param("filePath")
-    const embedding = await embeddingService.getEmbedding(filePath)
+
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.getEmbedding(filePath)
+    })
+
+    const embedding = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(AppLayer),
+        Effect.catchAll((error) => {
+          console.error("Embedding retrieval error:", error)
+          return Effect.succeed(null)
+        })
+      )
+    )
 
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
@@ -49,7 +73,15 @@ app.get("/embeddings/:filePath", async (c) => {
 
 app.get("/embeddings", async (c) => {
   try {
-    const embeddings = await embeddingService.getAllEmbeddings()
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.getAllEmbeddings()
+    })
+
+    const embeddings = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer))
+    )
+
     return c.json({ embeddings, count: embeddings.length })
   } catch (error) {
     console.error("Embeddings retrieval error:", error)
@@ -65,7 +97,14 @@ app.delete("/embeddings/:id", async (c) => {
       return c.json({ error: "Invalid ID parameter" }, 400)
     }
 
-    const deleted = await embeddingService.deleteEmbedding(id)
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.deleteEmbedding(id)
+    })
+
+    const deleted = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer))
+    )
 
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)

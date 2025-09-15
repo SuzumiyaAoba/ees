@@ -4,8 +4,8 @@ import { embeddings } from "../database/schema"
 import { DatabaseQueryError } from "../errors/database"
 import type { OllamaModelError } from "../errors/ollama"
 import type { CreateEmbeddingResponse } from "../types/embedding"
-import { DatabaseService } from "./database"
-import { OllamaService } from "./ollama-effect"
+import { DatabaseService, DatabaseServiceLive } from "./database"
+import { OllamaService, OllamaServiceLive } from "./ollama-effect"
 
 export interface EmbeddingService {
   readonly createEmbedding: (
@@ -74,7 +74,7 @@ const make = Effect.gen(function* () {
       })
 
       return {
-        id: result[0].id,
+        id: result[0]!.id,
         file_path: filePath,
         model_name: modelName,
         message: "Embedding created successfully",
@@ -101,7 +101,7 @@ const make = Effect.gen(function* () {
         return null
       }
 
-      const row = result[0]
+      const row = result[0]!
       const embeddingData = row.embedding as unknown as Uint8Array
       const embedding = JSON.parse(
         Buffer.from(embeddingData).toString()
@@ -156,7 +156,7 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      return result.changes > 0
+      return result.rowsAffected > 0
     })
 
   return {
@@ -168,6 +168,6 @@ const make = Effect.gen(function* () {
 })
 
 export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
-  Layer.provide(OllamaService),
-  Layer.provide(DatabaseService)
+  Layer.provide(OllamaServiceLive),
+  Layer.provide(DatabaseServiceLive)
 )

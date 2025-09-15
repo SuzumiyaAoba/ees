@@ -13,12 +13,12 @@ export const DatabaseService =
   Context.GenericTag<DatabaseService>("DatabaseService")
 
 const make = Effect.gen(function* () {
-  const isTest = process.env.NODE_ENV === "test"
+  const isTest = process.env["NODE_ENV"] === "test"
   const DB_PATH = isTest
     ? ":memory:"
     : resolve(process.cwd(), "data", "embeddings.db")
 
-  const client = yield* Effect.tryPromise({
+  const client = yield* Effect.try({
     try: () =>
       createClient({
         url: isTest ? ":memory:" : `file:${DB_PATH}`,
