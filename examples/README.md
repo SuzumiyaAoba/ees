@@ -93,6 +93,7 @@ Each test script covers the following functionality:
 {
   "id": 1,
   "uri": "file://example.txt",
+  "text": "Sample text for embedding",
   "model_name": "embeddinggemma:300m",
   "embedding": [0.1, 0.2, 0.3, ...],
   "created_at": "2024-01-01T00:00:00.000Z",
@@ -119,12 +120,18 @@ Each test script covers the following functionality:
 - Resending with same URI updates existing data
 - File paths, URLs, arbitrary identifiers - any data location identifier can be specified
 
-### 3. Text Limitations
+### 3. Document Storage and Retrieval
+- Original text is automatically stored along with embeddings
+- Text is returned in all retrieval operations for reference
+- Enables document reconstruction and content verification
+- Useful for debugging and understanding embedding results
+
+### 4. Text Limitations
 - Long texts are also processable
 - Multilingual support including Japanese
 - Special characters and Unicode characters are processed
 
-### 4. Port Configuration
+### 5. Port Configuration
 - Default: Port 3001
 - Changeable via `PORT` environment variable
 - Watch for port conflicts with other applications

@@ -58,6 +58,7 @@ const make = Effect.gen(function* () {
         CREATE TABLE IF NOT EXISTS embeddings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           uri TEXT NOT NULL UNIQUE,
+          text TEXT NOT NULL,
           model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m',
           embedding BLOB NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,

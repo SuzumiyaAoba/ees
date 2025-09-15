@@ -87,6 +87,7 @@ curl http://localhost:3001/embeddings
     {
       "id": 1,
       "uri": "file://example.txt",
+      "text": "This is a sample text for embedding generation.",
       "model_name": "embeddinggemma:300m",
       "embedding": [0.1, 0.2, 0.3, ...],
       "created_at": "2024-01-01T00:00:00.000Z",
@@ -108,6 +109,7 @@ curl http://localhost:3001/embeddings/file%3A%2F%2Fexample.txt
 {
   "id": 1,
   "uri": "file://example.txt",
+  "text": "This is a sample text for embedding generation.",
   "model_name": "embeddinggemma:300m",
   "embedding": [0.1, 0.2, 0.3, ...],
   "created_at": "2024-01-01T00:00:00.000Z",
@@ -250,3 +252,4 @@ This script executes the following:
 2. **Port Configuration**: Default is port 3001. Changeable via `PORT` environment variable
 3. **Model Specification**: If `model_name` is omitted, `embeddinggemma:300m` is used by default
 4. **URI**: `uri` must be unique. Resending with the same URI updates existing data. File paths, URLs, arbitrary identifiers - any data location identifier string can be specified
+5. **Document Storage**: Original text is automatically stored and returned with embeddings for reference and debugging purposes
