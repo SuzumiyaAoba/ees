@@ -516,7 +516,9 @@ describe("OllamaService", () => {
 
   describe("pullModel", () => {
     it("should pull default model successfully", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Mock implementation
+      })
 
       const program = Effect.gen(function* () {
         const ollamaService = yield* OllamaService
@@ -539,7 +541,9 @@ describe("OllamaService", () => {
     })
 
     it("should pull custom model successfully", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Mock implementation
+      })
 
       const program = Effect.gen(function* () {
         const ollamaService = yield* OllamaService
@@ -626,7 +630,9 @@ describe("OllamaService", () => {
     })
 
     it("should log progress messages", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Mock implementation
+      })
 
       const program = Effect.gen(function* () {
         const ollamaService = yield* OllamaService
@@ -649,7 +655,9 @@ describe("OllamaService", () => {
     })
 
     it("should not log success message on failure", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Mock implementation
+      })
       mockOllama.pull.mockRejectedValue(new Error("Pull failed"))
 
       const program = Effect.gen(function* () {

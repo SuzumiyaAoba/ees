@@ -26,7 +26,6 @@ const make = Effect.gen(function* () {
       try: () => {
         if (!existsSync(dataDir)) {
           mkdirSync(dataDir, { recursive: true })
-          console.log(`📁 Created data directory: ${dataDir}`)
         }
       },
       catch: (error) =>
@@ -77,8 +76,6 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_model_name ON embeddings(model_name)
       `)
-
-      console.log("Database initialized successfully")
     },
     catch: (error) =>
       new DatabaseConnectionError({

@@ -33,16 +33,14 @@ app.openapi(createEmbeddingRoute, async (c) => {
     const result = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((error) => {
-          console.error("Embedding creation error:", error)
+        Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create embedding"))
         })
       )
     )
 
     return c.json(result)
-  } catch (error) {
-    console.error("Embedding creation error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to create embedding" }, 500)
   }
 })
@@ -60,16 +58,14 @@ app.openapi(createBatchEmbeddingRoute, async (c) => {
     const result = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((error) => {
-          console.error("Batch embedding creation error:", error)
+        Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create batch embeddings"))
         })
       )
     )
 
     return c.json(result)
-  } catch (error) {
-    console.error("Batch embedding creation error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
@@ -87,16 +83,14 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     const result = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((error) => {
-          console.error("Embedding search error:", error)
+        Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to search embeddings"))
         })
       )
     )
 
     return c.json(result)
-  } catch (error) {
-    console.error("Embedding search error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
@@ -115,8 +109,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     const embedding = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((error) => {
-          console.error("Embedding retrieval error:", error)
+        Effect.catchAll((_error) => {
           return Effect.succeed(null)
         })
       )
@@ -127,8 +120,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     }
 
     return c.json(embedding)
-  } catch (error) {
-    console.error("Embedding retrieval error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
 })
@@ -169,8 +161,7 @@ app.openapi(getAllEmbeddingsRoute, async (c) => {
     )
 
     return c.json(result)
-  } catch (error) {
-    console.error("Embeddings retrieval error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
 })
@@ -199,8 +190,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     }
 
     return c.json({ message: "Embedding deleted successfully" })
-  } catch (error) {
-    console.error("Embedding deletion error:", error)
+  } catch (_error) {
     return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })
@@ -241,8 +231,7 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
-  const port = Number(process.env["PORT"]) || 3000
-  console.log(`🚀 EES API Server starting on port ${port}`)
+  const port = Number(process.env.PORT) || 3000
 
   // Use Hono's serve method for Node.js
   const { serve } = require("@hono/node-server")
@@ -252,7 +241,7 @@ if (require.main === module) {
       port,
     },
     () => {
-      console.log(`✅ EES API Server running on http://localhost:${port}`)
+      // Server callback
     }
   )
 }
