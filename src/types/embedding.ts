@@ -56,3 +56,30 @@ export interface EmbeddingsListResponse {
   has_next: boolean
   has_prev: boolean
 }
+
+export interface SearchEmbeddingRequest {
+  query: string
+  model_name?: string
+  limit?: number
+  threshold?: number
+  metric?: "cosine" | "euclidean" | "dot_product"
+}
+
+export interface SearchEmbeddingResult {
+  id: number
+  uri: string
+  text: string
+  model_name: string
+  similarity: number
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface SearchEmbeddingResponse {
+  results: SearchEmbeddingResult[]
+  query: string
+  model_name: string
+  metric: string
+  count: number
+  threshold?: number
+}

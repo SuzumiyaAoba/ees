@@ -9,6 +9,7 @@ import {
   getAllEmbeddingsRoute,
   getEmbeddingByUriRoute,
   rootRoute,
+  searchEmbeddingsRoute,
 } from "./routes/openapi"
 import { EmbeddingService } from "./services/embedding"
 
@@ -70,6 +71,33 @@ app.openapi(createBatchEmbeddingRoute, async (c) => {
   } catch (error) {
     console.error("Batch embedding creation error:", error)
     return c.json({ error: "Failed to create batch embeddings" }, 500)
+  }
+})
+
+// Search embeddings
+app.openapi(searchEmbeddingsRoute, async (c) => {
+  try {
+    const request = c.req.valid("json")
+
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.searchEmbeddings(request)
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(AppLayer),
+        Effect.catchAll((error) => {
+          console.error("Embedding search error:", error)
+          return Effect.fail(new Error("Failed to search embeddings"))
+        })
+      )
+    )
+
+    return c.json(result)
+  } catch (error) {
+    console.error("Embedding search error:", error)
+    return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
 

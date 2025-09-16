@@ -11,6 +11,8 @@ import {
   ErrorResponseSchema,
   IdParamSchema,
   NotFoundResponseSchema,
+  SearchEmbeddingRequestSchema,
+  SearchEmbeddingResponseSchema,
   UriParamSchema,
   ValidationErrorResponseSchema,
 } from "../schemas/openapi"
@@ -213,6 +215,52 @@ export const createBatchEmbeddingRoute = createRoute({
       content: {
         "application/json": {
           schema: BatchCreateEmbeddingResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid request body",
+      content: {
+        "application/json": {
+          schema: ValidationErrorResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: "Internal server error",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
+
+// Search embeddings
+export const searchEmbeddingsRoute = createRoute({
+  method: "post",
+  path: "/embeddings/search",
+  tags: ["Embeddings"],
+  summary: "Search for similar embeddings",
+  description:
+    "Find embeddings similar to a query text using various similarity metrics",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: SearchEmbeddingRequestSchema,
+        },
+      },
+      description: "Embedding search request",
+    },
+  },
+  responses: {
+    200: {
+      description: "Search results returned successfully",
+      content: {
+        "application/json": {
+          schema: SearchEmbeddingResponseSchema,
         },
       },
     },

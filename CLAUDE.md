@@ -165,9 +165,11 @@ describe("PaginationService", () => {
 
 **Embeddings API**:
 - `POST /embeddings` - Create embedding from text
-- `GET /embeddings` - List all embeddings
-- `GET /embeddings/:filePath` - Get embedding by file path
-- `DELETE /embeddings/:id` - Delete embedding by ID
+- `POST /embeddings/batch` - Create multiple embeddings in a single request
+- `POST /embeddings/search` - Search for similar embeddings using various metrics
+- `GET /embeddings` - List all embeddings with pagination support
+- `GET /embeddings/{uri}` - Get embedding by URI
+- `DELETE /embeddings/{id}` - Delete embedding by ID
 
 **Request/Response Types**:
 - Input validation via Zod schemas in `src/schemas/`
