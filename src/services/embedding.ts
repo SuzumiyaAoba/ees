@@ -433,6 +433,7 @@ const make = Effect.gen(function* () {
       )
 
       // Get all embeddings with the same model for comparison
+      // Note: For very large datasets, this could be optimized with batching
       const allEmbeddings = yield* Effect.tryPromise({
         try: () =>
           db
@@ -447,47 +448,72 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      // Calculate similarities and create results
-      const results = allEmbeddings
-        .map((row) => {
-          const embeddingData = row.embedding as unknown as Uint8Array
-          const storedEmbedding = JSON.parse(
-            Buffer.from(embeddingData).toString()
-          ) as number[]
+      // Calculate similarities and find top N results efficiently
+      const candidateResults: Array<{
+        id: number
+        uri: string
+        text: string
+        model_name: string
+        similarity: number
+        created_at: string | null
+        updated_at: string | null
+      }> = []
 
-          try {
-            const similarity = calculateSimilarity(
-              queryEmbedding,
-              storedEmbedding,
-              metric
-            )
+      // Process embeddings and use a min-heap approach for efficiency
+      for (const row of allEmbeddings) {
+        const embeddingData = row.embedding as unknown as Uint8Array
+        const storedEmbedding = JSON.parse(
+          Buffer.from(embeddingData).toString()
+        ) as number[]
 
-            return {
-              id: row.id,
-              uri: row.uri,
-              text: row.text,
-              model_name: row.modelName,
-              similarity,
-              created_at: row.createdAt,
-              updated_at: row.updatedAt,
+        try {
+          const similarity = calculateSimilarity(
+            queryEmbedding,
+            storedEmbedding,
+            metric
+          )
+
+          // Skip if doesn't meet threshold
+          if (threshold && similarity < threshold) {
+            continue
+          }
+
+          const result = {
+            id: row.id,
+            uri: row.uri,
+            text: row.text,
+            model_name: row.modelName,
+            similarity,
+            created_at: row.createdAt,
+            updated_at: row.updatedAt,
+          }
+
+          // Efficient top-k selection: maintain sorted array of size limit
+          if (candidateResults.length < limit) {
+            candidateResults.push(result)
+            // Sort only when we reach the limit for the first time
+            if (candidateResults.length === limit) {
+              candidateResults.sort((a, b) => b.similarity - a.similarity)
             }
-          } catch (_error) {
-            return null
+          } else if (
+            similarity >
+            candidateResults[candidateResults.length - 1].similarity
+          ) {
+            // Only add if better than the worst in our top-k
+            candidateResults[candidateResults.length - 1] = result
+            // Re-sort to maintain order (could be optimized with a proper heap)
+            candidateResults.sort((a, b) => b.similarity - a.similarity)
           }
-        })
-        .filter(
-          (result): result is NonNullable<typeof result> => result !== null
-        )
-        .filter((result) => !threshold || result.similarity >= threshold)
-        .sort((a, b) => {
-          // Sort by similarity in descending order (most similar first)
-          if (metric === "euclidean") {
-            // For euclidean, higher transformed score means more similar
-            return b.similarity - a.similarity
-          }
-          return b.similarity - a.similarity
-        })
-        .slice(0, limit)
+        } catch (_error) {
+          // Skip invalid embeddings
+        }
+      }
+
+      // Final sort if we have less than limit results
+      const results =
+        candidateResults.length < limit
+          ? candidateResults.sort((a, b) => b.similarity - a.similarity)
+          : candidateResults
 
       return {
         results,
