@@ -72,6 +72,60 @@ After creating a PR:
 
 **Never merge PRs with failing CI** - All checks must be green before merging.
 
+## Testing Requirements
+
+### Unit Testing Policy
+**Mandatory Testing Rule**: After implementing any new feature or functionality, unit tests MUST be added to ensure code quality and prevent regressions.
+
+**When to Add Tests:**
+1. **New API endpoints** - Add comprehensive tests covering success cases, error cases, validation, and edge cases
+2. **New service methods** - Test all public methods with various inputs and error conditions
+3. **New business logic** - Cover all code paths including happy path and error scenarios
+4. **Bug fixes** - Add regression tests to prevent the same bug from reoccurring
+5. **Feature enhancements** - Update existing tests and add new ones for new functionality
+
+**Test Coverage Requirements:**
+- All new public methods must have corresponding unit tests
+- Critical business logic must achieve >90% test coverage
+- Error handling and edge cases must be explicitly tested
+- Integration tests should be added for complex workflows
+
+**Test Structure:**
+- Tests are located in `src/__tests__/` directory
+- Use descriptive test names that explain the expected behavior
+- Group related tests using `describe` blocks
+- Include both positive and negative test cases
+- Mock external dependencies appropriately
+
+**Running Tests:**
+- `npm test` - Run tests in watch mode during development
+- `npm run test:run` - Run tests once (used in CI)
+- Tests must pass before committing any code
+- CI will automatically run all tests on every PR
+
+**Test Examples:**
+```typescript
+describe("PaginationService", () => {
+  it("should return correct pagination metadata for valid page and limit", async () => {
+    // Test implementation
+  })
+
+  it("should enforce maximum limit of 100 items per page", async () => {
+    // Test implementation
+  })
+
+  it("should handle empty results gracefully", async () => {
+    // Test implementation
+  })
+})
+```
+
+### Testing Tools and Framework
+- **Test Runner**: Vitest with Node.js environment
+- **Mocking**: Vitest built-in mocking capabilities
+- **Effect Testing**: Mock layers for testing Effect-based services
+- **API Testing**: In-memory testing with mocked dependencies
+
 ## Architecture Overview
 
 ### Technology Stack

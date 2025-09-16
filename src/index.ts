@@ -80,7 +80,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 // Get all embeddings
 app.openapi(getAllEmbeddingsRoute, async (c) => {
   try {
-    const { uri, model_name } = c.req.valid("query")
+    const { uri, model_name, page, limit } = c.req.valid("query")
     const filters = {}
 
     if (uri) {
@@ -88,6 +88,12 @@ app.openapi(getAllEmbeddingsRoute, async (c) => {
     }
     if (model_name) {
       filters.model_name = model_name
+    }
+    if (page) {
+      filters.page = page
+    }
+    if (limit) {
+      filters.limit = limit
     }
 
     const program = Effect.gen(function* () {
@@ -97,11 +103,11 @@ app.openapi(getAllEmbeddingsRoute, async (c) => {
       )
     })
 
-    const embeddings = await Effect.runPromise(
+    const result = await Effect.runPromise(
       program.pipe(Effect.provide(AppLayer))
     )
 
-    return c.json({ embeddings, count: embeddings.length })
+    return c.json(result)
   } catch (error) {
     console.error("Embeddings retrieval error:", error)
     return c.json({ error: "Failed to retrieve embeddings" }, 500)

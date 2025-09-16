@@ -54,6 +54,28 @@ export const EmbeddingQuerySchema = z.object({
       description: "Filter by model name (exact match)",
       example: "embeddinggemma:300m",
     }),
+  page: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => Number(val))
+    .optional()
+    .default("1")
+    .openapi({
+      param: { name: "page", in: "query" },
+      description: "Page number (starts from 1)",
+      example: "1",
+    }),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => Number(val))
+    .optional()
+    .default("10")
+    .openapi({
+      param: { name: "limit", in: "query" },
+      description: "Number of items per page (max 100)",
+      example: "10",
+    }),
 })
 
 // Response schemas
@@ -119,6 +141,26 @@ export const EmbeddingsListResponseSchema = z
     count: z.number().openapi({
       description: "Total count of embeddings",
       example: 5,
+    }),
+    page: z.number().openapi({
+      description: "Current page number",
+      example: 1,
+    }),
+    limit: z.number().openapi({
+      description: "Number of items per page",
+      example: 10,
+    }),
+    total_pages: z.number().openapi({
+      description: "Total number of pages",
+      example: 3,
+    }),
+    has_next: z.boolean().openapi({
+      description: "Whether there is a next page",
+      example: true,
+    }),
+    has_prev: z.boolean().openapi({
+      description: "Whether there is a previous page",
+      example: false,
     }),
   })
   .openapi("EmbeddingsListResponse")

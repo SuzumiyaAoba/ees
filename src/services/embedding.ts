@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import { DatabaseService, DatabaseServiceLive } from "../database/connection"
 import { embeddings } from "../database/schema"
@@ -24,7 +24,20 @@ export interface EmbeddingService {
   readonly getAllEmbeddings: (filters?: {
     uri?: string
     model_name?: string
-  }) => Effect.Effect<any[], DatabaseQueryError>
+    page?: number
+    limit?: number
+  }) => Effect.Effect<
+    {
+      embeddings: any[]
+      count: number
+      page: number
+      limit: number
+      total_pages: number
+      has_next: boolean
+      has_prev: boolean
+    },
+    DatabaseQueryError
+  >
 
   readonly deleteEmbedding: (
     id: number
@@ -119,8 +132,17 @@ const make = Effect.gen(function* () {
       }
     })
 
-  const getAllEmbeddings = (filters?: { uri?: string; model_name?: string }) =>
+  const getAllEmbeddings = (filters?: {
+    uri?: string
+    model_name?: string
+    page?: number
+    limit?: number
+  }) =>
     Effect.gen(function* () {
+      const page = filters?.page ?? 1
+      const limit = Math.min(filters?.limit ?? 10, 100) // Max 100 items per page
+      const offset = (page - 1) * limit
+
       // Build where conditions based on filters
       const whereConditions = []
       if (filters?.uri) {
@@ -130,6 +152,33 @@ const make = Effect.gen(function* () {
         whereConditions.push(eq(embeddings.modelName, filters.model_name))
       }
 
+      // Get total count for pagination
+      const totalCountResult = yield* Effect.tryPromise({
+        try: () => {
+          let countQuery = db
+            .select({ count: sql<number>`count(*)` })
+            .from(embeddings)
+
+          if (whereConditions.length > 0) {
+            countQuery = countQuery.where(
+              whereConditions.length === 1
+                ? whereConditions[0]!
+                : and(...whereConditions)
+            )
+          }
+
+          return countQuery
+        },
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to count embeddings from database",
+            cause: error,
+          }),
+      })
+
+      const totalCount = totalCountResult[0]?.count ?? 0
+
+      // Get paginated results
       const result = yield* Effect.tryPromise({
         try: () => {
           let query = db.select().from(embeddings)
@@ -142,7 +191,7 @@ const make = Effect.gen(function* () {
             )
           }
 
-          return query.orderBy(embeddings.createdAt)
+          return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
         },
         catch: (error) =>
           new DatabaseQueryError({
@@ -151,7 +200,7 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      return result.map((row) => {
+      const embeddingsData = result.map((row) => {
         const embeddingData = row.embedding as unknown as Uint8Array
         const embedding = JSON.parse(
           Buffer.from(embeddingData).toString()
@@ -167,6 +216,20 @@ const make = Effect.gen(function* () {
           updated_at: row.updatedAt,
         }
       })
+
+      const totalPages = Math.ceil(totalCount / limit)
+      const hasNext = page < totalPages
+      const hasPrev = page > 1
+
+      return {
+        embeddings: embeddingsData,
+        count: embeddingsData.length,
+        page,
+        limit,
+        total_pages: totalPages,
+        has_next: hasNext,
+        has_prev: hasPrev,
+      }
     })
 
   const deleteEmbedding = (id: number) =>
