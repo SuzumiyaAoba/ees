@@ -1,12 +1,13 @@
 import { eq } from "drizzle-orm"
+import type { drizzle } from "drizzle-orm/libsql"
 import { Effect, Exit, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { DatabaseService } from "../database/connection"
-import { embeddings } from "../database/schema"
-import { DatabaseQueryError } from "../errors/database"
-import { OllamaModelError } from "../errors/ollama"
-import { EmbeddingService, EmbeddingServiceLive } from "../services/embedding"
-import { OllamaService } from "../services/ollama"
+import { DatabaseService } from "../../../shared/database/connection"
+import { embeddings } from "../../../shared/database/schema"
+import { DatabaseQueryError } from "../../../shared/errors/database"
+import { OllamaModelError } from "../../../shared/errors/ollama"
+import { EmbeddingService, EmbeddingServiceLive } from "../api/embedding"
+import { OllamaService } from "../api/ollama"
 
 // Mock dependencies
 const mockDb = {
@@ -22,7 +23,7 @@ const mockOllamaService = {
 }
 
 const MockDatabaseServiceLive = Layer.succeed(DatabaseService, {
-  db: mockDb as any,
+  db: mockDb as ReturnType<typeof drizzle>,
 })
 
 const MockOllamaServiceLive = Layer.succeed(OllamaService, mockOllamaService)
@@ -218,7 +219,7 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect((result.cause as any).error).toBe(ollamaError)
+        expect((result.cause as { error: unknown }).error).toBe(ollamaError)
       }
     })
 
@@ -244,10 +245,12 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
-        expect((result.cause as any).error.message).toBe(
-          "Failed to save embedding to database"
-        )
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error
+        ).toBeInstanceOf(DatabaseQueryError)
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error.message
+        ).toBe("Failed to save embedding to database")
       }
     })
 
@@ -398,10 +401,12 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
-        expect((result.cause as any).error.message).toBe(
-          "Failed to get embedding from database"
-        )
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error
+        ).toBeInstanceOf(DatabaseQueryError)
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error.message
+        ).toBe("Failed to get embedding from database")
       }
     })
 
@@ -833,10 +838,12 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
-        expect((result.cause as any).error.message).toBe(
-          "Failed to get embeddings from database"
-        )
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error
+        ).toBeInstanceOf(DatabaseQueryError)
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error.message
+        ).toBe("Failed to get embeddings from database")
       }
     })
 
@@ -954,10 +961,12 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
-        expect((result.cause as any).error.message).toBe(
-          "Failed to delete embedding from database"
-        )
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error
+        ).toBeInstanceOf(DatabaseQueryError)
+        expect(
+          (result.cause as { error: DatabaseQueryError }).error.message
+        ).toBe("Failed to delete embedding from database")
       }
     })
 

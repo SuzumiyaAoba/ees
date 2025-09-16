@@ -1,9 +1,13 @@
 import { and, eq, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
-import { DatabaseService, DatabaseServiceLive } from "../database/connection"
-import { embeddings } from "../database/schema"
-import { DatabaseQueryError } from "../errors/database"
-import type { OllamaModelError } from "../errors/ollama"
+import {
+  DatabaseService,
+  DatabaseServiceLive,
+} from "../../../shared/database/connection"
+import { embeddings } from "../../../shared/database/schema"
+import { DatabaseQueryError } from "../../../shared/errors/database"
+import type { OllamaModelError } from "../../../shared/errors/ollama"
+import { parseStoredEmbeddingData } from "../lib/embedding-data"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -12,8 +16,7 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "../types/embedding"
-import { parseStoredEmbeddingData } from "../utils/embedding-data"
+} from "../model/embedding"
 import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {

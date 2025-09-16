@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CreateEmbeddingSchema } from "../schemas/embedding"
+import { CreateEmbeddingRequestSchema as CreateEmbeddingSchema } from "../model/openapi"
 
 describe("Validation Schemas", () => {
   describe("CreateEmbeddingSchema", () => {
@@ -596,7 +596,7 @@ describe("Validation Schemas", () => {
       })
 
       it("should handle circular references gracefully", () => {
-        const circularData: any = {
+        const circularData: Record<string, unknown> = {
           uri: "file://test.txt",
           text: "Test content",
         }

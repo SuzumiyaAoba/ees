@@ -1,8 +1,14 @@
 import { Effect, Exit } from "effect"
 import { Ollama } from "ollama"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { OllamaConnectionError, OllamaModelError } from "../errors/ollama"
-import { OllamaService, OllamaServiceLive } from "../services/ollama"
+import {
+  OllamaService,
+  OllamaServiceLive,
+} from "../entities/embedding/api/ollama"
+import {
+  OllamaConnectionError,
+  OllamaModelError,
+} from "../shared/errors/ollama"
 
 // Mock the Ollama client
 vi.mock("ollama", () => ({

@@ -1,6 +1,9 @@
 import { Context, Effect, Layer } from "effect"
 import { Ollama } from "ollama"
-import { OllamaConnectionError, OllamaModelError } from "../errors/ollama"
+import {
+  OllamaConnectionError,
+  OllamaModelError,
+} from "../../../shared/errors/ollama"
 
 export interface OllamaService {
   readonly generateEmbedding: (

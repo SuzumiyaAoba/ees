@@ -1,9 +1,9 @@
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { DatabaseService } from "../database/connection"
-import app from "../index"
-import { EmbeddingService } from "../services/embedding"
-import { OllamaService } from "../services/ollama"
+import app from "../app"
+import { EmbeddingService } from "../entities/embedding/api/embedding"
+import { OllamaService } from "../entities/embedding/api/ollama"
+import { DatabaseService } from "../shared/database/connection"
 
 describe("Integration Tests", () => {
   // Create test doubles for external dependencies

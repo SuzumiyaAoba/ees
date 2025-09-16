@@ -1,3 +1,5 @@
+// Core embedding types for the domain
+
 export interface Embedding {
   id: number
   uri: string

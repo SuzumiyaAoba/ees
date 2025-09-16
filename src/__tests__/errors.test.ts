@@ -4,12 +4,12 @@ import {
   DatabaseConnectionError,
   DatabaseError,
   DatabaseQueryError,
-} from "../errors/database"
+} from "../shared/errors/database"
 import {
   OllamaConnectionError,
   OllamaError,
   OllamaModelError,
-} from "../errors/ollama"
+} from "../shared/errors/ollama"
 
 describe("Error Classes", () => {
   describe("DatabaseError", () => {

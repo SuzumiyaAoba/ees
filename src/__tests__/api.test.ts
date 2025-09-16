@@ -9,7 +9,7 @@ import {
   EmbeddingsListResponseSchema,
   ErrorResponseSchema,
   parseJsonResponse,
-} from "../utils/test-helpers"
+} from "../shared/lib/test-helpers"
 
 // API response types for tests - now using test-helpers schemas
 
