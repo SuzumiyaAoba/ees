@@ -10,6 +10,8 @@ import type {
   CreateEmbeddingResponse,
   Embedding,
   EmbeddingsListResponse,
+  SearchEmbeddingRequest,
+  SearchEmbeddingResponse,
 } from "../types/embedding"
 import { OllamaService, OllamaServiceLive } from "./ollama"
 
@@ -44,10 +46,87 @@ export interface EmbeddingService {
   readonly deleteEmbedding: (
     id: number
   ) => Effect.Effect<boolean, DatabaseQueryError>
+
+  readonly searchEmbeddings: (
+    request: SearchEmbeddingRequest
+  ) => Effect.Effect<
+    SearchEmbeddingResponse,
+    OllamaModelError | DatabaseQueryError
+  >
 }
 
 export const EmbeddingService =
   Context.GenericTag<EmbeddingService>("EmbeddingService")
+
+// Similarity calculation helper functions
+const calculateCosineSimilarity = (vecA: number[], vecB: number[]): number => {
+  if (vecA.length !== vecB.length) {
+    throw new Error("Vectors must have the same dimension")
+  }
+
+  let dotProduct = 0
+  let normA = 0
+  let normB = 0
+
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i]! * vecB[i]!
+    normA += vecA[i]! * vecA[i]!
+    normB += vecB[i]! * vecB[i]!
+  }
+
+  if (normA === 0 || normB === 0) {
+    return 0
+  }
+
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+const calculateEuclideanDistance = (vecA: number[], vecB: number[]): number => {
+  if (vecA.length !== vecB.length) {
+    throw new Error("Vectors must have the same dimension")
+  }
+
+  let sum = 0
+  for (let i = 0; i < vecA.length; i++) {
+    const diff = vecA[i]! - vecB[i]!
+    sum += diff * diff
+  }
+
+  return Math.sqrt(sum)
+}
+
+const calculateDotProduct = (vecA: number[], vecB: number[]): number => {
+  if (vecA.length !== vecB.length) {
+    throw new Error("Vectors must have the same dimension")
+  }
+
+  let dotProduct = 0
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i]! * vecB[i]!
+  }
+
+  return dotProduct
+}
+
+const calculateSimilarity = (
+  vecA: number[],
+  vecB: number[],
+  metric: "cosine" | "euclidean" | "dot_product"
+): number => {
+  switch (metric) {
+    case "cosine":
+      return calculateCosineSimilarity(vecA, vecB)
+    case "euclidean": {
+      // Convert distance to similarity (higher = more similar)
+      const distance = calculateEuclideanDistance(vecA, vecB)
+      return 1 / (1 + distance)
+    }
+    case "dot_product":
+      return calculateDotProduct(vecA, vecB)
+    default:
+      throw new Error(`Unknown metric: ${metric}`)
+  }
+}
 
 const make = Effect.gen(function* () {
   const { db } = yield* DatabaseService
@@ -331,12 +410,100 @@ const make = Effect.gen(function* () {
       return result.rowsAffected > 0
     })
 
+  const searchEmbeddings = (request: SearchEmbeddingRequest) =>
+    Effect.gen(function* () {
+      const {
+        query,
+        model_name = "embeddinggemma:300m",
+        limit = 10,
+        threshold,
+        metric = "cosine",
+      } = request
+
+      // Generate embedding for the query text
+      const queryEmbedding = yield* ollamaService.generateEmbedding(
+        query,
+        model_name
+      )
+
+      // Get all embeddings with the same model for comparison
+      const allEmbeddings = yield* Effect.tryPromise({
+        try: () =>
+          db
+            .select()
+            .from(embeddings)
+            .where(eq(embeddings.modelName, model_name))
+            .orderBy(embeddings.createdAt),
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to retrieve embeddings for search",
+            cause: error,
+          }),
+      })
+
+      // Calculate similarities and create results
+      const results = allEmbeddings
+        .map((row) => {
+          const embeddingData = row.embedding as unknown as Uint8Array
+          const storedEmbedding = JSON.parse(
+            Buffer.from(embeddingData).toString()
+          ) as number[]
+
+          try {
+            const similarity = calculateSimilarity(
+              queryEmbedding,
+              storedEmbedding,
+              metric
+            )
+
+            return {
+              id: row.id,
+              uri: row.uri,
+              text: row.text,
+              model_name: row.modelName,
+              similarity,
+              created_at: row.createdAt,
+              updated_at: row.updatedAt,
+            }
+          } catch (error) {
+            console.error(
+              `Failed to calculate similarity for embedding ${row.id}:`,
+              error
+            )
+            return null
+          }
+        })
+        .filter(
+          (result): result is NonNullable<typeof result> => result !== null
+        )
+        .filter((result) => !threshold || result.similarity >= threshold)
+        .sort((a, b) => {
+          // Sort by similarity in descending order (most similar first)
+          if (metric === "euclidean") {
+            // For euclidean, higher transformed score means more similar
+            return b.similarity - a.similarity
+          }
+          return b.similarity - a.similarity
+        })
+        .slice(0, limit)
+
+      return {
+        results,
+        query,
+        model_name,
+        metric,
+        count: results.length,
+        threshold,
+      }
+    })
+
   return {
     createEmbedding,
     createBatchEmbedding,
     getEmbedding,
     getAllEmbeddings,
     deleteEmbedding,
+    searchEmbeddings,
   } as const
 })
 

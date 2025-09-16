@@ -172,6 +172,96 @@ export const BatchCreateEmbeddingResponseSchema = z
   })
   .openapi("BatchCreateEmbeddingResponse")
 
+export const SearchEmbeddingRequestSchema = z
+  .object({
+    query: z.string().min(1).openapi({
+      description: "Text query to search for similar embeddings",
+      example: "machine learning algorithms",
+    }),
+    model_name: z.string().optional().default("embeddinggemma:300m").openapi({
+      description: "Model name to use for query embedding generation",
+      example: "embeddinggemma:300m",
+    }),
+    limit: z.number().int().min(1).max(100).optional().default(10).openapi({
+      description: "Maximum number of results to return (max 100)",
+      example: 10,
+    }),
+    threshold: z.number().min(0).max(1).optional().openapi({
+      description: "Minimum similarity score threshold (0-1)",
+      example: 0.7,
+    }),
+    metric: z
+      .enum(["cosine", "euclidean", "dot_product"])
+      .optional()
+      .default("cosine")
+      .openapi({
+        description: "Distance metric for similarity calculation",
+        example: "cosine",
+      }),
+  })
+  .openapi("SearchEmbeddingRequest")
+
+export const SearchEmbeddingResultSchema = z
+  .object({
+    id: z.number().openapi({
+      description: "Unique identifier",
+      example: 123,
+    }),
+    uri: z.string().openapi({
+      description: "Resource URI",
+      example: "file://document.txt",
+    }),
+    text: z.string().openapi({
+      description: "Original text content",
+      example: "This document discusses machine learning algorithms.",
+    }),
+    model_name: z.string().openapi({
+      description: "Model used for embedding",
+      example: "embeddinggemma:300m",
+    }),
+    similarity: z.number().openapi({
+      description: "Similarity score (higher = more similar)",
+      example: 0.85,
+    }),
+    created_at: z.string().nullable().openapi({
+      description: "Creation timestamp",
+      example: "2024-01-01T00:00:00.000Z",
+    }),
+    updated_at: z.string().nullable().openapi({
+      description: "Last update timestamp",
+      example: "2024-01-01T00:00:00.000Z",
+    }),
+  })
+  .openapi("SearchEmbeddingResult")
+
+export const SearchEmbeddingResponseSchema = z
+  .object({
+    results: z.array(SearchEmbeddingResultSchema).openapi({
+      description: "Array of search results ordered by similarity",
+    }),
+    query: z.string().openapi({
+      description: "Original query text",
+      example: "machine learning algorithms",
+    }),
+    model_name: z.string().openapi({
+      description: "Model used for query embedding",
+      example: "embeddinggemma:300m",
+    }),
+    metric: z.string().openapi({
+      description: "Distance metric used for similarity calculation",
+      example: "cosine",
+    }),
+    count: z.number().openapi({
+      description: "Number of results returned",
+      example: 5,
+    }),
+    threshold: z.number().optional().openapi({
+      description: "Similarity threshold used (if any)",
+      example: 0.7,
+    }),
+  })
+  .openapi("SearchEmbeddingResponse")
+
 export const EmbeddingSchema = z
   .object({
     id: z.number().openapi({
