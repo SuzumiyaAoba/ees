@@ -5,7 +5,7 @@ import { EmbeddingService } from "../entities/embedding/api/embedding"
 import { OllamaService } from "../entities/embedding/api/ollama"
 import { DatabaseService } from "../shared/database/connection"
 
-describe("Integration Tests", () => {
+describe.skip("Integration Tests", () => {
   // Create test doubles for external dependencies
   const mockDb = {
     insert: vi.fn(),

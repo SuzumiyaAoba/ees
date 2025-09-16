@@ -15,11 +15,11 @@ export const StoredEmbeddingDataSchema = z.union([
 // Request schemas
 export const CreateEmbeddingRequestSchema = z
   .object({
-    uri: z.string().min(1).openapi({
+    uri: z.string().min(1, "URI is required").openapi({
       description: "Unique identifier for the resource being embedded",
       example: "file://document.txt",
     }),
-    text: z.string().min(1).openapi({
+    text: z.string().min(1, "Text is required").openapi({
       description: "Text content to generate embedding for",
       example: "This is a sample text for embedding generation.",
     }),
