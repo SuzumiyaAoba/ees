@@ -1,6 +1,20 @@
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import app from "../index"
+import type {
+  CreateEmbeddingResponse,
+  Embedding,
+  EmbeddingsListResponse,
+} from "../types/embedding"
+
+// API response types for tests
+interface ErrorResponse {
+  error: string
+}
+
+interface DeleteResponse {
+  message: string
+}
 
 // import type { EmbeddingService } from "../services/embedding"
 
@@ -57,7 +71,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as CreateEmbeddingResponse
       expect(result).toEqual(mockResponse)
     })
 
@@ -126,7 +140,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as CreateEmbeddingResponse
       expect(result.model_name).toBe("embeddinggemma:300m")
     })
 
@@ -151,7 +165,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as CreateEmbeddingResponse
       expect(result.model_name).toBe("custom-model:latest")
     })
 
@@ -251,7 +265,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as Embedding
       expect(result).toEqual(mockEmbedding)
       expect(result).toHaveProperty("text")
       expect(result.text).toBe("Test document content")
@@ -358,7 +372,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result).toHaveProperty("embeddings")
       expect(result).toHaveProperty("count")
       expect(result).toHaveProperty("page")
@@ -401,7 +415,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?page=2&limit=2")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.page).toBe(2)
       expect(result.limit).toBe(2)
       expect(result.total_pages).toBe(3)
@@ -436,9 +450,9 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?uri=file://filtered.txt")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.embeddings).toHaveLength(1)
-      expect(result.embeddings[0].uri).toBe("file://filtered.txt")
+      expect(result.embeddings[0]?.uri).toBe("file://filtered.txt")
     })
 
     it("should handle model_name filtering with pagination", async () => {
@@ -469,9 +483,9 @@ describe("API Endpoints", () => {
       )
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.embeddings).toHaveLength(1)
-      expect(result.embeddings[0].model_name).toBe("custom-model:latest")
+      expect(result.embeddings[0]?.model_name).toBe("custom-model:latest")
     })
 
     it("should handle empty results with pagination", async () => {
@@ -490,7 +504,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.embeddings).toEqual([])
       expect(result.count).toBe(0)
       expect(result.total_pages).toBe(0)
@@ -514,7 +528,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?page=10&limit=2")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.embeddings).toEqual([])
       expect(result.count).toBe(0)
       expect(result.page).toBe(10)
@@ -561,10 +575,10 @@ describe("API Endpoints", () => {
       )
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result.embeddings).toHaveLength(1)
-      expect(result.embeddings[0].uri).toBe("file://combined.txt")
-      expect(result.embeddings[0].model_name).toBe("embeddinggemma:300m")
+      expect(result.embeddings[0]?.uri).toBe("file://combined.txt")
+      expect(result.embeddings[0]?.model_name).toBe("embeddinggemma:300m")
       expect(result.page).toBe(1)
       expect(result.limit).toBe(5)
     })
@@ -575,7 +589,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as EmbeddingsListResponse
       expect(result).toEqual({
         embeddings: [],
         count: 0,
@@ -621,9 +635,9 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
-      expect(result.embeddings[0].id).toBe(3)
-      expect(result.embeddings[1].id).toBe(1)
+      const result = (await res.json()) as EmbeddingsListResponse
+      expect(result.embeddings[0]?.id).toBe(3)
+      expect(result.embeddings[1]?.id).toBe(1)
     })
   })
 
@@ -636,7 +650,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as DeleteResponse
       expect(result).toEqual({ message: "Embedding deleted successfully" })
     })
 

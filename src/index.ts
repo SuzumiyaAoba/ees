@@ -81,7 +81,12 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 app.openapi(getAllEmbeddingsRoute, async (c) => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
-    const filters: any = {}
+    const filters: {
+      uri?: string
+      model_name?: string
+      page?: number
+      limit?: number
+    } = {}
 
     if (uri) {
       filters.uri = uri
