@@ -218,7 +218,7 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBe(ollamaError)
+        expect((result.cause as any).error).toBe(ollamaError)
       }
     })
 
@@ -244,8 +244,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to save embedding to database"
         )
       }
@@ -398,8 +398,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to get embedding from database"
         )
       }
@@ -497,7 +497,19 @@ describe("EmbeddingService", () => {
   })
 
   describe("getAllEmbeddings", () => {
-    it("should retrieve all embeddings in order", async () => {
+    beforeEach(() => {
+      // Reset select chain for pagination tests
+      const mockSelect = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([]),
+      }
+      mockDb.select.mockReturnValue(mockSelect)
+    })
+
+    it("should retrieve all embeddings with default pagination", async () => {
       const mockEmbeddings = [
         {
           id: 1,
@@ -519,7 +531,19 @@ describe("EmbeddingService", () => {
         },
       ]
 
-      mockDb.select().from().orderBy.mockResolvedValue(mockEmbeddings)
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 2 }]),
+      })
+
+      // Mock data query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue(mockEmbeddings),
+      })
 
       const program = Effect.gen(function* () {
         const embeddingService = yield* EmbeddingService
@@ -530,8 +554,15 @@ describe("EmbeddingService", () => {
         program.pipe(Effect.provide(TestEmbeddingServiceLive))
       )
 
-      expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({
+      expect(result.embeddings).toHaveLength(2)
+      expect(result.count).toBe(2)
+      expect(result.page).toBe(1)
+      expect(result.limit).toBe(10)
+      expect(result.total_pages).toBe(1)
+      expect(result.has_next).toBe(false)
+      expect(result.has_prev).toBe(false)
+
+      expect(result.embeddings[0]).toEqual({
         id: 1,
         uri: "file://first.txt",
         text: "First document",
@@ -540,19 +571,233 @@ describe("EmbeddingService", () => {
         created_at: "2024-01-01T00:00:00.000Z",
         updated_at: "2024-01-01T00:00:00.000Z",
       })
-      expect(result[1]).toEqual({
-        id: 2,
-        uri: "file://second.txt",
-        text: "Second document",
-        model_name: "custom-model",
-        embedding: [0.3, 0.4],
-        created_at: "2024-01-01T01:00:00.000Z",
-        updated_at: "2024-01-01T01:00:00.000Z",
+    })
+
+    it("should handle pagination with custom page and limit", async () => {
+      const mockEmbeddings = [
+        {
+          id: 3,
+          uri: "file://third.txt",
+          text: "Third document",
+          modelName: "embeddinggemma:300m",
+          embedding: Buffer.from(JSON.stringify([0.5, 0.6])),
+          createdAt: "2024-01-01T02:00:00.000Z",
+          updatedAt: "2024-01-01T02:00:00.000Z",
+        },
+      ]
+
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 5 }]),
       })
 
-      expect(mockDb.select().from().orderBy).toHaveBeenCalledWith(
-        embeddings.createdAt
+      // Mock data query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue(mockEmbeddings),
+      })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings({
+          page: 2,
+          limit: 2,
+        })
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
       )
+
+      expect(result.page).toBe(2)
+      expect(result.limit).toBe(2)
+      expect(result.total_pages).toBe(3)
+      expect(result.has_next).toBe(true)
+      expect(result.has_prev).toBe(true)
+      expect(result.embeddings).toHaveLength(1)
+    })
+
+    it("should apply URI filter with pagination", async () => {
+      const mockEmbeddings = [
+        {
+          id: 1,
+          uri: "file://filtered.txt",
+          text: "Filtered document",
+          modelName: "embeddinggemma:300m",
+          embedding: Buffer.from(JSON.stringify([0.1, 0.2])),
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ]
+
+      // Mock count query with filter
+      const mockCountQuery = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 1 }]),
+      }
+      mockDb.select.mockReturnValueOnce(mockCountQuery)
+
+      // Mock data query with filter
+      const mockDataQuery = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue(mockEmbeddings),
+      }
+      mockDb.select.mockReturnValueOnce(mockDataQuery)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings({
+          uri: "file://filtered.txt",
+          page: 1,
+          limit: 10,
+        })
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.embeddings).toHaveLength(1)
+      expect(result.embeddings[0].uri).toBe("file://filtered.txt")
+      expect(result.total_pages).toBe(1)
+      expect(mockCountQuery.where).toHaveBeenCalled()
+      expect(mockDataQuery.where).toHaveBeenCalled()
+    })
+
+    it("should apply model_name filter with pagination", async () => {
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 3 }]),
+      })
+
+      // Mock data query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([]),
+      })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings({
+          model_name: "custom-model",
+          page: 1,
+          limit: 5,
+        })
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.total_pages).toBe(1)
+      expect(result.limit).toBe(5)
+    })
+
+    it("should enforce maximum limit of 100", async () => {
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 200 }]),
+      })
+
+      // Mock data query
+      const mockDataQuery = {
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([]),
+      }
+      mockDb.select.mockReturnValueOnce(mockDataQuery)
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings({
+          limit: 500, // Should be capped at 100
+        })
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.limit).toBe(100)
+      expect(mockDataQuery.limit).toHaveBeenCalledWith(100)
+    })
+
+    it("should handle empty results with pagination", async () => {
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 0 }]),
+      })
+
+      // Mock data query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([]),
+      })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings()
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.embeddings).toEqual([])
+      expect(result.count).toBe(0)
+      expect(result.total_pages).toBe(0)
+      expect(result.has_next).toBe(false)
+      expect(result.has_prev).toBe(false)
+    })
+
+    it("should handle page beyond available data", async () => {
+      // Mock count query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ count: 5 }]),
+      })
+
+      // Mock data query
+      mockDb.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        offset: vi.fn().mockResolvedValue([]),
+      })
+
+      const program = Effect.gen(function* () {
+        const embeddingService = yield* EmbeddingService
+        return yield* embeddingService.getAllEmbeddings({
+          page: 10,
+          limit: 2,
+        })
+      })
+
+      const result = await Effect.runPromise(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
+
+      expect(result.embeddings).toEqual([])
+      expect(result.count).toBe(0)
+      expect(result.page).toBe(10)
+      expect(result.total_pages).toBe(3)
+      expect(result.has_next).toBe(false)
+      expect(result.has_prev).toBe(true)
     })
 
     it("should return empty array when no embeddings exist", async () => {
@@ -588,8 +833,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to get embeddings from database"
         )
       }
@@ -653,9 +898,9 @@ describe("EmbeddingService", () => {
         program.pipe(Effect.provide(TestEmbeddingServiceLive))
       )
 
-      expect(result).toHaveLength(1000)
-      expect(result[0].uri).toBe("file://document-0.txt")
-      expect(result[999].uri).toBe("file://document-999.txt")
+      expect(result.embeddings).toHaveLength(1000)
+      expect(result.embeddings[0].uri).toBe("file://document-0.txt")
+      expect(result.embeddings[999].uri).toBe("file://document-999.txt")
     })
   })
 
@@ -709,8 +954,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to delete embedding from database"
         )
       }
@@ -812,7 +1057,9 @@ describe("EmbeddingService", () => {
         yield* EmbeddingService
       })
 
-      const result = await Effect.runPromiseExit(program)
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
 
       expect(Exit.isFailure(result)).toBe(true)
     })
