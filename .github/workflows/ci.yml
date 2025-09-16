@@ -26,7 +26,8 @@ jobs:
     - name: Run linting
       run: npm run lint
 
-    # Temporarily skip type checking due to complex test mocking types
+    # Type checking is temporarily disabled due to Hono OpenAPI type compatibility issues
+    # and environment variable access patterns in strict TypeScript mode
     # - name: Run type checking
     #   run: npm run type-check
 
@@ -34,7 +35,7 @@ jobs:
       run: |
         export NODE_ENV=test
         # Run only basic tests that don't require external services or complex mocking
-        npx vitest run src/__tests__/schemas.test.ts src/__tests__/index.test.ts
+        npx vitest run src/__tests__/index.test.ts src/entities/embedding/__tests__/schemas.test.ts
 
     - name: Build application
       run: npm run build
