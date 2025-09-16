@@ -8,9 +8,6 @@ import type {
 } from "../types/embedding"
 
 // API response types for tests
-interface ErrorResponse {
-  error: string
-}
 
 interface DeleteResponse {
   message: string
@@ -86,7 +83,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500) // Current implementation returns 500 for validation errors
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toHaveProperty("error")
     })
 
@@ -101,7 +98,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toHaveProperty("error")
     })
 
@@ -116,7 +113,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toHaveProperty("error")
     })
 
@@ -184,7 +181,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Failed to create embedding" })
     })
 
@@ -196,7 +193,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toHaveProperty("error")
     })
 
@@ -278,7 +275,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(404)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Embedding not found" })
     })
 
@@ -311,7 +308,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Failed to retrieve embedding" })
     })
 
@@ -604,7 +601,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Failed to retrieve embeddings" })
     })
 
@@ -662,7 +659,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(404)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Embedding not found" })
     })
 
@@ -672,7 +669,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(400)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Invalid ID parameter" })
     })
 
@@ -682,7 +679,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(400)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Invalid ID parameter" })
     })
 
@@ -707,7 +704,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as any
+      const result = (await res.json()) as { error: string }
       expect(result).toEqual({ error: "Failed to delete embedding" })
     })
 

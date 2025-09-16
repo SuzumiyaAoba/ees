@@ -69,9 +69,11 @@ const calculateCosineSimilarity = (vecA: number[], vecB: number[]): number => {
   let normB = 0
 
   for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i]! * vecB[i]!
-    normA += vecA[i]! * vecA[i]!
-    normB += vecB[i]! * vecB[i]!
+    const a = vecA[i] ?? 0
+    const b = vecB[i] ?? 0
+    dotProduct += a * b
+    normA += a * a
+    normB += b * b
   }
 
   if (normA === 0 || normB === 0) {
@@ -88,7 +90,9 @@ const calculateEuclideanDistance = (vecA: number[], vecB: number[]): number => {
 
   let sum = 0
   for (let i = 0; i < vecA.length; i++) {
-    const diff = vecA[i]! - vecB[i]!
+    const a = vecA[i] ?? 0
+    const b = vecB[i] ?? 0
+    const diff = a - b
     sum += diff * diff
   }
 
@@ -102,7 +106,9 @@ const calculateDotProduct = (vecA: number[], vecB: number[]): number => {
 
   let dotProduct = 0
   for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i]! * vecB[i]!
+    const a = vecA[i] ?? 0
+    const b = vecB[i] ?? 0
+    dotProduct += a * b
   }
 
   return dotProduct
@@ -279,7 +285,7 @@ const make = Effect.gen(function* () {
         return null
       }
 
-      const row = result[0]!
+      const row = result[0]
       const embeddingData = row.embedding as unknown as Uint8Array
       const embedding = JSON.parse(
         Buffer.from(embeddingData).toString()
@@ -326,7 +332,7 @@ const make = Effect.gen(function* () {
           if (whereConditions.length > 0) {
             countQuery = countQuery.where(
               whereConditions.length === 1
-                ? whereConditions[0]!
+                ? whereConditions[0]
                 : and(...whereConditions)
             )
           }
@@ -350,7 +356,7 @@ const make = Effect.gen(function* () {
           if (whereConditions.length > 0) {
             query = query.where(
               whereConditions.length === 1
-                ? whereConditions[0]!
+                ? whereConditions[0]
                 : and(...whereConditions)
             )
           }
@@ -465,11 +471,7 @@ const make = Effect.gen(function* () {
               created_at: row.createdAt,
               updated_at: row.updatedAt,
             }
-          } catch (error) {
-            console.error(
-              `Failed to calculate similarity for embedding ${row.id}:`,
-              error
-            )
+          } catch (_error) {
             return null
           }
         })

@@ -63,8 +63,8 @@ describe("DatabaseService", () => {
     })
 
     it("should use memory database in test environment", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      process.env["NODE_ENV"] = "test"
+      const originalEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "test"
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -76,12 +76,12 @@ describe("DatabaseService", () => {
         url: ":memory:",
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
 
     it("should use file database in non-test environment", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      delete process.env["NODE_ENV"]
+      const originalEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = undefined
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -93,12 +93,12 @@ describe("DatabaseService", () => {
         url: expect.stringMatching(/^file:.*embeddings\.db$/),
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
 
     it("should create data directory if it doesn't exist", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      delete process.env["NODE_ENV"]
+      const originalEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = undefined
       vi.mocked(fs.existsSync).mockReturnValue(false)
 
       const program = Effect.gen(function* () {
@@ -112,14 +112,14 @@ describe("DatabaseService", () => {
         { recursive: true }
       )
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
 
     it("should use custom data directory from environment variable", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      const originalDataDir = process.env["EES_DATA_DIR"]
-      delete process.env["NODE_ENV"]
-      process.env["EES_DATA_DIR"] = "/custom/data/path"
+      const originalEnv = process.env.NODE_ENV
+      const originalDataDir = process.env.EES_DATA_DIR
+      process.env.NODE_ENV = undefined
+      process.env.EES_DATA_DIR = "/custom/data/path"
       vi.mocked(fs.existsSync).mockReturnValue(false)
 
       const program = Effect.gen(function* () {
@@ -135,17 +135,17 @@ describe("DatabaseService", () => {
         url: "file:/custom/data/path/embeddings.db",
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
       if (originalDataDir) {
-        process.env["EES_DATA_DIR"] = originalDataDir
+        process.env.EES_DATA_DIR = originalDataDir
       } else {
-        delete process.env["EES_DATA_DIR"]
+        process.env.EES_DATA_DIR = undefined
       }
     })
 
     it("should not create directory in test environment", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      process.env["NODE_ENV"] = "test"
+      const originalEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "test"
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -155,7 +155,7 @@ describe("DatabaseService", () => {
 
       expect(fs.mkdirSync).not.toHaveBeenCalled()
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
   })
 
@@ -201,16 +201,16 @@ describe("DatabaseService", () => {
         call[0].includes("CREATE TABLE")
       )
       expect(tableCreationCall).toBeDefined()
-      expect(tableCreationCall![0]).toContain("text TEXT NOT NULL")
-      expect(tableCreationCall![0]).toContain("uri TEXT NOT NULL UNIQUE")
-      expect(tableCreationCall![0]).toContain(
+      expect(tableCreationCall?.[0]).toContain("text TEXT NOT NULL")
+      expect(tableCreationCall?.[0]).toContain("uri TEXT NOT NULL UNIQUE")
+      expect(tableCreationCall?.[0]).toContain(
         "model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m'"
       )
-      expect(tableCreationCall![0]).toContain("embedding BLOB NOT NULL")
-      expect(tableCreationCall![0]).toContain(
+      expect(tableCreationCall?.[0]).toContain("embedding BLOB NOT NULL")
+      expect(tableCreationCall?.[0]).toContain(
         "created_at TEXT DEFAULT CURRENT_TIMESTAMP"
       )
-      expect(tableCreationCall![0]).toContain(
+      expect(tableCreationCall?.[0]).toContain(
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP"
       )
     })
@@ -227,13 +227,13 @@ describe("DatabaseService", () => {
       )
 
       expect(indexCalls).toHaveLength(3)
-      expect(indexCalls[0]![0]).toContain(
+      expect(indexCalls[0]?.[0]).toContain(
         "idx_embeddings_uri ON embeddings(uri)"
       )
-      expect(indexCalls[1]![0]).toContain(
+      expect(indexCalls[1]?.[0]).toContain(
         "idx_embeddings_created_at ON embeddings(created_at)"
       )
-      expect(indexCalls[2]![0]).toContain(
+      expect(indexCalls[2]?.[0]).toContain(
         "idx_embeddings_model_name ON embeddings(model_name)"
       )
     })
@@ -266,8 +266,8 @@ describe("DatabaseService", () => {
     })
 
     it("should handle directory creation failure", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      delete process.env["NODE_ENV"]
+      const originalEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = undefined
       vi.mocked(fs.existsSync).mockReturnValue(false)
       vi.mocked(fs.mkdirSync).mockImplementation(() => {
         throw new Error("Permission denied")
@@ -292,7 +292,7 @@ describe("DatabaseService", () => {
         )
       }
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
 
     it("should handle schema initialization failure", async () => {
@@ -342,10 +342,10 @@ describe("DatabaseService", () => {
 
   describe("Database configuration edge cases", () => {
     it("should handle empty EES_DATA_DIR environment variable", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      const originalDataDir = process.env["EES_DATA_DIR"]
-      delete process.env["NODE_ENV"]
-      process.env["EES_DATA_DIR"] = ""
+      const originalEnv = process.env.NODE_ENV
+      const originalDataDir = process.env.EES_DATA_DIR
+      process.env.NODE_ENV = undefined
+      process.env.EES_DATA_DIR = ""
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -358,19 +358,19 @@ describe("DatabaseService", () => {
         url: expect.stringMatching(/data.*embeddings\.db$/),
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
       if (originalDataDir) {
-        process.env["EES_DATA_DIR"] = originalDataDir
+        process.env.EES_DATA_DIR = originalDataDir
       } else {
-        delete process.env["EES_DATA_DIR"]
+        process.env.EES_DATA_DIR = undefined
       }
     })
 
     it("should handle whitespace-only EES_DATA_DIR", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      const originalDataDir = process.env["EES_DATA_DIR"]
-      delete process.env["NODE_ENV"]
-      process.env["EES_DATA_DIR"] = "   "
+      const originalEnv = process.env.NODE_ENV
+      const originalDataDir = process.env.EES_DATA_DIR
+      process.env.NODE_ENV = undefined
+      process.env.EES_DATA_DIR = "   "
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -383,19 +383,19 @@ describe("DatabaseService", () => {
         url: "file:   /embeddings.db",
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
       if (originalDataDir) {
-        process.env["EES_DATA_DIR"] = originalDataDir
+        process.env.EES_DATA_DIR = originalDataDir
       } else {
-        delete process.env["EES_DATA_DIR"]
+        process.env.EES_DATA_DIR = undefined
       }
     })
 
     it("should handle relative path in EES_DATA_DIR", async () => {
-      const originalEnv = process.env["NODE_ENV"]
-      const originalDataDir = process.env["EES_DATA_DIR"]
-      delete process.env["NODE_ENV"]
-      process.env["EES_DATA_DIR"] = "./relative/path"
+      const originalEnv = process.env.NODE_ENV
+      const originalDataDir = process.env.EES_DATA_DIR
+      process.env.NODE_ENV = undefined
+      process.env.EES_DATA_DIR = "./relative/path"
 
       const program = Effect.gen(function* () {
         yield* DatabaseService
@@ -407,22 +407,22 @@ describe("DatabaseService", () => {
         url: expect.stringMatching(/relative.*path.*embeddings\.db$/),
       })
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
       if (originalDataDir) {
-        process.env["EES_DATA_DIR"] = originalDataDir
+        process.env.EES_DATA_DIR = originalDataDir
       } else {
-        delete process.env["EES_DATA_DIR"]
+        process.env.EES_DATA_DIR = undefined
       }
     })
 
     it("should handle NODE_ENV case variations", async () => {
-      const originalEnv = process.env["NODE_ENV"]
+      const originalEnv = process.env.NODE_ENV
 
       // Test various test environment indicators
       const testVariations = ["test", "TEST", "Test", "testing"]
 
       for (const testEnv of testVariations) {
-        process.env["NODE_ENV"] = testEnv
+        process.env.NODE_ENV = testEnv
 
         const program = Effect.gen(function* () {
           yield* DatabaseService
@@ -448,7 +448,7 @@ describe("DatabaseService", () => {
         mockClient.execute.mockResolvedValue({ rows: [] })
       }
 
-      process.env["NODE_ENV"] = originalEnv
+      process.env.NODE_ENV = originalEnv
     })
   })
 
@@ -480,7 +480,9 @@ describe("DatabaseService", () => {
     })
 
     it("should log successful initialization", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+        // Mock implementation
+      })
 
       const program = Effect.gen(function* () {
         yield* DatabaseService

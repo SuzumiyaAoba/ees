@@ -55,9 +55,7 @@ const make = Effect.gen(function* () {
   const pullModel = (modelName = "embeddinggemma:300m") =>
     Effect.tryPromise({
       try: async () => {
-        console.log(`Pulling model ${modelName}...`)
         await ollama.pull({ model: modelName })
-        console.log(`Model ${modelName} pulled successfully`)
       },
       catch: (error) =>
         new OllamaModelError({
