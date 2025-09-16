@@ -1,5 +1,17 @@
 import { z } from "@hono/zod-openapi"
 
+// Internal data validation schemas
+export const EmbeddingVectorSchema = z
+  .array(z.number())
+  .refine((arr) => arr.length > 0, {
+    message: "Embedding vector must not be empty",
+  })
+
+export const StoredEmbeddingDataSchema = z.union([
+  z.instanceof(Uint8Array),
+  z.string(),
+])
+
 // Request schemas
 export const CreateEmbeddingRequestSchema = z
   .object({
