@@ -1,17 +1,17 @@
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import app from "../index"
-import type {
-  CreateEmbeddingResponse,
-  Embedding,
-  EmbeddingsListResponse,
-} from "../types/embedding"
+// Type imports are handled by test-helpers now
+import {
+  CreateEmbeddingResponseSchema,
+  DeleteResponseSchema,
+  EmbeddingSchema,
+  EmbeddingsListResponseSchema,
+  ErrorResponseSchema,
+  parseJsonResponse,
+} from "../utils/test-helpers"
 
-// API response types for tests
-
-interface DeleteResponse {
-  message: string
-}
+// API response types for tests - now using test-helpers schemas
 
 // import type { EmbeddingService } from "../services/embedding"
 
@@ -68,7 +68,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as CreateEmbeddingResponse
+      const result = await parseJsonResponse(res, CreateEmbeddingResponseSchema)
       expect(result).toEqual(mockResponse)
     })
 
@@ -83,7 +83,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500) // Current implementation returns 500 for validation errors
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toHaveProperty("error")
     })
 
@@ -98,7 +98,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toHaveProperty("error")
     })
 
@@ -113,7 +113,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toHaveProperty("error")
     })
 
@@ -137,7 +137,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as CreateEmbeddingResponse
+      const result = await parseJsonResponse(res, CreateEmbeddingResponseSchema)
       expect(result.model_name).toBe("embeddinggemma:300m")
     })
 
@@ -162,7 +162,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as CreateEmbeddingResponse
+      const result = await parseJsonResponse(res, CreateEmbeddingResponseSchema)
       expect(result.model_name).toBe("custom-model:latest")
     })
 
@@ -181,7 +181,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Failed to create embedding" })
     })
 
@@ -193,7 +193,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toHaveProperty("error")
     })
 
@@ -262,7 +262,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as Embedding
+      const result = await parseJsonResponse(res, EmbeddingSchema)
       expect(result).toEqual(mockEmbedding)
       expect(result).toHaveProperty("text")
       expect(result.text).toBe("Test document content")
@@ -275,7 +275,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(404)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Embedding not found" })
     })
 
@@ -308,7 +308,7 @@ describe("API Endpoints", () => {
       const res = await app.request(`/embeddings/${encodedUri}`)
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Failed to retrieve embedding" })
     })
 
@@ -369,7 +369,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result).toHaveProperty("embeddings")
       expect(result).toHaveProperty("count")
       expect(result).toHaveProperty("page")
@@ -412,7 +412,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?page=2&limit=2")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.page).toBe(2)
       expect(result.limit).toBe(2)
       expect(result.total_pages).toBe(3)
@@ -447,7 +447,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?uri=file://filtered.txt")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings).toHaveLength(1)
       expect(result.embeddings[0]?.uri).toBe("file://filtered.txt")
     })
@@ -480,7 +480,7 @@ describe("API Endpoints", () => {
       )
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings).toHaveLength(1)
       expect(result.embeddings[0]?.model_name).toBe("custom-model:latest")
     })
@@ -501,7 +501,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings).toEqual([])
       expect(result.count).toBe(0)
       expect(result.total_pages).toBe(0)
@@ -525,7 +525,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings?page=10&limit=2")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings).toEqual([])
       expect(result.count).toBe(0)
       expect(result.page).toBe(10)
@@ -572,7 +572,7 @@ describe("API Endpoints", () => {
       )
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings).toHaveLength(1)
       expect(result.embeddings[0]?.uri).toBe("file://combined.txt")
       expect(result.embeddings[0]?.model_name).toBe("embeddinggemma:300m")
@@ -586,7 +586,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result).toEqual({
         embeddings: [],
         count: 0,
@@ -601,7 +601,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Failed to retrieve embeddings" })
     })
 
@@ -632,7 +632,7 @@ describe("API Endpoints", () => {
       const res = await app.request("/embeddings")
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as EmbeddingsListResponse
+      const result = await parseJsonResponse(res, EmbeddingsListResponseSchema)
       expect(result.embeddings[0]?.id).toBe(3)
       expect(result.embeddings[1]?.id).toBe(1)
     })
@@ -647,7 +647,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(200)
-      const result = (await res.json()) as DeleteResponse
+      const result = await parseJsonResponse(res, DeleteResponseSchema)
       expect(result).toEqual({ message: "Embedding deleted successfully" })
     })
 
@@ -659,7 +659,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(404)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Embedding not found" })
     })
 
@@ -669,7 +669,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(400)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Invalid ID parameter" })
     })
 
@@ -679,7 +679,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(400)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Invalid ID parameter" })
     })
 
@@ -704,7 +704,7 @@ describe("API Endpoints", () => {
       })
 
       expect(res.status).toBe(500)
-      const result = (await res.json()) as { error: string }
+      const result = await parseJsonResponse(res, ErrorResponseSchema)
       expect(result).toEqual({ error: "Failed to delete embedding" })
     })
 

@@ -13,6 +13,7 @@ import type {
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
 } from "../types/embedding"
+import { parseStoredEmbeddingData } from "../utils/embedding-data"
 import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {
@@ -286,10 +287,19 @@ const make = Effect.gen(function* () {
       }
 
       const row = result[0]
-      const embeddingData = row.embedding as unknown as Uint8Array
-      const embedding = JSON.parse(
-        Buffer.from(embeddingData).toString()
-      ) as number[]
+      if (!row) {
+        return null
+      }
+
+      const embedding = yield* parseStoredEmbeddingData(row.embedding).pipe(
+        Effect.mapError(
+          (error) =>
+            new DatabaseQueryError({
+              message: `Failed to parse embedding data for URI ${row.uri}`,
+              cause: error,
+            })
+        )
+      )
 
       return {
         id: row.id,
@@ -370,22 +380,28 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      const embeddingsData = result.map((row) => {
-        const embeddingData = row.embedding as unknown as Uint8Array
-        const embedding = JSON.parse(
-          Buffer.from(embeddingData).toString()
-        ) as number[]
-
-        return {
-          id: row.id,
-          uri: row.uri,
-          text: row.text,
-          model_name: row.modelName,
-          embedding,
-          created_at: row.createdAt,
-          updated_at: row.updatedAt,
-        }
-      })
+      const embeddingsData = yield* Effect.all(
+        result.map((row) =>
+          parseStoredEmbeddingData(row.embedding).pipe(
+            Effect.map((embedding) => ({
+              id: row.id,
+              uri: row.uri,
+              text: row.text,
+              model_name: row.modelName,
+              embedding,
+              created_at: row.createdAt,
+              updated_at: row.updatedAt,
+            })),
+            Effect.mapError(
+              (error) =>
+                new DatabaseQueryError({
+                  message: `Failed to parse embedding data for URI ${row.uri}`,
+                  cause: error,
+                })
+            )
+          )
+        )
+      )
 
       const totalPages = Math.ceil(totalCount / limit)
       const hasNext = page < totalPages
@@ -461,10 +477,16 @@ const make = Effect.gen(function* () {
 
       // Process embeddings and use a min-heap approach for efficiency
       for (const row of allEmbeddings) {
-        const embeddingData = row.embedding as unknown as Uint8Array
-        const storedEmbedding = JSON.parse(
-          Buffer.from(embeddingData).toString()
-        ) as number[]
+        const storedEmbeddingResult = yield* parseStoredEmbeddingData(
+          row.embedding
+        ).pipe(Effect.either)
+
+        if (storedEmbeddingResult._tag === "Left") {
+          // Skip invalid embeddings, continue processing others
+          continue
+        }
+
+        const storedEmbedding = storedEmbeddingResult.right
 
         try {
           const similarity = calculateSimilarity(
@@ -495,17 +517,18 @@ const make = Effect.gen(function* () {
             if (candidateResults.length === limit) {
               candidateResults.sort((a, b) => b.similarity - a.similarity)
             }
-          } else if (
-            similarity >
-            candidateResults[candidateResults.length - 1].similarity
-          ) {
-            // Only add if better than the worst in our top-k
-            candidateResults[candidateResults.length - 1] = result
-            // Re-sort to maintain order (could be optimized with a proper heap)
-            candidateResults.sort((a, b) => b.similarity - a.similarity)
+          } else {
+            const lastIndex = candidateResults.length - 1
+            const lastResult = candidateResults[lastIndex]
+            if (lastResult && similarity > lastResult.similarity) {
+              // Only add if better than the worst in our top-k
+              candidateResults[lastIndex] = result
+              // Re-sort to maintain order (could be optimized with a proper heap)
+              candidateResults.sort((a, b) => b.similarity - a.similarity)
+            }
           }
         } catch (_error) {
-          // Skip invalid embeddings
+          // Skip invalid similarity calculations
         }
       }
 
