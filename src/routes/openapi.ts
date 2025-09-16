@@ -1,5 +1,7 @@
 import { createRoute } from "@hono/zod-openapi"
 import {
+  BatchCreateEmbeddingRequestSchema,
+  BatchCreateEmbeddingResponseSchema,
   CreateEmbeddingRequestSchema,
   CreateEmbeddingResponseSchema,
   DeleteEmbeddingResponseSchema,
@@ -173,6 +175,52 @@ export const deleteEmbeddingRoute = createRoute({
       content: {
         "application/json": {
           schema: NotFoundResponseSchema,
+        },
+      },
+    },
+    500: {
+      description: "Internal server error",
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+})
+
+// Batch create embeddings
+export const createBatchEmbeddingRoute = createRoute({
+  method: "post",
+  path: "/embeddings/batch",
+  tags: ["Embeddings"],
+  summary: "Create multiple embeddings",
+  description:
+    "Generate and store embeddings for multiple text contents in a single request",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: BatchCreateEmbeddingRequestSchema,
+        },
+      },
+      description: "Batch embedding creation request",
+    },
+  },
+  responses: {
+    200: {
+      description: "Batch embedding processing completed",
+      content: {
+        "application/json": {
+          schema: BatchCreateEmbeddingResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid request body",
+      content: {
+        "application/json": {
+          schema: ValidationErrorResponseSchema,
         },
       },
     },

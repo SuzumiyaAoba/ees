@@ -18,6 +18,33 @@ export const CreateEmbeddingRequestSchema = z
   })
   .openapi("CreateEmbeddingRequest")
 
+export const BatchCreateEmbeddingRequestSchema = z
+  .object({
+    texts: z
+      .array(
+        z.object({
+          uri: z.string().min(1).openapi({
+            description: "Unique identifier for the resource being embedded",
+            example: "file://document1.txt",
+          }),
+          text: z.string().min(1).openapi({
+            description: "Text content to generate embedding for",
+            example: "This is the first document content.",
+          }),
+        })
+      )
+      .min(1)
+      .max(100)
+      .openapi({
+        description: "Array of texts to process (max 100 items)",
+      }),
+    model_name: z.string().optional().default("embeddinggemma:300m").openapi({
+      description: "Name of the embedding model to use for all texts",
+      example: "embeddinggemma:300m",
+    }),
+  })
+  .openapi("BatchCreateEmbeddingRequest")
+
 export const UriParamSchema = z.object({
   uri: z.string().openapi({
     param: { name: "uri", in: "path" },
@@ -99,6 +126,51 @@ export const CreateEmbeddingResponseSchema = z
     }),
   })
   .openapi("CreateEmbeddingResponse")
+
+export const BatchCreateEmbeddingResponseSchema = z
+  .object({
+    results: z
+      .array(
+        z.object({
+          id: z.number().openapi({
+            description: "Unique identifier of the created embedding",
+            example: 123,
+          }),
+          uri: z.string().openapi({
+            description: "Resource URI",
+            example: "file://document1.txt",
+          }),
+          model_name: z.string().openapi({
+            description: "Model used for embedding generation",
+            example: "embeddinggemma:300m",
+          }),
+          status: z.enum(["success", "error"]).openapi({
+            description: "Processing status",
+            example: "success",
+          }),
+          error: z.string().optional().openapi({
+            description: "Error message if processing failed",
+            example: "Failed to generate embedding",
+          }),
+        })
+      )
+      .openapi({
+        description: "Array of processing results",
+      }),
+    total: z.number().openapi({
+      description: "Total number of texts processed",
+      example: 5,
+    }),
+    successful: z.number().openapi({
+      description: "Number of successfully processed texts",
+      example: 4,
+    }),
+    failed: z.number().openapi({
+      description: "Number of failed texts",
+      example: 1,
+    }),
+  })
+  .openapi("BatchCreateEmbeddingResponse")
 
 export const EmbeddingSchema = z
   .object({

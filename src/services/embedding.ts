@@ -5,6 +5,8 @@ import { embeddings } from "../database/schema"
 import { DatabaseQueryError } from "../errors/database"
 import type { OllamaModelError } from "../errors/ollama"
 import type {
+  BatchCreateEmbeddingRequest,
+  BatchCreateEmbeddingResponse,
   CreateEmbeddingResponse,
   Embedding,
   EmbeddingsListResponse,
@@ -18,6 +20,13 @@ export interface EmbeddingService {
     modelName?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
+    OllamaModelError | DatabaseQueryError
+  >
+
+  readonly createBatchEmbedding: (
+    request: BatchCreateEmbeddingRequest
+  ) => Effect.Effect<
+    BatchCreateEmbeddingResponse,
     OllamaModelError | DatabaseQueryError
   >
 
@@ -89,6 +98,89 @@ const make = Effect.gen(function* () {
         uri,
         model_name: modelName,
         message: "Embedding created successfully",
+      }
+    })
+
+  const createBatchEmbedding = (request: BatchCreateEmbeddingRequest) =>
+    Effect.gen(function* () {
+      const { texts, model_name = "embeddinggemma:300m" } = request
+      const results: BatchCreateEmbeddingResponse["results"] = []
+      let successful = 0
+      let failed = 0
+
+      // Process each text individually
+      for (const { uri, text } of texts) {
+        // Try to create embedding, catch all errors at this level
+        const result = yield* Effect.gen(function* () {
+          // Generate embedding using Ollama
+          const embedding = yield* ollamaService.generateEmbedding(
+            text,
+            model_name
+          )
+
+          // Convert embedding array to binary data for storage
+          const embeddingBuffer = Buffer.from(JSON.stringify(embedding))
+
+          // Insert or update embedding in database
+          const insertResult = yield* Effect.tryPromise({
+            try: () =>
+              db
+                .insert(embeddings)
+                .values({
+                  uri,
+                  text,
+                  modelName: model_name,
+                  embedding: embeddingBuffer,
+                })
+                .onConflictDoUpdate({
+                  target: embeddings.uri,
+                  set: {
+                    text,
+                    modelName: model_name,
+                    embedding: embeddingBuffer,
+                    updatedAt: new Date().toISOString(),
+                  },
+                })
+                .returning({ id: embeddings.id }),
+            catch: (error) =>
+              new DatabaseQueryError({
+                message: `Failed to save embedding for URI ${uri}`,
+                cause: error,
+              }),
+          })
+
+          return {
+            id: insertResult[0]?.id ?? 0,
+            uri,
+            model_name,
+            status: "success" as const,
+          }
+        }).pipe(
+          Effect.catchAll((error) =>
+            Effect.succeed({
+              id: 0,
+              uri,
+              model_name,
+              status: "error" as const,
+              error: error instanceof Error ? error.message : "Unknown error",
+            })
+          )
+        )
+
+        results.push(result)
+
+        if (result.status === "success") {
+          successful++
+        } else {
+          failed++
+        }
+      }
+
+      return {
+        results,
+        total: texts.length,
+        successful,
+        failed,
       }
     })
 
@@ -241,6 +333,7 @@ const make = Effect.gen(function* () {
 
   return {
     createEmbedding,
+    createBatchEmbedding,
     getEmbedding,
     getAllEmbeddings,
     deleteEmbedding,

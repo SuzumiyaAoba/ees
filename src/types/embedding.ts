@@ -14,6 +14,27 @@ export interface CreateEmbeddingRequest {
   model_name?: string
 }
 
+export interface BatchCreateEmbeddingRequest {
+  texts: Array<{
+    uri: string
+    text: string
+  }>
+  model_name?: string
+}
+
+export interface BatchCreateEmbeddingResponse {
+  results: Array<{
+    id: number
+    uri: string
+    model_name: string
+    status: "success" | "error"
+    error?: string
+  }>
+  total: number
+  successful: number
+  failed: number
+}
+
 export interface CreateEmbeddingResponse {
   id: number
   uri: string
