@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
 import { AppLayer } from "./layers/main"
 import {
+  createBatchEmbeddingRoute,
   createEmbeddingRoute,
   deleteEmbeddingRoute,
   getAllEmbeddingsRoute,
@@ -42,6 +43,33 @@ app.openapi(createEmbeddingRoute, async (c) => {
   } catch (error) {
     console.error("Embedding creation error:", error)
     return c.json({ error: "Failed to create embedding" }, 500)
+  }
+})
+
+// Batch create embeddings
+app.openapi(createBatchEmbeddingRoute, async (c) => {
+  try {
+    const request = c.req.valid("json")
+
+    const program = Effect.gen(function* () {
+      const embeddingService = yield* EmbeddingService
+      return yield* embeddingService.createBatchEmbedding(request)
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(AppLayer),
+        Effect.catchAll((error) => {
+          console.error("Batch embedding creation error:", error)
+          return Effect.fail(new Error("Failed to create batch embeddings"))
+        })
+      )
+    )
+
+    return c.json(result)
+  } catch (error) {
+    console.error("Batch embedding creation error:", error)
+    return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
 
