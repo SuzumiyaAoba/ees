@@ -34,8 +34,7 @@ jobs:
     - name: Run tests
       run: |
         export NODE_ENV=test
-        # Run only basic tests that don't require external services or complex mocking
-        npx vitest run src/__tests__/index.test.ts src/entities/embedding/__tests__/schemas.test.ts
+        npm run test:run
 
     - name: Build application
       run: npm run build
