@@ -59,7 +59,7 @@ export const EmbeddingQuerySchema = z.object({
     .regex(/^\d+$/)
     .transform((val) => Number(val))
     .optional()
-    .default("1")
+    .default(1)
     .openapi({
       param: { name: "page", in: "query" },
       description: "Page number (starts from 1)",
@@ -70,7 +70,7 @@ export const EmbeddingQuerySchema = z.object({
     .regex(/^\d+$/)
     .transform((val) => Number(val))
     .optional()
-    .default("10")
+    .default(10)
     .openapi({
       param: { name: "limit", in: "query" },
       description: "Number of items per page (max 100)",

@@ -45,6 +45,8 @@ The only exceptions are:
 - `npm run format` - Format code with Biome
 - `npm run type-check` - TypeScript type checking without emitting files
 
+**MANDATORY QUALITY CHECKS**: After any implementation or code change, you MUST run `npm run type-check` and `npm run lint` to ensure no errors exist. If errors occur, fix the problematic parts before proceeding or committing changes. This is a strict requirement for all development work.
+
 ### Git Workflow
 Before developing:
 1. Ensure you're on the correct branch (check current branch name)

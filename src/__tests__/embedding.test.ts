@@ -218,7 +218,7 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBe(ollamaError)
+        expect((result.cause as any).error).toBe(ollamaError)
       }
     })
 
@@ -244,8 +244,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to save embedding to database"
         )
       }
@@ -398,8 +398,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to get embedding from database"
         )
       }
@@ -833,8 +833,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to get embeddings from database"
         )
       }
@@ -898,9 +898,9 @@ describe("EmbeddingService", () => {
         program.pipe(Effect.provide(TestEmbeddingServiceLive))
       )
 
-      expect(result).toHaveLength(1000)
-      expect(result[0].uri).toBe("file://document-0.txt")
-      expect(result[999].uri).toBe("file://document-999.txt")
+      expect(result.embeddings).toHaveLength(1000)
+      expect(result.embeddings[0].uri).toBe("file://document-0.txt")
+      expect(result.embeddings[999].uri).toBe("file://document-999.txt")
     })
   })
 
@@ -954,8 +954,8 @@ describe("EmbeddingService", () => {
       expect(Exit.isFailure(result)).toBe(true)
       if (Exit.isFailure(result)) {
         expect(result.cause._tag).toBe("Fail")
-        expect(result.cause.error).toBeInstanceOf(DatabaseQueryError)
-        expect(result.cause.error.message).toBe(
+        expect((result.cause as any).error).toBeInstanceOf(DatabaseQueryError)
+        expect((result.cause as any).error.message).toBe(
           "Failed to delete embedding from database"
         )
       }
@@ -1057,7 +1057,9 @@ describe("EmbeddingService", () => {
         yield* EmbeddingService
       })
 
-      const result = await Effect.runPromiseExit(program)
+      const result = await Effect.runPromiseExit(
+        program.pipe(Effect.provide(TestEmbeddingServiceLive))
+      )
 
       expect(Exit.isFailure(result)).toBe(true)
     })

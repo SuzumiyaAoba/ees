@@ -81,7 +81,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 app.openapi(getAllEmbeddingsRoute, async (c) => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
-    const filters = {}
+    const filters: any = {}
 
     if (uri) {
       filters.uri = uri
@@ -180,7 +180,7 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
-  const port = Number(process.env.PORT) || 3000
+  const port = Number(process.env["PORT"]) || 3000
   console.log(`🚀 EES API Server starting on port ${port}`)
 
   // Use Hono's serve method for Node.js

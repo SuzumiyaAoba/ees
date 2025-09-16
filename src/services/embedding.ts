@@ -92,7 +92,7 @@ const make = Effect.gen(function* () {
       })
 
       return {
-        id: result[0]?.id,
+        id: result[0]?.id ?? 0,
         uri,
         model_name: modelName,
         message: "Embedding created successfully",
@@ -144,7 +144,7 @@ const make = Effect.gen(function* () {
       const offset = (page - 1) * limit
 
       // Build where conditions based on filters
-      const whereConditions = []
+      const whereConditions: any[] = []
       if (filters?.uri) {
         whereConditions.push(eq(embeddings.uri, filters.uri))
       }
@@ -164,7 +164,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]!
                 : and(...whereConditions)
-            )
+            ) as any
           }
 
           return countQuery
@@ -188,7 +188,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]!
                 : and(...whereConditions)
-            )
+            ) as any
           }
 
           return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
