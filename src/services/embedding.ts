@@ -1,10 +1,14 @@
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import { DatabaseService, DatabaseServiceLive } from "../database/connection"
 import { embeddings } from "../database/schema"
 import { DatabaseQueryError } from "../errors/database"
 import type { OllamaModelError } from "../errors/ollama"
-import type { CreateEmbeddingResponse } from "../types/embedding"
+import type {
+  CreateEmbeddingResponse,
+  Embedding,
+  EmbeddingsListResponse,
+} from "../types/embedding"
 import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {
@@ -19,25 +23,14 @@ export interface EmbeddingService {
 
   readonly getEmbedding: (
     uri: string
-  ) => Effect.Effect<any | null, DatabaseQueryError>
+  ) => Effect.Effect<Embedding | null, DatabaseQueryError>
 
   readonly getAllEmbeddings: (filters?: {
     uri?: string
     model_name?: string
     page?: number
     limit?: number
-  }) => Effect.Effect<
-    {
-      embeddings: any[]
-      count: number
-      page: number
-      limit: number
-      total_pages: number
-      has_next: boolean
-      has_prev: boolean
-    },
-    DatabaseQueryError
-  >
+  }) => Effect.Effect<EmbeddingsListResponse, DatabaseQueryError>
 
   readonly deleteEmbedding: (
     id: number
@@ -144,7 +137,7 @@ const make = Effect.gen(function* () {
       const offset = (page - 1) * limit
 
       // Build where conditions based on filters
-      const whereConditions: any[] = []
+      const whereConditions: SQL<unknown>[] = []
       if (filters?.uri) {
         whereConditions.push(eq(embeddings.uri, filters.uri))
       }
@@ -164,7 +157,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]!
                 : and(...whereConditions)
-            ) as any
+            )
           }
 
           return countQuery
@@ -188,7 +181,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]!
                 : and(...whereConditions)
-            ) as any
+            )
           }
 
           return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
