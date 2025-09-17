@@ -83,5 +83,5 @@ export interface SearchEmbeddingResponse {
   model_name: string
   metric: string
   count: number
-  threshold?: number
+  threshold: number | undefined
 }

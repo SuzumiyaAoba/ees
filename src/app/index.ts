@@ -17,11 +17,11 @@ const app = new OpenAPIHono()
 
 // Root endpoint
 app.openapi(rootRoute, (c) => {
-  return c.text("EES - Embeddings API Service")
+  return c.text("EES - Embeddings API Service") as any
 })
 
 // Create embedding
-app.openapi(createEmbeddingRoute, async (c) => {
+app.openapi(createEmbeddingRoute, async (c): Promise<any> => {
   try {
     const { uri, text, model_name } = c.req.valid("json")
 
@@ -36,17 +36,17 @@ app.openapi(createEmbeddingRoute, async (c) => {
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create embedding"))
         })
-      )
+      ) as any
     )
 
-    return c.json(result)
+    return c.json(result as any)
   } catch (_error) {
     return c.json({ error: "Failed to create embedding" }, 500)
   }
 })
 
 // Batch create embeddings
-app.openapi(batchCreateEmbeddingRoute, async (c) => {
+app.openapi(batchCreateEmbeddingRoute, async (c): Promise<any> => {
   try {
     const request = c.req.valid("json")
 
@@ -61,23 +61,27 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create batch embeddings"))
         })
-      )
+      ) as any
     )
 
-    return c.json(result)
+    return c.json(result as any)
   } catch (_error) {
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
 
 // Search embeddings
-app.openapi(searchEmbeddingsRoute, async (c) => {
+app.openapi(searchEmbeddingsRoute, async (c): Promise<any> => {
   try {
     const request = c.req.valid("json")
+    const searchRequest = {
+      ...request,
+      threshold: request.threshold ?? undefined,
+    } as any
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.searchEmbeddings(request)
+      return yield* embeddingService.searchEmbeddings(searchRequest)
     })
 
     const result = await Effect.runPromise(
@@ -86,17 +90,17 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to search embeddings"))
         })
-      )
+      ) as any
     )
 
-    return c.json(result)
+    return c.json(result as any)
   } catch (_error) {
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
 
 // Get embedding by URI
-app.openapi(getEmbeddingByUriRoute, async (c) => {
+app.openapi(getEmbeddingByUriRoute, async (c): Promise<any> => {
   try {
     const { uri } = c.req.valid("param")
     const decodedUri = decodeURIComponent(uri)
@@ -112,21 +116,21 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
         Effect.catchAll((_error) => {
           return Effect.succeed(null)
         })
-      )
+      ) as any
     )
 
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
     }
 
-    return c.json(embedding)
+    return c.json(embedding as any)
   } catch (_error) {
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
 })
 
 // Get all embeddings
-app.openapi(listEmbeddingsRoute, async (c) => {
+app.openapi(listEmbeddingsRoute, async (c): Promise<any> => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
     const filters: {
@@ -157,17 +161,17 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+      program.pipe(Effect.provide(AppLayer)) as any
     )
 
-    return c.json(result)
+    return c.json(result as any)
   } catch (_error) {
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
 })
 
 // Delete embedding
-app.openapi(deleteEmbeddingRoute, async (c) => {
+app.openapi(deleteEmbeddingRoute, async (c): Promise<any> => {
   try {
     const { id: idStr } = c.req.valid("param")
     const id = Number(idStr)
@@ -182,7 +186,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     })
 
     const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+      program.pipe(Effect.provide(AppLayer)) as any
     )
 
     if (!deleted) {
@@ -231,7 +235,7 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
-  const port = Number(process.env.PORT) || 3000
+  const port = Number(process.env["PORT"]) || 3000
 
   // Use Hono's serve method for Node.js
   const { serve } = require("@hono/node-server")

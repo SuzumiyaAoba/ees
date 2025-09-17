@@ -347,7 +347,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]
                 : and(...whereConditions)
-            )
+            ) as any
           }
 
           return countQuery
@@ -371,7 +371,7 @@ const make = Effect.gen(function* () {
               whereConditions.length === 1
                 ? whereConditions[0]
                 : and(...whereConditions)
-            )
+            ) as any
           }
 
           return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
@@ -561,7 +561,7 @@ const make = Effect.gen(function* () {
   } as const
 })
 
-export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
-  Layer.provide(OllamaServiceLive),
-  Layer.provide(DatabaseServiceLive)
-)
+export const EmbeddingServiceLive = Layer.effect(
+  EmbeddingService,
+  make as any
+).pipe(Layer.provide(OllamaServiceLive), Layer.provide(DatabaseServiceLive))

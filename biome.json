@@ -28,6 +28,35 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/app/index.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "complexity": {
+            "useLiteralKeys": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/entities/embedding/api/embedding.ts",
+        "src/shared/database/connection.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "complexity": {
+            "useLiteralKeys": "off"
+          }
+        }
+      }
     }
   ],
   "formatter": {

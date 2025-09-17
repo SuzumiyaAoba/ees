@@ -26,15 +26,13 @@ jobs:
     - name: Run linting
       run: npm run lint
 
-    # Type checking is temporarily disabled due to Hono OpenAPI type compatibility issues
-    # and environment variable access patterns in strict TypeScript mode
-    # - name: Run type checking
-    #   run: npm run type-check
+    - name: Run type checking
+      run: npm run type-check
 
     - name: Run tests
       run: |
         export NODE_ENV=test
-        npm run test:run
+        npm test
 
     - name: Build application
       run: npm run build

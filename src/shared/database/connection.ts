@@ -14,10 +14,10 @@ export const DatabaseService =
   Context.GenericTag<DatabaseService>("DatabaseService")
 
 const make = Effect.gen(function* () {
-  const isTest = process.env.NODE_ENV === "test"
+  const isTest = process.env["NODE_ENV"] === "test"
 
   // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
-  const dataDir = process.env.EES_DATA_DIR || resolve(process.cwd(), "data")
+  const dataDir = process.env["EES_DATA_DIR"] || resolve(process.cwd(), "data")
   const DB_PATH = isTest ? ":memory:" : resolve(dataDir, "embeddings.db")
 
   // Ensure data directory exists for non-test environments
