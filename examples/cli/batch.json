@@ -1,0 +1,14 @@
+[
+  {
+    "uri": "doc1",
+    "text": "This is the first document for batch processing."
+  },
+  {
+    "uri": "doc2",
+    "text": "This is the second document for batch processing."
+  },
+  {
+    "uri": "doc3",
+    "text": "This is the third document for batch processing."
+  }
+]

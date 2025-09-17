@@ -1,0 +1,7 @@
+This is a sample text file that can be used with the CLI create command.
+It demonstrates how to read text content from a file for embedding generation.
+
+The CLI supports multiple input methods:
+1. Direct text parameter
+2. Reading from files (like this one)
+3. Reading from stdin (interactive mode)
