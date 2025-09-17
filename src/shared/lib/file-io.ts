@@ -23,18 +23,26 @@ export function readTextFile(filePath: string): Effect.Effect<string, Error> {
 export function readStdin(): Effect.Effect<string, Error> {
   return Effect.tryPromise({
     try: async () => {
-      const rl = createInterface({
-        input: process.stdin,
-        output: process.stdout,
+      return new Promise<string>((resolve, reject) => {
+        const rl = createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        })
+
+        const lines: string[] = []
+
+        rl.on("line", (line: string) => {
+          lines.push(line)
+        })
+
+        rl.on("close", () => {
+          resolve(lines.join("\n"))
+        })
+
+        rl.on("error", (error: Error) => {
+          reject(error)
+        })
       })
-
-      const lines: string[] = []
-
-      for await (const line of rl) {
-        lines.push(line)
-      }
-
-      return lines.join("\n")
     },
     catch: (error) => new Error(`Failed to read from stdin: ${error}`),
   })
@@ -54,12 +62,17 @@ export function parseBatchFile(
   return Effect.gen(function* () {
     const content = yield* readTextFile(filePath)
 
+    // First try to parse as JSON array
     try {
-      // Try to parse as JSON array first
       const parsed = JSON.parse(content)
       if (Array.isArray(parsed)) {
         return parsed.map((item, index) => {
-          if (typeof item !== "object" || !item.uri || !item.text) {
+          if (
+            typeof item !== "object" ||
+            item === null ||
+            !item.uri ||
+            !item.text
+          ) {
             throw new Error(
               `Invalid batch entry at index ${index}: must have 'uri' and 'text' fields`
             )
@@ -70,32 +83,41 @@ export function parseBatchFile(
           }
         })
       }
+      throw new Error("JSON root element is not an array")
+    } catch (_jsonError) {
+      // If JSON parsing fails, try to parse as newline-delimited JSON
+      try {
+        const lines = content
+          .trim()
+          .split("\n")
+          .filter((line) => line.trim())
 
-      // If not an array, try to parse as newline-delimited JSON
-      const lines = content
-        .trim()
-        .split("\n")
-        .filter((line) => line.trim())
-      return lines.map((line, index) => {
-        try {
-          const item = JSON.parse(line)
-          if (typeof item !== "object" || !item.uri || !item.text) {
-            throw new Error(
-              `Invalid batch entry at line ${index + 1}: must have 'uri' and 'text' fields`
-            )
+        return lines.map((line, index) => {
+          try {
+            const item = JSON.parse(line)
+            if (
+              typeof item !== "object" ||
+              item === null ||
+              !item.uri ||
+              !item.text
+            ) {
+              throw new Error(
+                `Invalid batch entry at line ${index + 1}: must have 'uri' and 'text' fields`
+              )
+            }
+            return {
+              uri: String(item.uri),
+              text: String(item.text),
+            }
+          } catch (parseError) {
+            throw new Error(`Invalid JSON at line ${index + 1}: ${parseError}`)
           }
-          return {
-            uri: String(item.uri),
-            text: String(item.text),
-          }
-        } catch (parseError) {
-          throw new Error(`Invalid JSON at line ${index + 1}: ${parseError}`)
-        }
-      })
-    } catch (parseError) {
-      return yield* Effect.fail(
-        new Error(`Failed to parse batch file ${filePath}: ${parseError}`)
-      )
+        })
+      } catch (ndjsonError) {
+        return yield* Effect.fail(
+          new Error(`Failed to parse batch file ${filePath}: ${ndjsonError}`)
+        )
+      }
     }
   })
 }

@@ -110,7 +110,19 @@ const make = Effect.gen(function* () {
     modelName?: string
     page?: number
     limit?: number
-  }) => embeddingService.getAllEmbeddings(filters)
+  }) =>
+    embeddingService.getAllEmbeddings(
+      filters
+        ? {
+            ...(filters.uri !== undefined && { uri: filters.uri }),
+            ...(filters.modelName !== undefined && {
+              model_name: filters.modelName,
+            }),
+            ...(filters.page !== undefined && { page: filters.page }),
+            ...(filters.limit !== undefined && { limit: filters.limit }),
+          }
+        : undefined
+    )
 
   const deleteEmbedding = (id: number) => embeddingService.deleteEmbedding(id)
 
