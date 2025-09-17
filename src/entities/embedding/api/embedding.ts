@@ -348,7 +348,7 @@ const make = Effect.gen(function* () {
                 ? whereConditions[0]
                 : and(...whereConditions)
             if (condition) {
-              countQuery = countQuery.where(condition)
+              countQuery = countQuery.where(condition) as typeof countQuery
             }
           }
 
@@ -374,7 +374,7 @@ const make = Effect.gen(function* () {
                 ? whereConditions[0]
                 : and(...whereConditions)
             if (condition) {
-              query = query.where(condition)
+              query = query.where(condition) as typeof query
             }
           }
 

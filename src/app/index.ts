@@ -17,6 +17,7 @@ import {
   listEmbeddingsRoute,
 } from "../features/list-embeddings"
 import { searchEmbeddingsRoute } from "../features/search-embeddings"
+import { getPort } from "../shared/lib/env"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
 
@@ -238,7 +239,7 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
-  const port = Number(process.env.PORT) || 3000
+  const port = getPort(3000)
 
   // Use Hono's serve method for Node.js
   const { serve } = require("@hono/node-server")
