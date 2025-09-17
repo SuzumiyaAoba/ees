@@ -47,6 +47,27 @@ The only exceptions are:
 
 **MANDATORY QUALITY CHECKS**: After any implementation or code change, you MUST run `npm run type-check` and `npm run lint` to ensure no errors exist. If errors occur, fix the problematic parts before proceeding or committing changes. This is a strict requirement for all development work.
 
+## Code Quality Standards
+
+### Biome Configuration Policy
+
+**IMPORTANT**: The `biome.json` configuration file is strictly protected and MUST NOT be edited by Claude Code.
+
+**Prohibited Actions**:
+- Editing `biome.json` to relax linting rules for specific files
+- Adding file-specific overrides to disable linting errors
+- Modifying Biome configuration to accommodate code quality issues
+
+**Required Approach**:
+- Fix all linting errors by improving the code quality, not by relaxing rules
+- Use proper TypeScript types instead of `any` where possible
+- Follow established patterns and best practices
+- Maintain consistent code quality standards across the entire codebase
+
+**Exception**: The existing test file override for `src/__tests__/**/*` is permitted as testing code has different requirements for `any` types and unused variables.
+
+If you encounter linting errors, you MUST fix the underlying code issues rather than modifying the Biome configuration. This ensures consistent code quality and maintainability across the project.
+
 ### Git Workflow
 Before developing:
 1. Ensure you're on the correct branch (check current branch name)
