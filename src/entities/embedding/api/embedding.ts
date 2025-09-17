@@ -343,11 +343,13 @@ const make = Effect.gen(function* () {
             .from(embeddings)
 
           if (whereConditions.length > 0) {
-            countQuery = countQuery.where(
+            const condition =
               whereConditions.length === 1
                 ? whereConditions[0]
                 : and(...whereConditions)
-            ) as any
+            if (condition) {
+              countQuery = countQuery.where(condition)
+            }
           }
 
           return countQuery
@@ -367,11 +369,13 @@ const make = Effect.gen(function* () {
           let query = db.select().from(embeddings)
 
           if (whereConditions.length > 0) {
-            query = query.where(
+            const condition =
               whereConditions.length === 1
                 ? whereConditions[0]
                 : and(...whereConditions)
-            ) as any
+            if (condition) {
+              query = query.where(condition)
+            }
           }
 
           return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
@@ -561,7 +565,7 @@ const make = Effect.gen(function* () {
   } as const
 })
 
-export const EmbeddingServiceLive = Layer.effect(
-  EmbeddingService,
-  make as any
-).pipe(Layer.provide(OllamaServiceLive), Layer.provide(DatabaseServiceLive))
+export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
+  Layer.provide(OllamaServiceLive),
+  Layer.provide(DatabaseServiceLive)
+)

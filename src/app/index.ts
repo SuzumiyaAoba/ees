@@ -2,6 +2,13 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
 import { EmbeddingService } from "../entities/embedding/api/embedding"
+import type {
+  BatchCreateEmbeddingResponse,
+  CreateEmbeddingResponse,
+  Embedding,
+  EmbeddingsListResponse,
+  SearchEmbeddingResponse,
+} from "../entities/embedding/model/embedding"
 import { batchCreateEmbeddingRoute } from "../features/batch-create-embedding"
 import { createEmbeddingRoute } from "../features/create-embedding"
 import { deleteEmbeddingRoute } from "../features/delete-embedding"
@@ -17,11 +24,11 @@ const app = new OpenAPIHono()
 
 // Root endpoint
 app.openapi(rootRoute, (c) => {
-  return c.text("EES - Embeddings API Service") as any
+  return c.text("EES - Embeddings API Service")
 })
 
 // Create embedding
-app.openapi(createEmbeddingRoute, async (c): Promise<any> => {
+app.openapi(createEmbeddingRoute, async (c) => {
   try {
     const { uri, text, model_name } = c.req.valid("json")
 
@@ -30,23 +37,23 @@ app.openapi(createEmbeddingRoute, async (c): Promise<any> => {
       return yield* embeddingService.createEmbedding(uri, text, model_name)
     })
 
-    const result = await Effect.runPromise(
+    const result: CreateEmbeddingResponse = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create embedding"))
         })
-      ) as any
+      )
     )
 
-    return c.json(result as any)
+    return c.json(result)
   } catch (_error) {
     return c.json({ error: "Failed to create embedding" }, 500)
   }
 })
 
 // Batch create embeddings
-app.openapi(batchCreateEmbeddingRoute, async (c): Promise<any> => {
+app.openapi(batchCreateEmbeddingRoute, async (c) => {
   try {
     const request = c.req.valid("json")
 
@@ -55,52 +62,48 @@ app.openapi(batchCreateEmbeddingRoute, async (c): Promise<any> => {
       return yield* embeddingService.createBatchEmbedding(request)
     })
 
-    const result = await Effect.runPromise(
+    const result: BatchCreateEmbeddingResponse = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to create batch embeddings"))
         })
-      ) as any
+      )
     )
 
-    return c.json(result as any)
+    return c.json(result)
   } catch (_error) {
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
 
 // Search embeddings
-app.openapi(searchEmbeddingsRoute, async (c): Promise<any> => {
+app.openapi(searchEmbeddingsRoute, async (c) => {
   try {
     const request = c.req.valid("json")
-    const searchRequest = {
-      ...request,
-      threshold: request.threshold ?? undefined,
-    } as any
 
     const program = Effect.gen(function* () {
       const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.searchEmbeddings(searchRequest)
+      return yield* embeddingService.searchEmbeddings(request)
     })
 
-    const result = await Effect.runPromise(
+    const result: SearchEmbeddingResponse = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
         Effect.catchAll((_error) => {
           return Effect.fail(new Error("Failed to search embeddings"))
         })
-      ) as any
+      )
     )
 
-    return c.json(result as any)
+    return c.json(result)
   } catch (_error) {
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
 
 // Get embedding by URI
-app.openapi(getEmbeddingByUriRoute, async (c): Promise<any> => {
+app.openapi(getEmbeddingByUriRoute, async (c) => {
   try {
     const { uri } = c.req.valid("param")
     const decodedUri = decodeURIComponent(uri)
@@ -110,27 +113,27 @@ app.openapi(getEmbeddingByUriRoute, async (c): Promise<any> => {
       return yield* embeddingService.getEmbedding(decodedUri)
     })
 
-    const embedding = await Effect.runPromise(
+    const embedding: Embedding | null = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
         Effect.catchAll((_error) => {
           return Effect.succeed(null)
         })
-      ) as any
+      )
     )
 
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
     }
 
-    return c.json(embedding as any)
+    return c.json(embedding)
   } catch (_error) {
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
 })
 
 // Get all embeddings
-app.openapi(listEmbeddingsRoute, async (c): Promise<any> => {
+app.openapi(listEmbeddingsRoute, async (c) => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
     const filters: {
@@ -160,18 +163,18 @@ app.openapi(listEmbeddingsRoute, async (c): Promise<any> => {
       )
     })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as any
+    const result: EmbeddingsListResponse = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer))
     )
 
-    return c.json(result as any)
+    return c.json(result)
   } catch (_error) {
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
 })
 
 // Delete embedding
-app.openapi(deleteEmbeddingRoute, async (c): Promise<any> => {
+app.openapi(deleteEmbeddingRoute, async (c) => {
   try {
     const { id: idStr } = c.req.valid("param")
     const id = Number(idStr)
@@ -185,8 +188,8 @@ app.openapi(deleteEmbeddingRoute, async (c): Promise<any> => {
       return yield* embeddingService.deleteEmbedding(id)
     })
 
-    const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as any
+    const deleted: boolean = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer))
     )
 
     if (!deleted) {
@@ -235,7 +238,7 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Start server if this is the main module
 if (require.main === module) {
-  const port = Number(process.env["PORT"]) || 3000
+  const port = Number(process.env.PORT) || 3000
 
   // Use Hono's serve method for Node.js
   const { serve } = require("@hono/node-server")
