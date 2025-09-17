@@ -28,8 +28,7 @@ export function getEnvWithDefault(key: string, defaultValue: string): string {
  * @returns True if NODE_ENV is set to "test"
  */
 export function isTestEnv(): boolean {
-  // biome-ignore lint/style/noNonNullAssertion: NODE_ENV is always defined in Node.js
-  return process.env.NODE_ENV! === "test"
+  return process.env.NODE_ENV === "test"
 }
 
 /**
@@ -38,6 +37,5 @@ export function isTestEnv(): boolean {
  * @returns Port number
  */
 export function getPort(defaultPort = 3000): number {
-  // biome-ignore lint/style/noNonNullAssertion: PORT is commonly defined environment variable
-  return Number(process.env.PORT!) || defaultPort
+  return Number(process.env.PORT) || defaultPort
 }
