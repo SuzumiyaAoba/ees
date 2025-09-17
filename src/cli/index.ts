@@ -1,0 +1,228 @@
+/**
+ * CLI Entry Point for EES (Embeddings Service)
+ *
+ * Provides command-line interface for embedding operations
+ * using the same core business logic as the web API.
+ */
+
+import { Effect } from "effect"
+import { EmbeddingApplicationService } from "../shared/application/embedding-application"
+import { ApplicationLayer } from "../shared/application/layers"
+import * as Console from "../shared/lib/console"
+
+/**
+ * CLI Commands Interface
+ */
+export interface CLICommands {
+  /**
+   * Create embedding from text file or stdin
+   */
+  create(options: {
+    uri: string
+    text?: string
+    file?: string
+    model?: string
+  }): Effect.Effect<void, Error>
+
+  /**
+   * Create multiple embeddings from batch file
+   */
+  batch(options: { file: string; model?: string }): Effect.Effect<void, Error>
+
+  /**
+   * Search for similar embeddings
+   */
+  search(options: {
+    query: string
+    model?: string
+    limit?: number
+    threshold?: number
+    metric?: "cosine" | "euclidean" | "dot_product"
+  }): Effect.Effect<void, Error>
+
+  /**
+   * List all embeddings with optional filters
+   */
+  list(options: {
+    uri?: string
+    model?: string
+    page?: number
+    limit?: number
+  }): Effect.Effect<void, Error>
+
+  /**
+   * Get embedding by URI
+   */
+  get(options: { uri: string }): Effect.Effect<void, Error>
+
+  /**
+   * Delete embedding by ID
+   */
+  delete(options: { id: number }): Effect.Effect<void, Error>
+}
+
+/**
+ * CLI Commands implementation using core application services
+ */
+const makeCLICommands = Effect.gen(function* () {
+  const appService = yield* EmbeddingApplicationService
+
+  const create = (options: {
+    uri: string
+    text?: string
+    file?: string
+    model?: string
+  }) =>
+    Effect.gen(function* () {
+      // Text input handling (from parameter, file, or stdin)
+      let text = options.text
+      if (!text && options.file) {
+        // TODO: Read from file
+        text = "File content placeholder"
+      }
+      if (!text) {
+        // TODO: Read from stdin
+        text = "Stdin content placeholder"
+      }
+
+      if (!text) {
+        return yield* Effect.fail(new Error("No text provided"))
+      }
+
+      const result = yield* appService.createEmbedding({
+        uri: options.uri,
+        text,
+        modelName: options.model,
+      })
+
+      Console.log(`Created embedding: ${result.id} for ${result.uri}`)
+    })
+
+  const batch = (options: { file: string; model?: string }) =>
+    Effect.gen(function* () {
+      // TODO: Read batch file and parse
+      const batchRequest = {
+        texts: [
+          { uri: "example1", text: "Example text 1" },
+          { uri: "example2", text: "Example text 2" },
+        ],
+        model_name: options.model,
+      }
+
+      const result = yield* appService.createBatchEmbeddings(batchRequest)
+
+      Console.log(
+        `Batch complete: ${result.successful}/${result.total} successful`
+      )
+    })
+
+  const search = (options: {
+    query: string
+    model?: string
+    limit?: number
+    threshold?: number
+    metric?: "cosine" | "euclidean" | "dot_product"
+  }) =>
+    Effect.gen(function* () {
+      const result = yield* appService.searchEmbeddings({
+        query: options.query,
+        model_name: options.model,
+        limit: options.limit,
+        threshold: options.threshold,
+        metric: options.metric,
+      })
+
+      Console.log(`Found ${result.count} similar embeddings:`)
+      for (const item of result.results) {
+        Console.log(`- ${item.uri} (similarity: ${item.similarity.toFixed(3)})`)
+      }
+    })
+
+  const list = (options: {
+    uri?: string
+    model?: string
+    page?: number
+    limit?: number
+  }) =>
+    Effect.gen(function* () {
+      const result = yield* appService.listEmbeddings({
+        uri: options.uri,
+        modelName: options.model,
+        page: options.page,
+        limit: options.limit,
+      })
+
+      Console.log(
+        `Embeddings (${result.count} of ${result.embeddings.length}):`
+      )
+      for (const embedding of result.embeddings) {
+        Console.log(`- ID: ${embedding.id}, URI: ${embedding.uri}`)
+      }
+
+      if (result.has_next) {
+        Console.log(`... and ${result.total_pages - result.page} more pages`)
+      }
+    })
+
+  const get = (options: { uri: string }) =>
+    Effect.gen(function* () {
+      const embedding = yield* appService.getEmbeddingByUri(options.uri)
+
+      if (!embedding) {
+        Console.log(`No embedding found for URI: ${options.uri}`)
+        return
+      }
+
+      Console.log(`Embedding for ${embedding.uri}:`)
+      Console.log(`- ID: ${embedding.id}`)
+      Console.log(`- Model: ${embedding.model_name}`)
+      Console.log(`- Text: ${embedding.text.substring(0, 100)}...`)
+      Console.log(`- Vector dimensions: ${embedding.embedding.length}`)
+    })
+
+  const deleteEmbedding = (options: { id: number }) =>
+    Effect.gen(function* () {
+      const deleted = yield* appService.deleteEmbedding(options.id)
+
+      if (deleted) {
+        Console.log(`Deleted embedding with ID: ${options.id}`)
+      } else {
+        Console.log(`No embedding found with ID: ${options.id}`)
+      }
+    })
+
+  return {
+    create,
+    batch,
+    search,
+    list,
+    get,
+    delete: deleteEmbedding,
+  } as const
+})
+
+/**
+ * Run CLI command with proper error handling and layer provision
+ */
+export function runCLICommand<T>(
+  command: Effect.Effect<T, Error>
+): Promise<void> {
+  return Effect.runPromise(
+    command.pipe(
+      Effect.provide(ApplicationLayer),
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          Console.error(`Error: ${error.message}`)
+          process.exit(1)
+        })
+      ),
+      Effect.asVoid
+    )
+  )
+}
+
+/**
+ * Create CLI commands instance
+ */
+export const createCLICommands = (): Effect.Effect<CLICommands, never> =>
+  makeCLICommands.pipe(Effect.provide(ApplicationLayer))
