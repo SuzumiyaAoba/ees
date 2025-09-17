@@ -4,6 +4,7 @@
  */
 
 import type { Effect } from "effect"
+import { Data } from "effect"
 
 /**
  * Configuration for different embedding providers
@@ -67,86 +68,49 @@ export interface EmbeddingResponse {
 }
 
 /**
- * Provider-specific error types
+ * Provider-specific error types using Effect Data
  */
-export abstract class ProviderError extends Error {
-  abstract readonly provider: string
-  abstract readonly errorCode: string | undefined
-}
-
-export class ProviderConnectionError extends ProviderError {
+export class ProviderError extends Data.TaggedError("ProviderError")<{
   readonly provider: string
-  readonly errorCode: string | undefined
+  readonly message: string
+  readonly cause?: unknown
+}> {}
 
-  constructor(params: {
-    provider: string
-    message: string
-    errorCode?: string
-    cause?: unknown
-  }) {
-    super(params.message)
-    this.provider = params.provider
-    this.errorCode = params.errorCode ?? undefined
-    this.cause = params.cause
-  }
-}
+export class ProviderConnectionError extends Data.TaggedError(
+  "ProviderConnectionError"
+)<{
+  readonly provider: string
+  readonly message: string
+  readonly errorCode?: string
+  readonly cause?: unknown
+}> {}
 
-export class ProviderModelError extends ProviderError {
+export class ProviderModelError extends Data.TaggedError("ProviderModelError")<{
   readonly provider: string
   readonly modelName: string
-  readonly errorCode: string | undefined
+  readonly message: string
+  readonly errorCode?: string
+  readonly cause?: unknown
+}> {}
 
-  constructor(params: {
-    provider: string
-    modelName: string
-    message: string
-    errorCode?: string
-    cause?: unknown
-  }) {
-    super(params.message)
-    this.provider = params.provider
-    this.modelName = params.modelName
-    this.errorCode = params.errorCode ?? undefined
-    this.cause = params.cause
-  }
-}
-
-export class ProviderAuthenticationError extends ProviderError {
+export class ProviderAuthenticationError extends Data.TaggedError(
+  "ProviderAuthenticationError"
+)<{
   readonly provider: string
-  readonly errorCode: string | undefined
+  readonly message: string
+  readonly errorCode?: string
+  readonly cause?: unknown
+}> {}
 
-  constructor(params: {
-    provider: string
-    message: string
-    errorCode?: string
-    cause?: unknown
-  }) {
-    super(params.message)
-    this.provider = params.provider
-    this.errorCode = params.errorCode ?? undefined
-    this.cause = params.cause
-  }
-}
-
-export class ProviderRateLimitError extends ProviderError {
+export class ProviderRateLimitError extends Data.TaggedError(
+  "ProviderRateLimitError"
+)<{
   readonly provider: string
-  readonly retryAfter: number | undefined
-  readonly errorCode: string | undefined
-
-  constructor(params: {
-    provider: string
-    message: string
-    retryAfter?: number
-    errorCode?: string
-    cause?: unknown
-  }) {
-    super(params.message)
-    this.provider = params.provider
-    this.retryAfter = params.retryAfter ?? undefined
-    this.errorCode = params.errorCode ?? undefined
-    this.cause = params.cause
-  }
-}
+  readonly message: string
+  readonly retryAfter?: number
+  readonly errorCode?: string
+  readonly cause?: unknown
+}> {}
 
 /**
  * Generic embedding provider interface
