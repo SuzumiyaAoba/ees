@@ -1,0 +1,3 @@
+{"uri": "article1", "text": "First article content for newline-delimited JSON format."}
+{"uri": "article2", "text": "Second article content for NDJSON processing."}
+{"uri": "article3", "text": "Third article content demonstrating JSONL format."}

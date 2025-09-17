@@ -235,6 +235,72 @@ const program = Effect.gen(function* () {
 await runCLICommand(program)
 ```
 
+### CLI Usage Examples
+
+The CLI interface provides full functionality for embedding operations:
+
+**Create embedding from text:**
+```bash
+# Direct text input
+ees create --uri "doc1" --text "Sample text content"
+
+# From file
+ees create --uri "doc2" --file "./examples/cli/sample.txt"
+
+# From stdin (interactive)
+ees create --uri "doc3"
+# (then type or paste text and press Ctrl+D)
+```
+
+**Batch operations:**
+```bash
+# JSON array format
+ees batch --file "./examples/cli/batch.json"
+
+# Newline-delimited JSON format
+ees batch --file "./examples/cli/batch-ndjson.jsonl"
+```
+
+**Search operations:**
+```bash
+# Basic search
+ees search --query "sample text"
+
+# Advanced search with parameters
+ees search --query "sample text" --limit 10 --threshold 0.7 --metric cosine
+```
+
+**List and management:**
+```bash
+# List all embeddings
+ees list
+
+# List with filters
+ees list --uri "doc*" --model "embeddinggemma:300m" --limit 20
+
+# Get specific embedding
+ees get --uri "doc1"
+
+# Delete embedding
+ees delete --id 123
+```
+
+**File Format Examples:**
+
+JSON Array (`batch.json`):
+```json
+[
+  {"uri": "doc1", "text": "First document content"},
+  {"uri": "doc2", "text": "Second document content"}
+]
+```
+
+NDJSON (`batch.jsonl`):
+```jsonl
+{"uri": "doc1", "text": "First document content"}
+{"uri": "doc2", "text": "Second document content"}
+```
+
 ### API Endpoints
 
 **Embeddings API**:

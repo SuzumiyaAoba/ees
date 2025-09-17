@@ -9,6 +9,7 @@ import { Effect } from "effect"
 import { EmbeddingApplicationService } from "../shared/application/embedding-application"
 import { ApplicationLayer } from "../shared/application/layers"
 import * as Console from "../shared/lib/console"
+import { parseBatchFile, readStdin, readTextFile } from "../shared/lib/file-io"
 
 /**
  * CLI Commands Interface
@@ -76,16 +77,17 @@ const makeCLICommands = Effect.gen(function* () {
     Effect.gen(function* () {
       // Text input handling (from parameter, file, or stdin)
       let text = options.text
+
       if (!text && options.file) {
-        // TODO: Read from file
-        text = "File content placeholder"
-      }
-      if (!text) {
-        // TODO: Read from stdin
-        text = "Stdin content placeholder"
+        text = yield* readTextFile(options.file)
       }
 
       if (!text) {
+        Console.log("Reading from stdin... (press Ctrl+D when finished)")
+        text = yield* readStdin()
+      }
+
+      if (!text || text.trim().length === 0) {
         return yield* Effect.fail(new Error("No text provided"))
       }
 
@@ -100,12 +102,10 @@ const makeCLICommands = Effect.gen(function* () {
 
   const batch = (options: { file: string; model?: string }) =>
     Effect.gen(function* () {
-      // TODO: Read batch file and parse
+      const batchEntries = yield* parseBatchFile(options.file)
+
       const batchRequest = {
-        texts: [
-          { uri: "example1", text: "Example text 1" },
-          { uri: "example2", text: "Example text 2" },
-        ],
+        texts: batchEntries,
         model_name: options.model,
       }
 
