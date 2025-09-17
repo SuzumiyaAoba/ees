@@ -111,7 +111,7 @@ describe("Provider Configuration", () => {
         type: "google",
         apiKey: "google-api-key",
         baseUrl: undefined,
-        defaultModel: "text-embedding-004",
+        defaultModel: "embedding-001",
       })
     })
 
@@ -244,7 +244,7 @@ describe("Provider Configuration", () => {
       const config = {
         type: "google" as const,
         apiKey: "google-key",
-        defaultModel: "text-embedding-004",
+        defaultModel: "embedding-001",
       }
 
       const errors = validateProviderConfig(config)
@@ -256,7 +256,7 @@ describe("Provider Configuration", () => {
       const config = {
         type: "google" as const,
         apiKey: "",
-        defaultModel: "text-embedding-004",
+        defaultModel: "embedding-001",
       }
 
       const errors = validateProviderConfig(config)
@@ -312,7 +312,7 @@ describe("Provider Configuration", () => {
         google: {
           hasApiKey: false,
           baseUrl: "default",
-          defaultModel: "text-embedding-004",
+          defaultModel: "embedding-001",
         },
       })
     })
@@ -337,7 +337,7 @@ describe("Provider Configuration", () => {
       expect(summary.google).toEqual({
         hasApiKey: true,
         baseUrl: "https://custom-google.com",
-        defaultModel: "text-embedding-004",
+        defaultModel: "embedding-001",
       })
     })
   })

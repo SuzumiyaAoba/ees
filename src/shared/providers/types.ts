@@ -33,7 +33,7 @@ export interface GoogleConfig extends ProviderConfig {
   readonly type: "google"
   readonly apiKey: string
   readonly baseUrl?: string // Default: Google AI Studio endpoint
-  readonly defaultModel?: string // Default: text-embedding-004
+  readonly defaultModel?: string // Default: embedding-001
 }
 
 /**
@@ -52,7 +52,7 @@ export interface ModelInfo {
  */
 export interface EmbeddingRequest {
   readonly text: string
-  readonly modelName?: string
+  readonly modelName?: string | undefined
 }
 
 /**

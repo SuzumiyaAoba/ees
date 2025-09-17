@@ -29,8 +29,8 @@ const make = (config: OpenAIConfig) =>
   Effect.gen(function* () {
     const client = openai({
       apiKey: config.apiKey,
-      baseURL: config.baseUrl,
-      organization: config.organization,
+      ...(config.baseUrl && { baseURL: config.baseUrl }),
+      ...(config.organization && { organization: config.organization }),
     })
 
     const generateEmbedding = (request: EmbeddingRequest) =>
@@ -40,7 +40,7 @@ const make = (config: OpenAIConfig) =>
             request.modelName ?? config.defaultModel ?? "text-embedding-3-small"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: client.textEmbedding(modelName),
             value: request.text,
           })
 
@@ -89,7 +89,7 @@ const make = (config: OpenAIConfig) =>
                 return new ProviderConnectionError({
                   provider: "openai",
                   message: `OpenAI API error: ${message}`,
-                  errorCode: statusCode ? statusCode.toString() : undefined,
+                  errorCode: statusCode?.toString(),
                   cause: error,
                 })
             }

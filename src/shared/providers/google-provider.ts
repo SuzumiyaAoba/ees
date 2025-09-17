@@ -29,17 +29,17 @@ const make = (config: GoogleConfig) =>
   Effect.gen(function* () {
     const client = google({
       apiKey: config.apiKey,
-      baseURL: config.baseUrl,
+      ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
-            request.modelName ?? config.defaultModel ?? "text-embedding-004"
+            request.modelName ?? config.defaultModel ?? "embedding-001"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: client.textEmbedding(modelName),
             value: request.text,
           })
 
@@ -90,7 +90,7 @@ const make = (config: GoogleConfig) =>
                 return new ProviderConnectionError({
                   provider: "google",
                   message: `Google AI API error: ${message}`,
-                  errorCode: statusCode ? statusCode.toString() : undefined,
+                  errorCode: statusCode?.toString(),
                   cause: error,
                 })
             }
@@ -99,7 +99,7 @@ const make = (config: GoogleConfig) =>
           return new ProviderModelError({
             provider: "google",
             modelName:
-              request.modelName ?? config.defaultModel ?? "text-embedding-004",
+              request.modelName ?? config.defaultModel ?? "embedding-001",
             message: `Failed to generate embedding: ${error}`,
             cause: error,
           })
@@ -109,14 +109,14 @@ const make = (config: GoogleConfig) =>
     const listModels = () =>
       Effect.succeed([
         {
-          name: "text-embedding-004",
+          name: "embedding-001",
           provider: "google",
           dimensions: 768,
           maxTokens: 2048,
           pricePerToken: 0.00001 / 1000, // $0.01 per 1M tokens (estimated)
         },
         {
-          name: "embedding-001",
+          name: "text-embedding-004",
           provider: "google",
           dimensions: 768,
           maxTokens: 2048,

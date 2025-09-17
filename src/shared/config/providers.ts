@@ -64,12 +64,12 @@ export function getOpenAIConfig(): OpenAIConfig | null {
   return {
     type: "openai",
     apiKey,
-    baseUrl: getEnv(ENV_KEYS.OPENAI_BASE_URL),
+    baseUrl: getEnv(ENV_KEYS.OPENAI_BASE_URL) ?? undefined,
     defaultModel: getEnvWithDefault(
       ENV_KEYS.OPENAI_DEFAULT_MODEL,
       "text-embedding-3-small"
     ),
-    organization: getEnv(ENV_KEYS.OPENAI_ORGANIZATION),
+    organization: getEnv(ENV_KEYS.OPENAI_ORGANIZATION) ?? undefined,
   }
 }
 
@@ -86,10 +86,10 @@ export function getGoogleConfig(): GoogleConfig | null {
   return {
     type: "google",
     apiKey,
-    baseUrl: getEnv(ENV_KEYS.GOOGLE_BASE_URL),
+    baseUrl: getEnv(ENV_KEYS.GOOGLE_BASE_URL) ?? undefined,
     defaultModel: getEnvWithDefault(
       ENV_KEYS.GOOGLE_DEFAULT_MODEL,
-      "text-embedding-004"
+      "embedding-001"
     ),
   }
 }
@@ -137,8 +137,9 @@ export function getDefaultProvider(): ProviderConfig {
   }
 
   // Fallback to first available provider (should always be Ollama)
-  if (availableProviders.length > 0) {
-    return availableProviders[0]
+  const firstProvider = availableProviders[0]
+  if (firstProvider) {
+    return firstProvider
   }
 
   // Ultimate fallback to Ollama config
@@ -212,7 +213,7 @@ export function getProviderConfigSummary(): Record<string, unknown> {
       baseUrl: getEnv(ENV_KEYS.GOOGLE_BASE_URL) || "default",
       defaultModel: getEnvWithDefault(
         ENV_KEYS.GOOGLE_DEFAULT_MODEL,
-        "text-embedding-004"
+        "embedding-001"
       ),
     },
   }

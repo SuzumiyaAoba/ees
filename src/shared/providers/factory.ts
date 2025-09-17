@@ -187,7 +187,7 @@ export const createGoogleConfig = (
 ): GoogleConfig => ({
   type: "google",
   apiKey,
-  defaultModel: options.defaultModel ?? "text-embedding-004",
+  defaultModel: options.defaultModel ?? "embedding-001",
   ...options,
 })
 

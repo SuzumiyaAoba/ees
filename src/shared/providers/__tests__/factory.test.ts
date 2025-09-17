@@ -99,7 +99,7 @@ describe("Provider Factory", () => {
       expect(config).toEqual({
         type: "google",
         apiKey: "google-api-key",
-        defaultModel: "text-embedding-004",
+        defaultModel: "embedding-001",
       })
     })
 
@@ -255,7 +255,7 @@ describe("Provider Factory", () => {
 
       expect(ollamaConfig.defaultModel).toBe("embeddinggemma:300m")
       expect(openaiConfig.defaultModel).toBe("text-embedding-3-small")
-      expect(googleConfig.defaultModel).toBe("text-embedding-004")
+      expect(googleConfig.defaultModel).toBe("embedding-001")
     })
   })
 })
