@@ -28,7 +28,7 @@ describe("Environment Variable Utilities", () => {
     })
 
     it("should return undefined when environment variable does not exist", () => {
-      delete process.env.TEST_VAR
+      process.env.TEST_VAR = undefined
 
       const result = getEnv("TEST_VAR")
 
@@ -63,7 +63,7 @@ describe("Environment Variable Utilities", () => {
     })
 
     it("should return default value when environment variable does not exist", () => {
-      delete process.env.TEST_VAR
+      process.env.TEST_VAR = undefined
 
       const result = getEnvWithDefault("TEST_VAR", "default-value")
 
@@ -121,7 +121,7 @@ describe("Environment Variable Utilities", () => {
     })
 
     it("should return false when NODE_ENV is not set", () => {
-      delete process.env.NODE_ENV
+      process.env.NODE_ENV = undefined
 
       const result = isTestEnv()
 
@@ -155,7 +155,7 @@ describe("Environment Variable Utilities", () => {
     })
 
     it("should return default port when PORT is not set", () => {
-      delete process.env.PORT
+      process.env.PORT = undefined
 
       const result = getPort()
 
@@ -163,7 +163,7 @@ describe("Environment Variable Utilities", () => {
     })
 
     it("should return custom default port when provided", () => {
-      delete process.env.PORT
+      process.env.PORT = undefined
 
       const result = getPort(5000)
 
@@ -234,7 +234,7 @@ describe("Environment Variable Utilities", () => {
     it("should handle production-like environment", () => {
       process.env.NODE_ENV = "production"
       process.env.PORT = "80"
-      delete process.env.DEBUG
+      process.env.DEBUG = undefined
 
       expect(isTestEnv()).toBe(false)
       expect(getPort()).toBe(80)

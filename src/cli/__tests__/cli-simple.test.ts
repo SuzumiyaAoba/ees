@@ -25,9 +25,26 @@ import { DatabaseService } from "../../shared/database/connection"
 
 describe("CLI Application Service Layer", () => {
   let testDir: string
-  let mockEmbeddingService: any
-  let mockDatabaseService: any
-  let mockOllamaService: any
+  let mockEmbeddingService: {
+    createEmbedding: ReturnType<typeof vi.fn>
+    createBatchEmbedding: ReturnType<typeof vi.fn>
+    searchEmbeddings: ReturnType<typeof vi.fn>
+    getEmbedding: ReturnType<typeof vi.fn>
+    getAllEmbeddings: ReturnType<typeof vi.fn>
+    deleteEmbedding: ReturnType<typeof vi.fn>
+  }
+  let mockDatabaseService: {
+    db: {
+      insert: ReturnType<typeof vi.fn>
+      select: ReturnType<typeof vi.fn>
+      delete: ReturnType<typeof vi.fn>
+    }
+  }
+  let mockOllamaService: {
+    generateEmbedding: ReturnType<typeof vi.fn>
+    isModelAvailable: ReturnType<typeof vi.fn>
+    pullModel: ReturnType<typeof vi.fn>
+  }
   let mockLayer: Layer.Layer<EmbeddingApplicationService>
 
   beforeEach(async () => {

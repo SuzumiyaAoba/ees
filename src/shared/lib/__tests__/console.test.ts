@@ -6,12 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as Console from "../console"
 
 describe("Console Utilities", () => {
-  let logSpy: any
-  let errorSpy: any
+  let logSpy: ReturnType<typeof vi.spyOn<Console, "log">>
+  let errorSpy: ReturnType<typeof vi.spyOn<Console, "error">>
 
   beforeEach(() => {
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {})
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {
+      // Mock implementation - intentionally empty
+    })
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      // Mock implementation - intentionally empty
+    })
   })
 
   afterEach(() => {
