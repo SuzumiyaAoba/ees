@@ -1,7 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
-import { EmbeddingService } from "../entities/embedding/api/embedding"
 import type {
   BatchCreateEmbeddingResponse,
   CreateEmbeddingResponse,
@@ -17,6 +16,7 @@ import {
   listEmbeddingsRoute,
 } from "../features/list-embeddings"
 import { searchEmbeddingsRoute } from "../features/search-embeddings"
+import { EmbeddingApplicationService } from "../shared/application/embedding-application"
 import { getPort } from "../shared/lib/env"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
@@ -34,8 +34,12 @@ app.openapi(createEmbeddingRoute, async (c) => {
     const { uri, text, model_name } = c.req.valid("json")
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.createEmbedding(uri, text, model_name)
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.createEmbedding({
+        uri,
+        text,
+        modelName: model_name,
+      })
     })
 
     const result: CreateEmbeddingResponse = await Effect.runPromise(
@@ -59,8 +63,8 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     const request = c.req.valid("json")
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.createBatchEmbedding(request)
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.createBatchEmbeddings(request)
     })
 
     const result: BatchCreateEmbeddingResponse = await Effect.runPromise(
@@ -84,8 +88,8 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     const request = c.req.valid("json")
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.searchEmbeddings(request)
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.searchEmbeddings(request)
     })
 
     const result: SearchEmbeddingResponse = await Effect.runPromise(
@@ -110,8 +114,8 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     const decodedUri = decodeURIComponent(uri)
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.getEmbedding(decodedUri)
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.getEmbeddingByUri(decodedUri)
     })
 
     const embedding: Embedding | null = await Effect.runPromise(
@@ -139,7 +143,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     const { uri, model_name, page, limit } = c.req.valid("query")
     const filters: {
       uri?: string
-      model_name?: string
+      modelName?: string
       page?: number
       limit?: number
     } = {}
@@ -148,7 +152,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
       filters.uri = uri
     }
     if (model_name) {
-      filters.model_name = model_name
+      filters.modelName = model_name
     }
     if (page) {
       filters.page = page
@@ -158,8 +162,8 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     }
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.getAllEmbeddings(
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.listEmbeddings(
         Object.keys(filters).length > 0 ? filters : undefined
       )
     })
@@ -185,8 +189,8 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     }
 
     const program = Effect.gen(function* () {
-      const embeddingService = yield* EmbeddingService
-      return yield* embeddingService.deleteEmbedding(id)
+      const appService = yield* EmbeddingApplicationService
+      return yield* appService.deleteEmbedding(id)
     })
 
     const deleted: boolean = await Effect.runPromise(

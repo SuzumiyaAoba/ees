@@ -182,6 +182,59 @@ describe("PaginationService", () => {
 - Database uses libSQL with automatic schema initialization
 - Test environment uses in-memory database (`:memory:`)
 
+### Multi-Interface Architecture (Web + CLI)
+
+The codebase is designed with a clear separation of concerns to support multiple interfaces (web API and CLI) while sharing core business logic.
+
+**Application Layer** (Framework-agnostic):
+- `src/shared/application/embedding-application.ts` - Core application service interface independent of HTTP frameworks
+- `src/shared/application/layers.ts` - Composed Effect layers for dependency injection
+- `src/shared/application/index.ts` - Application layer exports
+
+**Web Interface**:
+- `src/app/index.ts` - Hono web API routes using the shared application layer
+- `src/app/providers/main.ts` - Web-specific layer composition
+- `src/features/` - Web route definitions and validation schemas
+
+**CLI Interface**:
+- `src/cli/index.ts` - Command-line interface using the same application services
+- `src/shared/lib/console.ts` - CLI output helpers with proper linting compliance
+
+**Shared Core Logic**:
+- `src/entities/embedding/api/embedding.ts` - Core embedding service (domain layer)
+- `src/shared/lib/env.ts` - Environment variable helpers
+- `src/shared/lib/console.ts` - Console output utilities
+
+**Architecture Benefits**:
+- **Reusability**: Core business logic is shared between web and CLI interfaces
+- **Testability**: Application services can be tested independently of presentation layer
+- **Maintainability**: Clear separation between framework-specific code and business logic
+- **Extensibility**: Easy to add new interfaces (e.g., gRPC, GraphQL) using the same core services
+
+**Usage Examples**:
+
+Web API (using Hono framework):
+```typescript
+const program = Effect.gen(function* () {
+  const appService = yield* EmbeddingApplicationService
+  return yield* appService.createEmbedding({ uri, text, modelName })
+})
+
+const result = await Effect.runPromise(
+  program.pipe(Effect.provide(AppLayer))
+)
+```
+
+CLI (framework-independent):
+```typescript
+const program = Effect.gen(function* () {
+  const appService = yield* EmbeddingApplicationService
+  return yield* appService.createEmbedding({ uri, text, modelName })
+})
+
+await runCLICommand(program)
+```
+
 ### API Endpoints
 
 **Embeddings API**:

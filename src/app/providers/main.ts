@@ -1,10 +1,7 @@
-import { Layer } from "effect"
-import { EmbeddingServiceLive } from "../../entities/embedding/api/embedding"
-import { OllamaServiceLive } from "../../entities/embedding/api/ollama"
-import { DatabaseServiceLive } from "../../shared/database/connection"
+import { ApplicationLayer } from "../../shared/application/layers"
 
-export const AppLayer = Layer.mergeAll(
-  DatabaseServiceLive,
-  OllamaServiceLive,
-  EmbeddingServiceLive
-)
+/**
+ * Web application layer
+ * Uses the shared application layer for consistency with CLI and other interfaces
+ */
+export const AppLayer = ApplicationLayer
