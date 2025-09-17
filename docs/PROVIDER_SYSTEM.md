@@ -10,7 +10,8 @@ The EES application now supports multiple embedding providers through a unified 
 - **Type**: `ollama`
 - **Cost**: Free (local)
 - **Setup**: Requires local Ollama installation
-- **Default Model**: `embeddinggemma:300m`
+- **Default Model**: `nomic-embed-text`
+- **Implementation**: Uses Vercel AI SDK with `ollama-ai-provider-v2`
 
 ### 2. OpenAI
 - **Type**: `openai`
@@ -38,7 +39,7 @@ EES_DEFAULT_PROVIDER=ollama  # ollama | openai | google
 
 # Ollama configuration
 EES_OLLAMA_BASE_URL=http://localhost:11434
-EES_OLLAMA_DEFAULT_MODEL=embeddinggemma:300m
+EES_OLLAMA_DEFAULT_MODEL=nomic-embed-text
 
 # OpenAI configuration
 EES_OPENAI_API_KEY=sk-your-openai-key
@@ -66,7 +67,7 @@ import {
 // Create individual provider configs
 const ollamaConfig = createOllamaConfig({
   baseUrl: "http://localhost:11434",
-  defaultModel: "embeddinggemma:300m",
+  defaultModel: "nomic-embed-text",
 })
 
 const openaiConfig = createOpenAIConfig("sk-your-api-key", {
@@ -188,7 +189,7 @@ The new provider system is designed to be backward compatible. The original `Emb
 
 1. **Install Dependencies**:
    ```bash
-   npm install ai @ai-sdk/openai @ai-sdk/google
+   npm install ai @ai-sdk/openai @ai-sdk/google ollama-ai-provider-v2
    ```
 
 2. **Update Service Layer**:
@@ -258,10 +259,10 @@ npm test -- --run src/shared/providers src/shared/config
 
 | Provider | Model | Dimensions | Max Tokens | Price/1M tokens |
 |----------|-------|------------|------------|-----------------|
-| Ollama | embeddinggemma:300m | Variable | Variable | Free |
+| Ollama | nomic-embed-text | 768 | 8192 | Free |
 | OpenAI | text-embedding-3-small | 1536 | 8191 | $0.02 |
 | OpenAI | text-embedding-3-large | 3072 | 8191 | $0.13 |
-| Google | text-embedding-004 | 768 | 2048 | ~$0.01 |
+| Google | embedding-001 | 768 | 2048 | ~$0.01 |
 
 ## Future Enhancements
 

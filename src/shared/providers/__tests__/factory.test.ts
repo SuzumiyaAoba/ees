@@ -19,7 +19,7 @@ describe("Provider Factory", () => {
       expect(config).toEqual({
         type: "ollama",
         baseUrl: "http://localhost:11434",
-        defaultModel: "embeddinggemma:300m",
+        defaultModel: "nomic-embed-text",
       })
     })
 
@@ -44,7 +44,7 @@ describe("Provider Factory", () => {
       expect(config).toEqual({
         type: "ollama",
         baseUrl: "http://custom:9999",
-        defaultModel: "embeddinggemma:300m",
+        defaultModel: "nomic-embed-text",
       })
     })
   })
@@ -253,7 +253,7 @@ describe("Provider Factory", () => {
       const openaiConfig = createOpenAIConfig("sk-key")
       const googleConfig = createGoogleConfig("google-key")
 
-      expect(ollamaConfig.defaultModel).toBe("embeddinggemma:300m")
+      expect(ollamaConfig.defaultModel).toBe("nomic-embed-text")
       expect(openaiConfig.defaultModel).toBe("text-embedding-3-small")
       expect(googleConfig.defaultModel).toBe("embedding-001")
     })

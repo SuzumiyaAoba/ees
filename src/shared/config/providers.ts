@@ -46,7 +46,7 @@ export function getOllamaConfig(): OllamaConfig {
     ),
     defaultModel: getEnvWithDefault(
       ENV_KEYS.OLLAMA_DEFAULT_MODEL,
-      "embeddinggemma:300m"
+      "nomic-embed-text"
     ),
   }
 }
@@ -196,7 +196,7 @@ export function getProviderConfigSummary(): Record<string, unknown> {
       ),
       defaultModel: getEnvWithDefault(
         ENV_KEYS.OLLAMA_DEFAULT_MODEL,
-        "embeddinggemma:300m"
+        "nomic-embed-text"
       ),
     },
     openai: {

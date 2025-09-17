@@ -166,7 +166,7 @@ export const createOllamaConfig = (
 ): OllamaConfig => ({
   type: "ollama",
   baseUrl: options.baseUrl ?? "http://localhost:11434",
-  defaultModel: options.defaultModel ?? "embeddinggemma:300m",
+  defaultModel: options.defaultModel ?? "nomic-embed-text",
   ...options,
 })
 

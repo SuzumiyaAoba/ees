@@ -18,7 +18,7 @@ export interface ProviderConfig {
 export interface OllamaConfig extends ProviderConfig {
   readonly type: "ollama"
   readonly baseUrl?: string // Default: http://localhost:11434
-  readonly defaultModel?: string // Default: embeddinggemma:300m
+  readonly defaultModel?: string // Default: nomic-embed-text
 }
 
 export interface OpenAIConfig extends ProviderConfig {

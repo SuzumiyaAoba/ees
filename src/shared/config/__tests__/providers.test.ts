@@ -34,7 +34,7 @@ describe("Provider Configuration", () => {
       expect(config).toEqual({
         type: "ollama",
         baseUrl: "http://localhost:11434",
-        defaultModel: "embeddinggemma:300m",
+        defaultModel: "nomic-embed-text",
       })
     })
 
@@ -208,7 +208,7 @@ describe("Provider Configuration", () => {
       const config = {
         type: "ollama" as const,
         baseUrl: "http://localhost:11434",
-        defaultModel: "embeddinggemma:300m",
+        defaultModel: "nomic-embed-text",
       }
 
       const errors = validateProviderConfig(config)
@@ -279,7 +279,7 @@ describe("Provider Configuration", () => {
       const config = {
         type: "ollama" as const,
         baseUrl: "",
-        defaultModel: "embeddinggemma:300m",
+        defaultModel: "nomic-embed-text",
       }
 
       const errors = validateProviderConfig(config)
@@ -301,7 +301,7 @@ describe("Provider Configuration", () => {
         defaultProvider: "openai",
         ollama: {
           baseUrl: "http://custom:11434",
-          defaultModel: "embeddinggemma:300m",
+          defaultModel: "nomic-embed-text",
         },
         openai: {
           hasApiKey: true,

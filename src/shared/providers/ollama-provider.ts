@@ -1,9 +1,10 @@
 /**
- * Ollama provider implementation for embedding generation
+ * Ollama provider implementation using Vercel AI SDK
  */
 
+import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
-import { Ollama } from "ollama"
+import { createOllama } from "ollama-ai-provider-v2"
 import type {
   EmbeddingProvider,
   EmbeddingRequest,
@@ -21,63 +22,63 @@ export const OllamaProviderService = Context.GenericTag<OllamaProviderService>(
 
 const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
-    const ollama = new Ollama({
-      host: config.baseUrl ?? "http://localhost:11434",
+    const ollama = createOllama({
+      baseURL: config.baseUrl ?? "http://localhost:11434/api",
     })
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
-            request.modelName ?? config.defaultModel ?? "embeddinggemma:300m"
+            request.modelName ?? config.defaultModel ?? "nomic-embed-text"
 
-          const response = await ollama.embeddings({
-            model: modelName,
-            prompt: request.text,
+          const result = await embed({
+            model: ollama.textEmbeddingModel(modelName),
+            value: request.text,
           })
 
           return {
-            embedding: response.embedding,
+            embedding: result.embedding,
             model: modelName,
             provider: "ollama",
-            dimensions: response.embedding.length,
+            dimensions: result.embedding.length,
+            tokensUsed: result.usage?.tokens,
           } satisfies EmbeddingResponse
         },
         catch: (error) =>
           new ProviderModelError({
             provider: "ollama",
             modelName:
-              request.modelName ?? config.defaultModel ?? "embeddinggemma:300m",
+              request.modelName ?? config.defaultModel ?? "nomic-embed-text",
             message: `Failed to generate embedding: ${error}`,
             cause: error,
           }),
       })
 
     const listModels = () =>
-      Effect.tryPromise({
-        try: async () => {
-          const response = await ollama.list()
-          return response.models
-            .filter(
-              (model) =>
-                model.name.includes("embedding") || model.name.includes("embed")
-            )
-            .map(
-              (model): ModelInfo => ({
-                name: model.name,
-                provider: "ollama",
-                // Ollama doesn't provide this info directly, so we omit optional fields
-                pricePerToken: 0, // Ollama is free/local
-              })
-            )
+      Effect.succeed([
+        {
+          name: "nomic-embed-text",
+          provider: "ollama",
+          dimensions: 768,
+          maxTokens: 8192,
+          pricePerToken: 0, // Ollama is free/local
         },
-        catch: (error) =>
-          new ProviderConnectionError({
-            provider: "ollama",
-            message: `Failed to list models: ${error}`,
-            cause: error,
-          }),
-      })
+        {
+          name: "mxbai-embed-large",
+          provider: "ollama",
+          dimensions: 1024,
+          maxTokens: 512,
+          pricePerToken: 0, // Ollama is free/local
+        },
+        {
+          name: "snowflake-arctic-embed",
+          provider: "ollama",
+          dimensions: 1024,
+          maxTokens: 512,
+          pricePerToken: 0, // Ollama is free/local
+        },
+      ] satisfies ModelInfo[])
 
     const isModelAvailable = (modelName: string) =>
       Effect.gen(function* () {
