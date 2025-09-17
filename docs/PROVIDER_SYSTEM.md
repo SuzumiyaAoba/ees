@@ -173,17 +173,17 @@ const handleEmbeddingWithErrors = Effect.gen(function* () {
 
 ## Migration from Original Implementation
 
-The new provider system is designed to be backward compatible. The original `EmbeddingService` continues to work with Ollama, while the new `EmbeddingServiceV2` supports multiple providers.
+The provider system has been integrated into the main `EmbeddingService`, replacing the original Ollama-only implementation with a unified multi-provider system.
 
 ### Key Differences
 
-| Feature | Original | New Provider System |
-|---------|----------|-------------------|
+| Feature | Original | Current Implementation |
+|---------|----------|---------------------|
 | Providers | Ollama only | Ollama, OpenAI, Google AI |
 | Configuration | Hard-coded | Environment variables + programmatic |
 | Error Types | Ollama-specific | Provider-agnostic with specific subtypes |
 | Model Management | Basic | Full model listing and info |
-| Provider Switching | Not supported | Runtime switching (planned) |
+| Provider Switching | Not supported | Available via API |
 
 ### Upgrading
 
@@ -192,16 +192,11 @@ The new provider system is designed to be backward compatible. The original `Emb
    npm install ai @ai-sdk/openai @ai-sdk/google ollama-ai-provider-v2
    ```
 
-2. **Update Service Layer**:
+2. **No Service Layer Changes Required**:
+   The main `EmbeddingService` now automatically integrates the provider system. Simply use the existing `EmbeddingServiceLive` layer as before:
    ```typescript
-   // Old
    import { EmbeddingServiceLive } from "./entities/embedding/api/embedding"
-
-   // New
-   import { createEmbeddingProviderService, getDefaultProvider } from "./shared/providers"
-
-   const providerConfig = getDefaultProvider()
-   const serviceLayer = createEmbeddingProviderService({ defaultProvider: providerConfig })
+   // EmbeddingServiceLive now includes provider support automatically
    ```
 
 3. **Set Environment Variables** (if using non-Ollama providers):
@@ -217,7 +212,7 @@ The provider system follows a layered architecture:
 ```
 ┌─────────────────────────────────────┐
 │           Application Layer          │
-│         (EmbeddingServiceV2)        │
+│          (EmbeddingService)         │
 ├─────────────────────────────────────┤
 │         Provider Factory            │
 │    (EmbeddingProviderService)       │

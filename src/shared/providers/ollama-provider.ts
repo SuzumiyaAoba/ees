@@ -12,7 +12,7 @@ import type {
   ModelInfo,
   OllamaConfig,
 } from "./types"
-import { ProviderConnectionError, ProviderModelError } from "./types"
+import { ProviderModelError } from "./types"
 
 export interface OllamaProviderService extends EmbeddingProvider {}
 

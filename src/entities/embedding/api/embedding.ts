@@ -1,12 +1,23 @@
+/**
+ * Multi-provider embedding service
+ * Supports multiple providers (Ollama, OpenAI, Google AI) via Vercel AI SDK
+ */
+
 import { and, eq, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
+import { getDefaultProvider } from "../../../shared/config/providers"
 import {
   DatabaseService,
   DatabaseServiceLive,
 } from "../../../shared/database/connection"
 import { embeddings } from "../../../shared/database/schema"
 import { DatabaseQueryError } from "../../../shared/errors/database"
-import type { OllamaModelError } from "../../../shared/errors/ollama"
+import {
+  EmbeddingProviderService,
+  type EmbeddingRequest,
+  type ProviderError,
+} from "../../../shared/providers"
+import { createEmbeddingProviderService } from "../../../shared/providers/factory"
 import { parseStoredEmbeddingData } from "../lib/embedding-data"
 import type {
   BatchCreateEmbeddingRequest,
@@ -17,7 +28,6 @@ import type {
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
 } from "../model/embedding"
-import { OllamaService, OllamaServiceLive } from "./ollama"
 
 export interface EmbeddingService {
   readonly createEmbedding: (
@@ -26,14 +36,14 @@ export interface EmbeddingService {
     modelName?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    ProviderError | DatabaseQueryError
   >
 
   readonly createBatchEmbedding: (
     request: BatchCreateEmbeddingRequest
   ) => Effect.Effect<
     BatchCreateEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    ProviderError | DatabaseQueryError
   >
 
   readonly getEmbedding: (
@@ -55,7 +65,28 @@ export interface EmbeddingService {
     request: SearchEmbeddingRequest
   ) => Effect.Effect<
     SearchEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    ProviderError | DatabaseQueryError
+  >
+
+  readonly listProviders: () => Effect.Effect<string[], never>
+
+  readonly getCurrentProvider: () => Effect.Effect<string, never>
+
+  readonly getProviderModels: (
+    providerType?: string
+  ) => Effect.Effect<
+    Array<{ name: string; provider: string; dimensions: number }>,
+    ProviderError
+  >
+
+  readonly createEmbeddingWithProvider: (
+    providerType: string,
+    uri: string,
+    text: string,
+    modelName?: string
+  ) => Effect.Effect<
+    CreateEmbeddingResponse,
+    ProviderError | DatabaseQueryError
   >
 }
 
@@ -140,19 +171,22 @@ const calculateSimilarity = (
 
 const make = Effect.gen(function* () {
   const { db } = yield* DatabaseService
-  const ollamaService = yield* OllamaService
+  const providerService = yield* EmbeddingProviderService
 
-  const createEmbedding = (
-    uri: string,
-    text: string,
-    modelName = "embeddinggemma:300m"
-  ) =>
+  const createEmbedding = (uri: string, text: string, modelName?: string) =>
     Effect.gen(function* () {
-      // Generate embedding using Ollama
-      const embedding = yield* ollamaService.generateEmbedding(text, modelName)
+      // Generate embedding using the current provider
+      const embeddingRequest: EmbeddingRequest = {
+        text,
+        modelName,
+      }
+      const embeddingResponse =
+        yield* providerService.generateEmbedding(embeddingRequest)
 
       // Convert embedding array to binary data for storage
-      const embeddingBuffer = Buffer.from(JSON.stringify(embedding))
+      const embeddingBuffer = Buffer.from(
+        JSON.stringify(embeddingResponse.embedding)
+      )
 
       // Insert or update embedding in database
       const result = yield* Effect.tryPromise({
@@ -162,14 +196,14 @@ const make = Effect.gen(function* () {
             .values({
               uri,
               text,
-              modelName,
+              modelName: embeddingResponse.model,
               embedding: embeddingBuffer,
             })
             .onConflictDoUpdate({
               target: embeddings.uri,
               set: {
                 text,
-                modelName,
+                modelName: embeddingResponse.model,
                 embedding: embeddingBuffer,
                 updatedAt: new Date().toISOString(),
               },
@@ -185,14 +219,14 @@ const make = Effect.gen(function* () {
       return {
         id: result[0]?.id ?? 0,
         uri,
-        model_name: modelName,
+        model_name: embeddingResponse.model,
         message: "Embedding created successfully",
       }
     })
 
   const createBatchEmbedding = (request: BatchCreateEmbeddingRequest) =>
     Effect.gen(function* () {
-      const { texts, model_name = "embeddinggemma:300m" } = request
+      const { texts, model_name } = request
       const results: BatchCreateEmbeddingResponse["results"] = []
       let successful = 0
       let failed = 0
@@ -201,14 +235,18 @@ const make = Effect.gen(function* () {
       for (const { uri, text } of texts) {
         // Try to create embedding, catch all errors at this level
         const result = yield* Effect.gen(function* () {
-          // Generate embedding using Ollama
-          const embedding = yield* ollamaService.generateEmbedding(
+          // Generate embedding using the current provider
+          const embeddingRequest: EmbeddingRequest = {
             text,
-            model_name
-          )
+            modelName: model_name,
+          }
+          const embeddingResponse =
+            yield* providerService.generateEmbedding(embeddingRequest)
 
           // Convert embedding array to binary data for storage
-          const embeddingBuffer = Buffer.from(JSON.stringify(embedding))
+          const embeddingBuffer = Buffer.from(
+            JSON.stringify(embeddingResponse.embedding)
+          )
 
           // Insert or update embedding in database
           const insertResult = yield* Effect.tryPromise({
@@ -218,14 +256,14 @@ const make = Effect.gen(function* () {
                 .values({
                   uri,
                   text,
-                  modelName: model_name,
+                  modelName: embeddingResponse.model,
                   embedding: embeddingBuffer,
                 })
                 .onConflictDoUpdate({
                   target: embeddings.uri,
                   set: {
                     text,
-                    modelName: model_name,
+                    modelName: embeddingResponse.model,
                     embedding: embeddingBuffer,
                     updatedAt: new Date().toISOString(),
                   },
@@ -241,7 +279,7 @@ const make = Effect.gen(function* () {
           return {
             id: insertResult[0]?.id ?? 0,
             uri,
-            model_name,
+            model_name: embeddingResponse.model,
             status: "success" as const,
           }
         }).pipe(
@@ -249,7 +287,7 @@ const make = Effect.gen(function* () {
             Effect.succeed({
               id: 0,
               uri,
-              model_name,
+              model_name: model_name ?? "unknown",
               status: "error" as const,
               error: error instanceof Error ? error.message : "Unknown error",
             })
@@ -443,26 +481,29 @@ const make = Effect.gen(function* () {
     Effect.gen(function* () {
       const {
         query,
-        model_name = "embeddinggemma:300m",
+        model_name,
         limit = 10,
         threshold,
         metric = "cosine",
       } = request
 
-      // Generate embedding for the query text
-      const queryEmbedding = yield* ollamaService.generateEmbedding(
-        query,
-        model_name
-      )
+      // Generate embedding for the query text using the current provider
+      const embeddingRequest: EmbeddingRequest = {
+        text: query,
+        modelName: model_name,
+      }
+      const queryEmbeddingResponse =
+        yield* providerService.generateEmbedding(embeddingRequest)
+      const queryEmbedding = queryEmbeddingResponse.embedding
+      const actualModelName = queryEmbeddingResponse.model
 
       // Get all embeddings with the same model for comparison
-      // Note: For very large datasets, this could be optimized with batching
       const allEmbeddings = yield* Effect.tryPromise({
         try: () =>
           db
             .select()
             .from(embeddings)
-            .where(eq(embeddings.modelName, model_name))
+            .where(eq(embeddings.modelName, actualModelName))
             .orderBy(embeddings.createdAt),
         catch: (error) =>
           new DatabaseQueryError({
@@ -548,11 +589,48 @@ const make = Effect.gen(function* () {
       return {
         results,
         query,
-        model_name,
+        model_name: actualModelName,
         metric,
         count: results.length,
         threshold,
       }
+    })
+
+  const listProviders = () => providerService.listAllProviders()
+
+  const getCurrentProvider = () => providerService.getCurrentProvider()
+
+  const getProviderModels = (providerType?: string) =>
+    Effect.gen(function* () {
+      if (providerType) {
+        // Get models for specific provider
+        const allModels = yield* providerService.listModels()
+        return allModels.filter((model) => model.provider === providerType)
+      }
+      // Get models for current provider
+      return yield* providerService.listModels()
+    })
+
+  const createEmbeddingWithProvider = (
+    providerType: string,
+    uri: string,
+    text: string,
+    modelName?: string
+  ) =>
+    Effect.gen(function* () {
+      // For now, use the default provider since switching isn't implemented
+      // This could be enhanced to support dynamic provider selection
+      const currentProvider = yield* getCurrentProvider()
+      if (currentProvider !== providerType) {
+        return yield* Effect.fail(
+          new Error(
+            `Provider switching from ${currentProvider} to ${providerType} not yet supported`
+          )
+        )
+      }
+
+      // Use the regular createEmbedding method
+      return yield* createEmbedding(uri, text, modelName)
     })
 
   return {
@@ -562,10 +640,23 @@ const make = Effect.gen(function* () {
     getAllEmbeddings,
     deleteEmbedding,
     searchEmbeddings,
+    listProviders,
+    getCurrentProvider,
+    getProviderModels,
+    createEmbeddingWithProvider,
   } as const
 })
 
 export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
-  Layer.provide(OllamaServiceLive),
-  Layer.provide(DatabaseServiceLive)
+  Layer.provide(DatabaseServiceLive),
+  Layer.provideMerge(
+    Layer.suspend(() => {
+      const defaultProvider = getDefaultProvider()
+      const factoryConfig = {
+        defaultProvider,
+        availableProviders: [defaultProvider],
+      }
+      return createEmbeddingProviderService(factoryConfig)
+    })
+  )
 )

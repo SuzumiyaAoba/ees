@@ -61,16 +61,19 @@ export function getOpenAIConfig(): OpenAIConfig | null {
     return null
   }
 
+  const baseUrl = getEnv(ENV_KEYS.OPENAI_BASE_URL)
+  const organization = getEnv(ENV_KEYS.OPENAI_ORGANIZATION)
+
   return {
-    type: "openai",
+    type: "openai" as const,
     apiKey,
-    baseUrl: getEnv(ENV_KEYS.OPENAI_BASE_URL) ?? undefined,
     defaultModel: getEnvWithDefault(
       ENV_KEYS.OPENAI_DEFAULT_MODEL,
       "text-embedding-3-small"
     ),
-    organization: getEnv(ENV_KEYS.OPENAI_ORGANIZATION) ?? undefined,
-  }
+    ...(baseUrl && { baseUrl }),
+    ...(organization && { organization }),
+  } as OpenAIConfig
 }
 
 /**
@@ -83,15 +86,17 @@ export function getGoogleConfig(): GoogleConfig | null {
     return null
   }
 
+  const baseUrl = getEnv(ENV_KEYS.GOOGLE_BASE_URL)
+
   return {
-    type: "google",
+    type: "google" as const,
     apiKey,
-    baseUrl: getEnv(ENV_KEYS.GOOGLE_BASE_URL) ?? undefined,
     defaultModel: getEnvWithDefault(
       ENV_KEYS.GOOGLE_DEFAULT_MODEL,
       "embedding-001"
     ),
-  }
+    ...(baseUrl && { baseUrl }),
+  } as GoogleConfig
 }
 
 /**
