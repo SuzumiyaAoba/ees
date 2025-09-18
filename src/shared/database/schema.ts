@@ -22,6 +22,10 @@ export const embeddings = sqliteTable(
     uriIdx: index("idx_embeddings_uri").on(table.uri),
     createdAtIdx: index("idx_embeddings_created_at").on(table.createdAt),
     modelNameIdx: index("idx_embeddings_model_name").on(table.modelName),
+    // Vector index for efficient similarity search using cosine distance
+    vectorIdx: index("idx_embeddings_vector").on(
+      sql`libsql_vector_idx(embedding, 'metric=cosine')`
+    ),
   })
 )
 
