@@ -15,7 +15,10 @@ import { DatabaseQueryError } from "../../../shared/errors/database"
 import {
   EmbeddingProviderService,
   type EmbeddingRequest,
-  type ProviderError,
+  type ProviderAuthenticationError,
+  type ProviderConnectionError,
+  type ProviderModelError,
+  type ProviderRateLimitError,
 } from "../../../shared/providers"
 import { createEmbeddingProviderService } from "../../../shared/providers/factory"
 import { parseStoredEmbeddingData } from "../lib/embedding-data"
@@ -36,14 +39,22 @@ export interface EmbeddingService {
     modelName?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
-    ProviderError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   readonly createBatchEmbedding: (
     request: BatchCreateEmbeddingRequest
   ) => Effect.Effect<
     BatchCreateEmbeddingResponse,
-    ProviderError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   readonly getEmbedding: (
@@ -65,7 +76,11 @@ export interface EmbeddingService {
     request: SearchEmbeddingRequest
   ) => Effect.Effect<
     SearchEmbeddingResponse,
-    ProviderError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   readonly listProviders: () => Effect.Effect<string[], never>
@@ -75,8 +90,8 @@ export interface EmbeddingService {
   readonly getProviderModels: (
     providerType?: string
   ) => Effect.Effect<
-    Array<{ name: string; provider: string; dimensions: number }>,
-    ProviderError
+    Array<{ name: string; provider: string; dimensions?: number }>,
+    ProviderConnectionError | ProviderAuthenticationError
   >
 
   readonly createEmbeddingWithProvider: (
@@ -86,7 +101,11 @@ export interface EmbeddingService {
     modelName?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
-    ProviderError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 }
 

@@ -40,7 +40,7 @@ const make = (config: OpenAIConfig) =>
             request.modelName ?? config.defaultModel ?? "text-embedding-3-small"
 
           const result = await embed({
-            model: client.textEmbedding(modelName),
+            model: client.textEmbeddingModel(modelName),
             value: request.text,
           })
 
@@ -89,7 +89,7 @@ const make = (config: OpenAIConfig) =>
                 return new ProviderConnectionError({
                   provider: "openai",
                   message: `OpenAI API error: ${message}`,
-                  errorCode: statusCode?.toString(),
+                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
                   cause: error,
                 })
             }

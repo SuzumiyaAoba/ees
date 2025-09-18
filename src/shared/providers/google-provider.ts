@@ -39,7 +39,7 @@ const make = (config: GoogleConfig) =>
             request.modelName ?? config.defaultModel ?? "embedding-001"
 
           const result = await embed({
-            model: client.textEmbedding(modelName),
+            model: client.textEmbeddingModel(modelName),
             value: request.text,
           })
 
@@ -90,7 +90,7 @@ const make = (config: GoogleConfig) =>
                 return new ProviderConnectionError({
                   provider: "google",
                   message: `Google AI API error: ${message}`,
-                  errorCode: statusCode?.toString(),
+                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
                   cause: error,
                 })
             }

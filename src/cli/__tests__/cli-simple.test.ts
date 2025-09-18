@@ -9,7 +9,6 @@ import { join } from "node:path"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { EmbeddingService } from "../../entities/embedding/api/embedding"
-import { OllamaService } from "../../entities/embedding/api/ollama"
 import type {
   BatchCreateEmbeddingResponse,
   CreateEmbeddingResponse,
@@ -40,11 +39,6 @@ describe("CLI Application Service Layer", () => {
       delete: ReturnType<typeof vi.fn>
     }
   }
-  let mockOllamaService: {
-    generateEmbedding: ReturnType<typeof vi.fn>
-    isModelAvailable: ReturnType<typeof vi.fn>
-    pullModel: ReturnType<typeof vi.fn>
-  }
   let mockLayer: Layer.Layer<EmbeddingApplicationService>
 
   beforeEach(async () => {
@@ -61,13 +55,6 @@ describe("CLI Application Service Layer", () => {
       },
     }
 
-    // Mock the Ollama service
-    mockOllamaService = {
-      generateEmbedding: vi.fn(),
-      isModelAvailable: vi.fn(),
-      pullModel: vi.fn(),
-    }
-
     // Mock the Embedding service with proper return values
     mockEmbeddingService = {
       createEmbedding: vi.fn(),
@@ -82,7 +69,6 @@ describe("CLI Application Service Layer", () => {
     // First provide the base services, then build the application service on top
     const baseLayer = Layer.mergeAll(
       Layer.succeed(DatabaseService, mockDatabaseService),
-      Layer.succeed(OllamaService, mockOllamaService),
       Layer.succeed(EmbeddingService, mockEmbeddingService)
     )
 
