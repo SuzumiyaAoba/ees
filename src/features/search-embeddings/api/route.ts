@@ -3,7 +3,7 @@ import {
   ErrorResponseSchema,
   SearchEmbeddingRequestSchema,
   SearchEmbeddingResponseSchema,
-} from "../../../entities/embedding/model/openapi"
+} from "@/entities/embedding/model/openapi"
 
 // Search embeddings route
 export const searchEmbeddingsRoute = createRoute({

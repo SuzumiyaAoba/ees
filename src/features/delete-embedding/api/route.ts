@@ -5,7 +5,7 @@ import {
   IdParamSchema,
   NotFoundResponseSchema,
   ValidationErrorResponseSchema,
-} from "../../../entities/embedding/model/openapi"
+} from "@/entities/embedding/model/openapi"
 
 // Delete embedding route
 export const deleteEmbeddingRoute = createRoute({

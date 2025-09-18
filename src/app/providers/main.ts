@@ -1,4 +1,4 @@
-import { ApplicationLayer } from "../../shared/application/layers"
+import { ApplicationLayer } from "@/shared/application/layers"
 
 /**
  * Web application layer

@@ -3,7 +3,7 @@ import {
   BatchCreateEmbeddingRequestSchema,
   BatchCreateEmbeddingResponseSchema,
   ErrorResponseSchema,
-} from "../../../entities/embedding/model/openapi"
+} from "@/entities/embedding/model/openapi"
 
 // Batch create embedding route
 export const batchCreateEmbeddingRoute = createRoute({

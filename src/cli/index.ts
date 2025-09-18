@@ -6,10 +6,10 @@
  */
 
 import { Effect } from "effect"
-import { EmbeddingApplicationService } from "../shared/application/embedding-application"
-import { ApplicationLayer } from "../shared/application/layers"
-import * as Console from "../shared/lib/console"
-import { parseBatchFile, readStdin, readTextFile } from "../shared/lib/file-io"
+import { EmbeddingApplicationService } from "@/shared/application/embedding-application"
+import { ApplicationLayer } from "@/shared/application/layers"
+import * as Console from "@/shared/lib/console"
+import { parseBatchFile, readStdin, readTextFile } from "@/shared/lib/file-io"
 
 /**
  * CLI Commands Interface

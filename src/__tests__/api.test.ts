@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import app from "../index"
+import app from "@/index"
 // Type imports are handled by test-helpers now
 import {
   CreateEmbeddingResponseSchema,
@@ -9,7 +9,7 @@ import {
   EmbeddingsListResponseSchema,
   ErrorResponseSchema,
   parseJsonResponse,
-} from "../shared/lib/test-helpers"
+} from "@/shared/lib/test-helpers"
 
 // API response types for tests - now using test-helpers schemas
 

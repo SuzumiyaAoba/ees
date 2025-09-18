@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   DatabaseService,
   DatabaseServiceLive,
-} from "../shared/database/connection"
-import { DatabaseConnectionError } from "../shared/errors/database"
+} from "@/shared/database/connection"
+import { DatabaseConnectionError } from "@/shared/errors/database"
 
 // Mock fs module for directory creation tests
 vi.mock("fs", () => ({
