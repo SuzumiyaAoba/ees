@@ -7,7 +7,7 @@
     "web"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/api && npm run build --workspace=web",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/cli && npm run build --workspace=packages/api && npm run build --workspace=web",
     "start": "npm run start --workspace=packages/api",
     "dev": "npm run dev --workspace=packages/api",
     "dev:web": "npm run dev --workspace=web",

@@ -5,16 +5,17 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "noEmit": false,
+    "composite": true,
     "allowImportingTsExtensions": false,
     "module": "ESNext",
-    "moduleResolution": "bundler",
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "moduleResolution": "bundler"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**/*"]
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    {
+      "path": "../core"
+    }
+  ]
 }

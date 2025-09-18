@@ -159,7 +159,7 @@ function extractResourceName(baseUrl: string): string {
     const hostname = url.hostname
     // Extract resource name from Azure OpenAI endpoint format: https://{resource-name}.openai.azure.com
     const parts = hostname.split(".")
-    if (parts.length >= 3 && parts[1] === "openai" && parts[2] === "azure") {
+    if (parts.length >= 3 && parts[1] === "openai" && parts[2] === "azure" && parts[0]) {
       return parts[0]
     }
     throw new Error("Invalid Azure OpenAI endpoint format")
