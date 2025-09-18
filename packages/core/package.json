@@ -1,0 +1,28 @@
+{
+  "name": "@ees/core",
+  "version": "1.0.0",
+  "description": "EES Core - Shared types, utilities, and business logic",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["ees", "embedding", "core"],
+  "author": "SuzumiyaAoba",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "drizzle-orm": "^0.44.5",
+    "effect": "^3.17.13",
+    "zod": "^4.1.8"
+  }
+}
