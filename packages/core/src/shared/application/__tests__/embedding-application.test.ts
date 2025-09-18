@@ -13,7 +13,7 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "@/entities/embedding/model/embedding"
+} from "../../../entities/embedding/model/embedding"
 import { DatabaseService } from "../../database/connection"
 import {
   EmbeddingApplicationService,
