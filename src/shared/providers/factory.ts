@@ -3,12 +3,21 @@
  */
 
 import { Context, Effect, Layer } from "effect"
+import { AzureProviderService, createAzureProvider } from "./azure-provider"
+import { CohereProviderService, createCohereProvider } from "./cohere-provider"
 import { createGoogleProvider, GoogleProviderService } from "./google-provider"
+import {
+  createMistralProvider,
+  MistralProviderService,
+} from "./mistral-provider"
 import { createOllamaProvider, OllamaProviderService } from "./ollama-provider"
 import { createOpenAIProvider, OpenAIProviderService } from "./openai-provider"
 import type {
+  AzureConfig,
+  CohereConfig,
   EmbeddingProvider,
   GoogleConfig,
+  MistralConfig,
   OllamaConfig,
   OpenAIConfig,
   ProviderConfig,
@@ -47,6 +56,12 @@ export const createProviderLayer = (config: ProviderConfig) => {
       return createOpenAIProvider(config as OpenAIConfig)
     case "google":
       return createGoogleProvider(config as GoogleConfig)
+    case "azure":
+      return createAzureProvider(config as AzureConfig)
+    case "cohere":
+      return createCohereProvider(config as CohereConfig)
+    case "mistral":
+      return createMistralProvider(config as MistralConfig)
     default:
       throw new Error(
         `Unsupported provider type: ${(config as ProviderConfig).type}`
@@ -65,6 +80,12 @@ const getProviderService = (providerType: string) => {
       return OpenAIProviderService
     case "google":
       return GoogleProviderService
+    case "azure":
+      return AzureProviderService
+    case "cohere":
+      return CohereProviderService
+    case "mistral":
+      return MistralProviderService
     default:
       throw new Error(`Unsupported provider type: ${providerType}`)
   }
@@ -188,6 +209,39 @@ export const createGoogleConfig = (
   type: "google",
   apiKey,
   defaultModel: options.defaultModel ?? "embedding-001",
+  ...options,
+})
+
+export const createAzureConfig = (
+  apiKey: string,
+  baseUrl: string,
+  options: Partial<Omit<AzureConfig, "type" | "apiKey" | "baseUrl">> = {}
+): AzureConfig => ({
+  type: "azure",
+  apiKey,
+  baseUrl,
+  defaultModel: options.defaultModel ?? "text-embedding-ada-002",
+  apiVersion: options.apiVersion ?? "2024-02-01",
+  ...options,
+})
+
+export const createCohereConfig = (
+  apiKey: string,
+  options: Partial<Omit<CohereConfig, "type" | "apiKey">> = {}
+): CohereConfig => ({
+  type: "cohere",
+  apiKey,
+  defaultModel: options.defaultModel ?? "embed-english-v3.0",
+  ...options,
+})
+
+export const createMistralConfig = (
+  apiKey: string,
+  options: Partial<Omit<MistralConfig, "type" | "apiKey">> = {}
+): MistralConfig => ({
+  type: "mistral",
+  apiKey,
+  defaultModel: options.defaultModel ?? "mistral-embed",
   ...options,
 })
 

@@ -10,7 +10,7 @@ import { Data } from "effect"
  * Configuration for different embedding providers
  */
 export interface ProviderConfig {
-  readonly type: "ollama" | "openai" | "google"
+  readonly type: "ollama" | "openai" | "google" | "azure" | "cohere" | "mistral"
   readonly apiKey?: string
   readonly baseUrl?: string
   readonly defaultModel?: string
@@ -35,6 +35,28 @@ export interface GoogleConfig extends ProviderConfig {
   readonly apiKey: string
   readonly baseUrl?: string // Default: Google AI Studio endpoint
   readonly defaultModel?: string // Default: embedding-001
+}
+
+export interface AzureConfig extends ProviderConfig {
+  readonly type: "azure"
+  readonly apiKey: string
+  readonly baseUrl: string // Required: Azure endpoint URL
+  readonly defaultModel?: string // Default: text-embedding-ada-002
+  readonly apiVersion?: string // Azure API version
+}
+
+export interface CohereConfig extends ProviderConfig {
+  readonly type: "cohere"
+  readonly apiKey: string
+  readonly baseUrl?: string // Default: Cohere API endpoint
+  readonly defaultModel?: string // Default: embed-english-v3.0
+}
+
+export interface MistralConfig extends ProviderConfig {
+  readonly type: "mistral"
+  readonly apiKey: string
+  readonly baseUrl?: string // Default: Mistral API endpoint
+  readonly defaultModel?: string // Default: mistral-embed
 }
 
 /**

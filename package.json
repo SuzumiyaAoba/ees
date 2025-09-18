@@ -12,10 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "run-s format:*",
-    "format:biome": "biome check --write .",
-    "lint": "run-s lint:*",
-    "lint:biome": "biome check .",
+    "format": "biome check --write .",
+    "lint": "biome check .",
     "type-check": "tsc --project tsconfig.typecheck.json",
     "prepare": "husky"
   },
@@ -39,7 +37,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.17",
+    "@ai-sdk/azure": "^2.0.32",
+    "@ai-sdk/cohere": "^2.0.10",
     "@ai-sdk/google": "^2.0.14",
+    "@ai-sdk/mistral": "^2.0.14",
     "@ai-sdk/openai": "^2.0.31",
     "@hono/node-server": "^1.12.0",
     "@hono/swagger-ui": "^0.5.2",

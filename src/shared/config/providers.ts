@@ -5,7 +5,10 @@
 
 import { getEnv, getEnvWithDefault } from "../lib/env"
 import type {
+  AzureConfig,
+  CohereConfig,
   GoogleConfig,
+  MistralConfig,
   OllamaConfig,
   OpenAIConfig,
   ProviderConfig,
@@ -32,6 +35,22 @@ export const ENV_KEYS = {
   GOOGLE_API_KEY: "EES_GOOGLE_API_KEY",
   GOOGLE_BASE_URL: "EES_GOOGLE_BASE_URL",
   GOOGLE_DEFAULT_MODEL: "EES_GOOGLE_DEFAULT_MODEL",
+
+  // Azure OpenAI configuration
+  AZURE_API_KEY: "EES_AZURE_API_KEY",
+  AZURE_BASE_URL: "EES_AZURE_BASE_URL",
+  AZURE_API_VERSION: "EES_AZURE_API_VERSION",
+  AZURE_DEFAULT_MODEL: "EES_AZURE_DEFAULT_MODEL",
+
+  // Cohere configuration
+  COHERE_API_KEY: "EES_COHERE_API_KEY",
+  COHERE_BASE_URL: "EES_COHERE_BASE_URL",
+  COHERE_DEFAULT_MODEL: "EES_COHERE_DEFAULT_MODEL",
+
+  // Mistral configuration
+  MISTRAL_API_KEY: "EES_MISTRAL_API_KEY",
+  MISTRAL_BASE_URL: "EES_MISTRAL_BASE_URL",
+  MISTRAL_DEFAULT_MODEL: "EES_MISTRAL_DEFAULT_MODEL",
 } as const
 
 /**
@@ -100,6 +119,77 @@ export function getGoogleConfig(): GoogleConfig | null {
 }
 
 /**
+ * Get Azure OpenAI configuration from environment
+ * @returns Azure config or null if API key or base URL is not provided
+ */
+export function getAzureConfig(): AzureConfig | null {
+  const apiKey = getEnv(ENV_KEYS.AZURE_API_KEY)
+  const baseUrl = getEnv(ENV_KEYS.AZURE_BASE_URL)
+  if (!(apiKey && baseUrl)) {
+    return null
+  }
+
+  const apiVersion = getEnv(ENV_KEYS.AZURE_API_VERSION)
+
+  return {
+    type: "azure" as const,
+    apiKey,
+    baseUrl,
+    defaultModel: getEnvWithDefault(
+      ENV_KEYS.AZURE_DEFAULT_MODEL,
+      "text-embedding-ada-002"
+    ),
+    ...(apiVersion && { apiVersion }),
+  } as AzureConfig
+}
+
+/**
+ * Get Cohere configuration from environment
+ * @returns Cohere config or null if API key is not provided
+ */
+export function getCohereConfig(): CohereConfig | null {
+  const apiKey = getEnv(ENV_KEYS.COHERE_API_KEY)
+  if (!apiKey) {
+    return null
+  }
+
+  const baseUrl = getEnv(ENV_KEYS.COHERE_BASE_URL)
+
+  return {
+    type: "cohere" as const,
+    apiKey,
+    defaultModel: getEnvWithDefault(
+      ENV_KEYS.COHERE_DEFAULT_MODEL,
+      "embed-english-v3.0"
+    ),
+    ...(baseUrl && { baseUrl }),
+  } as CohereConfig
+}
+
+/**
+ * Get Mistral configuration from environment
+ * @returns Mistral config or null if API key is not provided
+ */
+export function getMistralConfig(): MistralConfig | null {
+  const apiKey = getEnv(ENV_KEYS.MISTRAL_API_KEY)
+  if (!apiKey) {
+    return null
+  }
+
+  const baseUrl = getEnv(ENV_KEYS.MISTRAL_BASE_URL)
+
+  return {
+    type: "mistral" as const,
+    apiKey,
+    defaultModel: getEnvWithDefault(
+      ENV_KEYS.MISTRAL_DEFAULT_MODEL,
+      "mistral-embed"
+    ),
+    ...(baseUrl && { baseUrl }),
+  } as MistralConfig
+}
+
+/**
  * Get all available provider configurations from environment
  */
 export function getAvailableProviders(): ProviderConfig[] {
@@ -118,6 +208,24 @@ export function getAvailableProviders(): ProviderConfig[] {
   const googleConfig = getGoogleConfig()
   if (googleConfig) {
     providers.push(googleConfig)
+  }
+
+  // Add Azure if API key and base URL are provided
+  const azureConfig = getAzureConfig()
+  if (azureConfig) {
+    providers.push(azureConfig)
+  }
+
+  // Add Cohere if API key is provided
+  const cohereConfig = getCohereConfig()
+  if (cohereConfig) {
+    providers.push(cohereConfig)
+  }
+
+  // Add Mistral if API key is provided
+  const mistralConfig = getMistralConfig()
+  if (mistralConfig) {
+    providers.push(mistralConfig)
   }
 
   return providers
@@ -179,6 +287,30 @@ export function validateProviderConfig(config: ProviderConfig): string[] {
       }
       break
     }
+    case "azure": {
+      const azureConfig = config as AzureConfig
+      if (!azureConfig.apiKey) {
+        errors.push("Azure API key is required")
+      }
+      if (!azureConfig.baseUrl) {
+        errors.push("Azure base URL is required")
+      }
+      break
+    }
+    case "cohere": {
+      const cohereConfig = config as CohereConfig
+      if (!cohereConfig.apiKey) {
+        errors.push("Cohere API key is required")
+      }
+      break
+    }
+    case "mistral": {
+      const mistralConfig = config as MistralConfig
+      if (!mistralConfig.apiKey) {
+        errors.push("Mistral API key is required")
+      }
+      break
+    }
     default:
       errors.push(
         `Unsupported provider type: ${(config as ProviderConfig).type}`
@@ -219,6 +351,31 @@ export function getProviderConfigSummary(): Record<string, unknown> {
       defaultModel: getEnvWithDefault(
         ENV_KEYS.GOOGLE_DEFAULT_MODEL,
         "embedding-001"
+      ),
+    },
+    azure: {
+      hasApiKey: Boolean(getEnv(ENV_KEYS.AZURE_API_KEY)),
+      hasBaseUrl: Boolean(getEnv(ENV_KEYS.AZURE_BASE_URL)),
+      apiVersion: getEnv(ENV_KEYS.AZURE_API_VERSION) || "default",
+      defaultModel: getEnvWithDefault(
+        ENV_KEYS.AZURE_DEFAULT_MODEL,
+        "text-embedding-ada-002"
+      ),
+    },
+    cohere: {
+      hasApiKey: Boolean(getEnv(ENV_KEYS.COHERE_API_KEY)),
+      baseUrl: getEnv(ENV_KEYS.COHERE_BASE_URL) || "default",
+      defaultModel: getEnvWithDefault(
+        ENV_KEYS.COHERE_DEFAULT_MODEL,
+        "embed-english-v3.0"
+      ),
+    },
+    mistral: {
+      hasApiKey: Boolean(getEnv(ENV_KEYS.MISTRAL_API_KEY)),
+      baseUrl: getEnv(ENV_KEYS.MISTRAL_BASE_URL) || "default",
+      defaultModel: getEnvWithDefault(
+        ENV_KEYS.MISTRAL_DEFAULT_MODEL,
+        "mistral-embed"
       ),
     },
   }

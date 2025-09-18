@@ -594,7 +594,7 @@ const make = Effect.gen(function* () {
               candidateResults.sort((a, b) => b.similarity - a.similarity)
             }
           }
-        } catch (_error) {
+        } catch {
           // Skip invalid similarity calculations
         }
       }

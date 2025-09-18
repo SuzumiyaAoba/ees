@@ -314,6 +314,22 @@ describe("Provider Configuration", () => {
           baseUrl: "default",
           defaultModel: "embedding-001",
         },
+        azure: {
+          hasApiKey: false,
+          hasBaseUrl: false,
+          apiVersion: "default",
+          defaultModel: "text-embedding-ada-002",
+        },
+        cohere: {
+          hasApiKey: false,
+          baseUrl: "default",
+          defaultModel: "embed-english-v3.0",
+        },
+        mistral: {
+          hasApiKey: false,
+          baseUrl: "default",
+          defaultModel: "mistral-embed",
+        },
       })
     })
 
