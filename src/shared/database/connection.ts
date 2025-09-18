@@ -9,6 +9,7 @@ import * as schema from "./schema"
 
 export interface DatabaseService {
   readonly db: ReturnType<typeof drizzle>
+  readonly client: ReturnType<typeof createClient>
 }
 
 export const DatabaseService =
@@ -80,6 +81,11 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_model_name ON embeddings(model_name)
       `)
+
+      // Create vector index for efficient similarity search
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding, 'metric=cosine'))
+      `)
     },
     catch: (error) =>
       new DatabaseConnectionError({
@@ -88,7 +94,7 @@ const make = Effect.gen(function* () {
       }),
   })
 
-  return { db }
+  return { db, client }
 })
 
 export const DatabaseServiceLive = Layer.effect(DatabaseService, make)

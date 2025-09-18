@@ -168,7 +168,7 @@ const calculateDotProduct = (vecA: number[], vecB: number[]): number => {
   return dotProduct
 }
 
-const calculateSimilarity = (
+const _calculateSimilarity = (
   vecA: number[],
   vecB: number[],
   metric: "cosine" | "euclidean" | "dot_product"
@@ -189,7 +189,7 @@ const calculateSimilarity = (
 }
 
 const make = Effect.gen(function* () {
-  const { db } = yield* DatabaseService
+  const { db, client } = yield* DatabaseService
   const providerService = yield* EmbeddingProviderService
 
   const createEmbedding = (uri: string, text: string, modelName?: string) =>
@@ -202,10 +202,9 @@ const make = Effect.gen(function* () {
       const embeddingResponse =
         yield* providerService.generateEmbedding(embeddingRequest)
 
-      // Convert embedding array to binary data for storage
-      const embeddingBuffer = Buffer.from(
-        JSON.stringify(embeddingResponse.embedding)
-      )
+      // Convert embedding array to libSQL vector format
+      // For libSQL vector search, we store embeddings as JSON string that can be converted with vector() function
+      const embeddingData = JSON.stringify(embeddingResponse.embedding)
 
       // Insert or update embedding in database
       const result = yield* Effect.tryPromise({
@@ -216,14 +215,14 @@ const make = Effect.gen(function* () {
               uri,
               text,
               modelName: embeddingResponse.model,
-              embedding: embeddingBuffer,
+              embedding: Buffer.from(embeddingData),
             })
             .onConflictDoUpdate({
               target: embeddings.uri,
               set: {
                 text,
                 modelName: embeddingResponse.model,
-                embedding: embeddingBuffer,
+                embedding: Buffer.from(embeddingData),
                 updatedAt: new Date().toISOString(),
               },
             })
@@ -262,10 +261,8 @@ const make = Effect.gen(function* () {
           const embeddingResponse =
             yield* providerService.generateEmbedding(embeddingRequest)
 
-          // Convert embedding array to binary data for storage
-          const embeddingBuffer = Buffer.from(
-            JSON.stringify(embeddingResponse.embedding)
-          )
+          // Convert embedding array to libSQL vector format
+          const embeddingData = JSON.stringify(embeddingResponse.embedding)
 
           // Insert or update embedding in database
           const insertResult = yield* Effect.tryPromise({
@@ -276,14 +273,14 @@ const make = Effect.gen(function* () {
                   uri,
                   text,
                   modelName: embeddingResponse.model,
-                  embedding: embeddingBuffer,
+                  embedding: Buffer.from(embeddingData),
                 })
                 .onConflictDoUpdate({
                   target: embeddings.uri,
                   set: {
                     text,
                     modelName: embeddingResponse.model,
-                    embedding: embeddingBuffer,
+                    embedding: Buffer.from(embeddingData),
                     updatedAt: new Date().toISOString(),
                   },
                 })
@@ -516,94 +513,93 @@ const make = Effect.gen(function* () {
       const queryEmbedding = queryEmbeddingResponse.embedding
       const actualModelName = queryEmbeddingResponse.model
 
-      // Get all embeddings with the same model for comparison
-      const allEmbeddings = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(embeddings)
-            .where(eq(embeddings.modelName, actualModelName))
-            .orderBy(embeddings.createdAt),
+      // Use libSQL native vector search for efficient similarity search
+      const queryVector = JSON.stringify(queryEmbedding)
+
+      // Build the search query using libSQL vector functions
+      let vectorSearchQuery: string
+
+      if (metric === "cosine") {
+        // Use cosine distance with vector_top_k for efficient search
+        vectorSearchQuery = `
+          SELECT
+            e.id,
+            e.uri,
+            e.text,
+            e.model_name,
+            (1.0 - vector_distance_cos(e.embedding, vector('${queryVector}'))) as similarity,
+            e.created_at,
+            e.updated_at
+          FROM vector_top_k('idx_embeddings_vector', vector('${queryVector}'), ${limit}) as v
+          INNER JOIN embeddings as e ON v.id = e.rowid
+          WHERE e.model_name = '${actualModelName}'
+          ${threshold ? `AND (1.0 - vector_distance_cos(e.embedding, vector('${queryVector}'))) >= ${threshold}` : ""}
+          ORDER BY similarity DESC
+        `
+      } else {
+        // Fallback to regular similarity search for other metrics
+        vectorSearchQuery = `
+          SELECT
+            id,
+            uri,
+            text,
+            model_name,
+            vector_distance_cos(embedding, vector('${queryVector}')) as distance,
+            created_at,
+            updated_at
+          FROM embeddings
+          WHERE model_name = '${actualModelName}'
+          ORDER BY distance ASC
+          LIMIT ${limit}
+        `
+      }
+
+      const searchResults = yield* Effect.tryPromise({
+        try: async () => {
+          // Execute raw SQL for vector search using libSQL client
+          const result = await client.execute({
+            sql: vectorSearchQuery,
+            args: [],
+          })
+          return result.rows
+        },
         catch: (error) =>
           new DatabaseQueryError({
-            message: "Failed to retrieve embeddings for search",
+            message: "Failed to execute vector search query",
             cause: error,
           }),
       })
 
-      // Calculate similarities and find top N results efficiently
-      const candidateResults: Array<{
-        id: number
-        uri: string
-        text: string
-        model_name: string
-        similarity: number
-        created_at: string | null
-        updated_at: string | null
-      }> = []
-
-      // Process embeddings and use a min-heap approach for efficiency
-      for (const row of allEmbeddings) {
-        const storedEmbeddingResult = yield* parseStoredEmbeddingData(
-          row.embedding
-        ).pipe(Effect.either)
-
-        if (storedEmbeddingResult._tag === "Left") {
-          // Skip invalid embeddings, continue processing others
-          continue
-        }
-
-        const storedEmbedding = storedEmbeddingResult.right
-
-        try {
-          const similarity = calculateSimilarity(
-            queryEmbedding,
-            storedEmbedding,
-            metric
-          )
-
-          // Skip if doesn't meet threshold
-          if (threshold && similarity < threshold) {
-            continue
-          }
-
-          const result = {
-            id: row.id,
-            uri: row.uri,
-            text: row.text,
-            model_name: row.modelName,
-            similarity,
-            created_at: row.createdAt,
-            updated_at: row.updatedAt,
-          }
-
-          // Efficient top-k selection: maintain sorted array of size limit
-          if (candidateResults.length < limit) {
-            candidateResults.push(result)
-            // Sort only when we reach the limit for the first time
-            if (candidateResults.length === limit) {
-              candidateResults.sort((a, b) => b.similarity - a.similarity)
-            }
-          } else {
-            const lastIndex = candidateResults.length - 1
-            const lastResult = candidateResults[lastIndex]
-            if (lastResult && similarity > lastResult.similarity) {
-              // Only add if better than the worst in our top-k
-              candidateResults[lastIndex] = result
-              // Re-sort to maintain order (could be optimized with a proper heap)
-              candidateResults.sort((a, b) => b.similarity - a.similarity)
-            }
-          }
-        } catch {
-          // Skip invalid similarity calculations
-        }
+      // Transform results to expected format
+      interface VectorSearchRow {
+        id: unknown
+        uri: unknown
+        text: unknown
+        model_name: unknown
+        similarity?: unknown
+        distance?: unknown
+        created_at: unknown
+        updated_at: unknown
       }
 
-      // Final sort if we have less than limit results
-      const results =
-        candidateResults.length < limit
-          ? candidateResults.sort((a, b) => b.similarity - a.similarity)
-          : candidateResults
+      const results = (searchResults as VectorSearchRow[])
+        .map((row) => ({
+          id: Number(row.id),
+          uri: String(row.uri),
+          text: String(row.text),
+          model_name: String(row.model_name),
+          similarity:
+            metric === "cosine"
+              ? Number(row.similarity)
+              : 1.0 - Number(row.distance), // Convert distance to similarity
+          created_at: row.created_at ? String(row.created_at) : null,
+          updated_at: row.updated_at ? String(row.updated_at) : null,
+        }))
+        .filter(
+          (result) =>
+            // Apply threshold filter if specified
+            !threshold || result.similarity >= threshold
+        )
 
       return {
         results,

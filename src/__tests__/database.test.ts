@@ -170,7 +170,7 @@ describe("DatabaseService", () => {
 
       await Effect.runPromise(program.pipe(Effect.provide(DatabaseServiceLive)))
 
-      expect(mockClient.execute).toHaveBeenCalledTimes(4)
+      expect(mockClient.execute).toHaveBeenCalledTimes(5)
 
       // Check table creation
       expect(mockClient.execute).toHaveBeenCalledWith(
@@ -229,7 +229,7 @@ describe("DatabaseService", () => {
         call[0].includes("CREATE INDEX")
       )
 
-      expect(indexCalls).toHaveLength(3)
+      expect(indexCalls).toHaveLength(4)
       expect(indexCalls[0]?.[0]).toContain(
         "idx_embeddings_uri ON embeddings(uri)"
       )
@@ -238,6 +238,9 @@ describe("DatabaseService", () => {
       )
       expect(indexCalls[2]?.[0]).toContain(
         "idx_embeddings_model_name ON embeddings(model_name)"
+      )
+      expect(indexCalls[3]?.[0]).toContain(
+        "idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding"
       )
     })
   })
