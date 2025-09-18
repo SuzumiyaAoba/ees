@@ -52,7 +52,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
     )
 
     return c.json(result)
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to create embedding" }, 500)
   }
 })
@@ -70,14 +70,14 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     const result: BatchCreateEmbeddingResponse = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((_error) => {
+        Effect.catchAll(() => {
           return Effect.fail(new Error("Failed to create batch embeddings"))
         })
       )
     )
 
     return c.json(result)
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
@@ -95,14 +95,14 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     const result: SearchEmbeddingResponse = await Effect.runPromise(
       program.pipe(
         Effect.provide(AppLayer),
-        Effect.catchAll((_error) => {
+        Effect.catchAll(() => {
           return Effect.fail(new Error("Failed to search embeddings"))
         })
       )
     )
 
     return c.json(result)
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
@@ -132,7 +132,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     }
 
     return c.json(embedding)
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
 })
@@ -173,7 +173,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     )
 
     return c.json(result)
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
 })
@@ -202,7 +202,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     }
 
     return c.json({ message: "Embedding deleted successfully" })
-  } catch (_error) {
+  } catch {
     return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })

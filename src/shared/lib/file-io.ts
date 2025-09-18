@@ -84,7 +84,7 @@ export function parseBatchFile(
         })
       }
       throw new Error("JSON root element is not an array")
-    } catch (_jsonError) {
+    } catch {
       // If JSON parsing fails, try to parse as newline-delimited JSON
       try {
         const lines = content
