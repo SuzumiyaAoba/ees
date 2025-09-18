@@ -6,6 +6,14 @@
     "declaration": true,
     "declarationMap": true,
     "composite": true,
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
