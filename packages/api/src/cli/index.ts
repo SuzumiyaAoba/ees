@@ -6,10 +6,10 @@
  */
 
 import { Effect } from "effect"
-import { EmbeddingApplicationService } from "@/shared/application/embedding-application"
-import { ApplicationLayer } from "@/shared/application/layers"
-import * as Console from "@/shared/lib/console"
-import { parseBatchFile, readStdin, readTextFile } from "@/shared/lib/file-io"
+import { EmbeddingApplicationService } from "@ees/core"
+import { ApplicationLayer } from "@ees/core"
+import { log, error } from "@ees/core"
+import { parseBatchFile, readStdin, readTextFile } from "@ees/core"
 
 /**
  * CLI Commands Interface
@@ -83,7 +83,7 @@ const makeCLICommands = Effect.gen(function* () {
       }
 
       if (!text) {
-        Console.log("Reading from stdin... (press Ctrl+D when finished)")
+        log("Reading from stdin... (press Ctrl+D when finished)")
         text = yield* readStdin()
       }
 
@@ -97,7 +97,7 @@ const makeCLICommands = Effect.gen(function* () {
         modelName: options.model,
       })
 
-      Console.log(`Created embedding: ${result.id} for ${result.uri}`)
+      log(`Created embedding: ${result.id} for ${result.uri}`)
     })
 
   const batch = (options: { file: string; model?: string }) =>
@@ -111,7 +111,7 @@ const makeCLICommands = Effect.gen(function* () {
 
       const result = yield* appService.createBatchEmbeddings(batchRequest)
 
-      Console.log(
+      log(
         `Batch complete: ${result.successful}/${result.total} successful`
       )
     })
@@ -132,9 +132,9 @@ const makeCLICommands = Effect.gen(function* () {
         metric: options.metric,
       })
 
-      Console.log(`Found ${result.count} similar embeddings:`)
+      log(`Found ${result.count} similar embeddings:`)
       for (const item of result.results) {
-        Console.log(`- ${item.uri} (similarity: ${item.similarity.toFixed(3)})`)
+        log(`- ${item.uri} (similarity: ${item.similarity.toFixed(3)})`)
       }
     })
 
@@ -152,15 +152,15 @@ const makeCLICommands = Effect.gen(function* () {
         limit: options.limit,
       })
 
-      Console.log(
+      log(
         `Embeddings (${result.count} of ${result.embeddings.length}):`
       )
       for (const embedding of result.embeddings) {
-        Console.log(`- ID: ${embedding.id}, URI: ${embedding.uri}`)
+        log(`- ID: ${embedding.id}, URI: ${embedding.uri}`)
       }
 
       if (result.has_next) {
-        Console.log(`... and ${result.total_pages - result.page} more pages`)
+        log(`... and ${result.total_pages - result.page} more pages`)
       }
     })
 
@@ -169,15 +169,15 @@ const makeCLICommands = Effect.gen(function* () {
       const embedding = yield* appService.getEmbeddingByUri(options.uri)
 
       if (!embedding) {
-        Console.log(`No embedding found for URI: ${options.uri}`)
+        log(`No embedding found for URI: ${options.uri}`)
         return
       }
 
-      Console.log(`Embedding for ${embedding.uri}:`)
-      Console.log(`- ID: ${embedding.id}`)
-      Console.log(`- Model: ${embedding.model_name}`)
-      Console.log(`- Text: ${embedding.text.substring(0, 100)}...`)
-      Console.log(`- Vector dimensions: ${embedding.embedding.length}`)
+      log(`Embedding for ${embedding.uri}:`)
+      log(`- ID: ${embedding.id}`)
+      log(`- Model: ${embedding.model_name}`)
+      log(`- Text: ${embedding.text.substring(0, 100)}...`)
+      log(`- Vector dimensions: ${embedding.embedding.length}`)
     })
 
   const deleteEmbedding = (options: { id: number }) =>
@@ -185,9 +185,9 @@ const makeCLICommands = Effect.gen(function* () {
       const deleted = yield* appService.deleteEmbedding(options.id)
 
       if (deleted) {
-        Console.log(`Deleted embedding with ID: ${options.id}`)
+        log(`Deleted embedding with ID: ${options.id}`)
       } else {
-        Console.log(`No embedding found with ID: ${options.id}`)
+        log(`No embedding found with ID: ${options.id}`)
       }
     })
 
@@ -212,7 +212,7 @@ export function runCLICommand<T>(
       Effect.provide(ApplicationLayer),
       Effect.catchAll((error) =>
         Effect.sync(() => {
-          Console.error(`Error: ${error.message}`)
+          error(`Error: ${error.message}`)
           process.exit(1)
         })
       ),

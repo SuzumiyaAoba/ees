@@ -6,7 +6,7 @@
  */
 
 import { Context, Effect, Layer } from "effect"
-import { EmbeddingService } from "@/entities/embedding/api/embedding"
+import { EmbeddingService } from "../../entities/embedding/api/embedding.js"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,

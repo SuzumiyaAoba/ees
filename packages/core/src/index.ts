@@ -12,5 +12,6 @@ export type {
   CreateEmbeddingResponse,
   BatchCreateEmbeddingResponse,
   SearchEmbeddingResponse,
-  EmbeddingsListResponse
+  EmbeddingsListResponse,
+  Embedding
 } from './entities/embedding/model/embedding.js'
