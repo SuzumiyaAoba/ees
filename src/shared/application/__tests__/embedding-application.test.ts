@@ -5,7 +5,6 @@
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { EmbeddingService } from "../../../entities/embedding/api/embedding"
-import { OllamaService } from "../../../entities/embedding/api/ollama"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -37,11 +36,6 @@ describe("EmbeddingApplicationService", () => {
       delete: ReturnType<typeof vi.fn>
     }
   }
-  let mockOllamaService: {
-    generateEmbedding: ReturnType<typeof vi.fn>
-    isModelAvailable: ReturnType<typeof vi.fn>
-    pullModel: ReturnType<typeof vi.fn>
-  }
 
   beforeEach(() => {
     // Mock the database service
@@ -51,13 +45,6 @@ describe("EmbeddingApplicationService", () => {
         select: vi.fn(),
         delete: vi.fn(),
       },
-    }
-
-    // Mock the Ollama service
-    mockOllamaService = {
-      generateEmbedding: vi.fn(),
-      isModelAvailable: vi.fn(),
-      pullModel: vi.fn(),
     }
 
     // Mock the Embedding service
@@ -74,7 +61,6 @@ describe("EmbeddingApplicationService", () => {
   const createTestLayer = () => {
     const baseLayer = Layer.mergeAll(
       Layer.succeed(DatabaseService, mockDatabaseService),
-      Layer.succeed(OllamaService, mockOllamaService),
       Layer.succeed(EmbeddingService, mockEmbeddingService)
     )
     return Layer.provide(EmbeddingApplicationServiceLive, baseLayer)

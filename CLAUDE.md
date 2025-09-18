@@ -155,7 +155,8 @@ describe("PaginationService", () => {
 - **Framework**: Hono (lightweight web framework)
 - **Runtime**: Node.js with TypeScript
 - **Database**: libSQL with Drizzle ORM for type safety
-- **AI/ML**: Ollama for local embedding generation (default model: `embeddinggemma:300m`)
+- **AI/ML**: Multi-provider embedding system via Vercel AI SDK (Ollama, OpenAI, Google AI)
+- **Default Model**: `nomic-embed-text` (Ollama)
 - **Functional Programming**: Effect library for composable, type-safe operations
 - **Validation**: Zod schemas for runtime type checking
 - **Testing**: Vitest with Node.js environment
@@ -167,15 +168,15 @@ describe("PaginationService", () => {
 - `src/index.ts` - Effect-based Hono API with functional programming paradigm and type-safe error handling
 
 **Effect-based Service Layer**:
-- `src/services/database.ts` - Database connection with Effect wrappers
-- `src/services/ollama-effect.ts` - Ollama integration with Effect error handling
-- `src/services/embedding-effect.ts` - Core embedding business logic
-- `src/layers/main.ts` - Effect dependency injection layer composition
+- `src/shared/database/connection.ts` - Database connection with Effect wrappers
+- `src/shared/providers/` - Multi-provider embedding system with unified interfaces
+- `src/entities/embedding/api/embedding.ts` - Core embedding business logic
+- `src/shared/application/layers.ts` - Effect dependency injection layer composition
 
 **Error Handling**:
-- Tagged error types in `src/errors/` for domain-specific error handling
+- Tagged error types for domain-specific error handling
 - `DatabaseError`, `DatabaseConnectionError`, `DatabaseQueryError`
-- `OllamaError`, `OllamaConnectionError`, `OllamaModelError`
+- `ProviderError`, `ProviderConnectionError`, `ProviderModelError`, `ProviderAuthenticationError`, `ProviderRateLimitError`
 
 **Data Layer**:
 - `src/database/schema.ts` - Drizzle ORM schema definitions
@@ -276,7 +277,7 @@ ees search --query "sample text" --limit 10 --threshold 0.7 --metric cosine
 ees list
 
 # List with filters
-ees list --uri "doc*" --model "embeddinggemma:300m" --limit 20
+ees list --uri "doc*" --model "nomic-embed-text" --limit 20
 
 # Get specific embedding
 ees get --uri "doc1"

@@ -17,7 +17,12 @@ import type {
   SearchEmbeddingResponse,
 } from "../../entities/embedding/model/embedding"
 import type { DatabaseQueryError } from "../errors/database"
-import type { OllamaModelError } from "../errors/ollama"
+import type {
+  ProviderAuthenticationError,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderRateLimitError,
+} from "../providers/types"
 
 /**
  * Application-level embedding operations interface
@@ -33,7 +38,11 @@ export interface EmbeddingApplicationService {
     modelName?: string
   }) => Effect.Effect<
     CreateEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   /**
@@ -43,7 +52,11 @@ export interface EmbeddingApplicationService {
     request: BatchCreateEmbeddingRequest
   ) => Effect.Effect<
     BatchCreateEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   /**
@@ -53,7 +66,11 @@ export interface EmbeddingApplicationService {
     request: SearchEmbeddingRequest
   ) => Effect.Effect<
     SearchEmbeddingResponse,
-    OllamaModelError | DatabaseQueryError
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
   >
 
   /**
