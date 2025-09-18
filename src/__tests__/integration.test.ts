@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import app from "../app"
-import { EmbeddingService } from "../entities/embedding/api/embedding"
-import { DatabaseService } from "../shared/database/connection"
+import app from "@/app"
+import { EmbeddingService } from "@/entities/embedding/api/embedding"
+import { DatabaseService } from "@/shared/database/connection"
 
 describe.skip("Integration Tests", () => {
   // Create test doubles for external dependencies

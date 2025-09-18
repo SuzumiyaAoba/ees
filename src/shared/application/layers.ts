@@ -6,7 +6,7 @@
  */
 
 import { Layer } from "effect"
-import { EmbeddingServiceLive } from "../../entities/embedding/api/embedding"
+import { EmbeddingServiceLive } from "@/entities/embedding/api/embedding"
 import { EmbeddingApplicationServiceLive } from "./embedding-application"
 
 /**

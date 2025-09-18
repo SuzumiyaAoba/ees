@@ -7,17 +7,17 @@ import type {
   Embedding,
   EmbeddingsListResponse,
   SearchEmbeddingResponse,
-} from "../entities/embedding/model/embedding"
-import { batchCreateEmbeddingRoute } from "../features/batch-create-embedding"
-import { createEmbeddingRoute } from "../features/create-embedding"
-import { deleteEmbeddingRoute } from "../features/delete-embedding"
+} from "@/entities/embedding/model/embedding"
+import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
+import { createEmbeddingRoute } from "@/features/create-embedding"
+import { deleteEmbeddingRoute } from "@/features/delete-embedding"
 import {
   getEmbeddingByUriRoute,
   listEmbeddingsRoute,
-} from "../features/list-embeddings"
-import { searchEmbeddingsRoute } from "../features/search-embeddings"
-import { EmbeddingApplicationService } from "../shared/application/embedding-application"
-import { getPort } from "../shared/lib/env"
+} from "@/features/list-embeddings"
+import { searchEmbeddingsRoute } from "@/features/search-embeddings"
+import { EmbeddingApplicationService } from "@/shared/application/embedding-application"
+import { getPort } from "@/shared/lib/env"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
 

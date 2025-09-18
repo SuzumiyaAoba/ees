@@ -3,14 +3,14 @@ import {
   DatabaseConnectionError,
   DatabaseError,
   DatabaseQueryError,
-} from "../shared/errors/database"
+} from "@/shared/errors/database"
 import {
   ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "../shared/providers/types"
+} from "@/shared/providers/types"
 
 describe("Error Classes", () => {
   describe("DatabaseError", () => {
