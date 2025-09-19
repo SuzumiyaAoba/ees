@@ -18,6 +18,7 @@ import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
   DatabaseService,
+  type EmbeddingApplicationService as EmbeddingApplicationServiceType,
 } from "@ees/core"
 
 describe("CLI Application Service Layer", () => {
@@ -34,14 +35,8 @@ describe("CLI Application Service Layer", () => {
     getProviderModels: ReturnType<typeof vi.fn>
     createEmbeddingWithProvider: ReturnType<typeof vi.fn>
   }
-  let mockDatabaseService: {
-    db: {
-      insert: ReturnType<typeof vi.fn>
-      select: ReturnType<typeof vi.fn>
-      delete: ReturnType<typeof vi.fn>
-    }
-  }
-  let mockLayer: Layer.Layer<typeof EmbeddingApplicationService>
+  let mockDatabaseService: typeof DatabaseService.Service
+  let mockLayer: Layer.Layer<EmbeddingApplicationServiceType>
 
   beforeEach(async () => {
     // Create temporary test directory
@@ -50,12 +45,9 @@ describe("CLI Application Service Layer", () => {
 
     // Mock the database service
     mockDatabaseService = {
-      db: {
-        insert: vi.fn(),
-        select: vi.fn(),
-        delete: vi.fn(),
-      },
-    }
+      db: {} as unknown as typeof DatabaseService.Service["db"],
+      client: {} as unknown as typeof DatabaseService.Service["client"],
+    } as unknown as typeof DatabaseService.Service
 
     // Mock the Embedding service with proper return values
     mockEmbeddingService = {
@@ -163,11 +155,30 @@ describe("CLI Application Service Layer", () => {
     it("should search embeddings successfully", async () => {
       const mockResponse: SearchEmbeddingResponse = {
         results: [
-          { uri: "doc1", similarity: 0.95 },
-          { uri: "doc2", similarity: 0.87 },
+          {
+            id: 1,
+            uri: "doc1",
+            text: "",
+            model_name: "test-model",
+            similarity: 0.95,
+            created_at: null,
+            updated_at: null,
+          },
+          {
+            id: 2,
+            uri: "doc2",
+            text: "",
+            model_name: "test-model",
+            similarity: 0.87,
+            created_at: null,
+            updated_at: null,
+          },
         ],
         count: 2,
         query: "test query",
+        model_name: "test-model",
+        metric: "cosine",
+        threshold: 0.8,
       }
       mockEmbeddingService.searchEmbeddings.mockReturnValue(
         Effect.succeed(mockResponse)

@@ -48,7 +48,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
       ) as unknown as Effect.Effect<CreateEmbeddingResponse, never, never>
     )
 
-    return c.json(result)
+    return c.json(result, 200)
   } catch {
     return c.json({ error: "Failed to create embedding" }, 500)
   }
@@ -73,7 +73,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
       ) as unknown as Effect.Effect<BatchCreateEmbeddingResponse, never, never>
     )
 
-    return c.json(result)
+    return c.json(result, 200)
   } catch {
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
@@ -98,7 +98,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
       ) as unknown as Effect.Effect<SearchEmbeddingResponse, never, never>
     )
 
-    return c.json(result)
+    return c.json(result, 200)
   } catch {
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
@@ -126,7 +126,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
       return c.json({ error: "Embedding not found" }, 404)
     }
 
-    return c.json(embedding)
+    return c.json(embedding, 200)
   } catch {
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
@@ -171,7 +171,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
       >
     )
 
-    return c.json(result)
+    return c.json(result, 200)
   } catch {
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
