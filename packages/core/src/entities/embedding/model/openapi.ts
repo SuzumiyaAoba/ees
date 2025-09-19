@@ -296,11 +296,11 @@ export const EmbeddingSchema = z
       description: "Embedding vector",
       example: [0.1, 0.2, 0.3, 0.4, 0.5],
     }),
-    created_at: z.string().openapi({
+    created_at: z.string().nullable().openapi({
       description: "Creation timestamp",
       example: "2024-01-01T00:00:00.000Z",
     }),
-    updated_at: z.string().openapi({
+    updated_at: z.string().nullable().openapi({
       description: "Last update timestamp",
       example: "2024-01-01T00:00:00.000Z",
     }),
