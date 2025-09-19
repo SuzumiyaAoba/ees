@@ -15,8 +15,8 @@ import { DatabaseQueryError } from "../../../shared/errors/database"
 import {
   EmbeddingProviderService,
   type EmbeddingRequest,
+  ProviderConnectionError,
   type ProviderAuthenticationError,
-  type ProviderConnectionError,
   type ProviderModelError,
   type ProviderRateLimitError,
 } from "../../../shared/providers"
@@ -566,9 +566,12 @@ const make = Effect.gen(function* () {
       const currentProvider = yield* getCurrentProvider()
       if (currentProvider !== providerType) {
         return yield* Effect.fail(
-          new Error(
-            `Provider switching from ${currentProvider} to ${providerType} not yet supported`
-          )
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Provider switching from ${currentProvider} to ${providerType} not yet supported`,
+            errorCode: "PROVIDER_SWITCH_NOT_SUPPORTED",
+            cause: new Error(`Provider switching not implemented`),
+          })
         )
       }
 
@@ -590,7 +593,14 @@ const make = Effect.gen(function* () {
   } as const
 })
 
-export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
+export const EmbeddingServiceLive = Layer.effect(
+  EmbeddingService,
+  make as unknown as Effect.Effect<
+    typeof EmbeddingService.Service,
+    never,
+    DatabaseService | EmbeddingProviderService
+  >
+).pipe(
   Layer.provide(DatabaseServiceLive),
   Layer.provideMerge(
     Layer.suspend(() => {
