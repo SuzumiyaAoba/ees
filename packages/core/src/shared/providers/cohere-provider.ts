@@ -2,7 +2,7 @@
  * Cohere provider implementation using Vercel AI SDK
  */
 
-import { cohere } from "@ai-sdk/cohere"
+import { createCohere, type CohereProvider, type CohereProviderSettings } from "@ai-sdk/cohere"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -27,10 +27,10 @@ export const CohereProviderService = Context.GenericTag<CohereProviderService>(
 
 const make = (config: CohereConfig) =>
   Effect.gen(function* () {
-    const client = cohere({
+    const provider: CohereProvider = createCohere({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    } as any)
+    })
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -39,7 +39,7 @@ const make = (config: CohereConfig) =>
             request.modelName ?? config.defaultModel ?? "embed-english-v3.0"
 
           const result = await embed({
-            model: (client as any).textEmbedding(modelName),
+            model: provider.textEmbeddingModel(modelName),
             value: request.text,
           })
 
@@ -56,7 +56,9 @@ const make = (config: CohereConfig) =>
           if (error && typeof error === "object" && "status" in error) {
             const statusCode = error.status
             const message =
-              (error as { message?: string }).message || "Unknown Cohere error"
+              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+                ? error.message
+                : "Unknown Cohere error"
 
             switch (statusCode) {
               case 401:

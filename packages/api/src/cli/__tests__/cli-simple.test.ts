@@ -16,11 +16,7 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingResponse,
 } from "@ees/core"
-import {
-  EmbeddingApplicationService,
-  EmbeddingApplicationServiceLive,
-} from "@ees/core"
-import { DatabaseService } from "@ees/core"
+import { EmbeddingApplicationService, EmbeddingApplicationServiceLive, DatabaseService } from "@ees/core"
 
 describe("CLI Application Service Layer", () => {
   let testDir: string

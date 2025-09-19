@@ -34,6 +34,11 @@
     "@libsql/client": "^0.15.15",
     "drizzle-orm": "^0.44.5",
     "effect": "^3.17.13",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "@ai-sdk/cohere": "^2.0.10",
+    "@ai-sdk/google": "^2.0.14",
+    "@ai-sdk/mistral": "^2.0.14",
+    "@ai-sdk/openai": "^2.0.31",
+    "ai": "^5.0.45"
   }
 }

@@ -429,9 +429,9 @@ describe("Validation Schemas", () => {
         const result = CreateEmbeddingSchema.parse(validData)
 
         // TypeScript should infer these types correctly
-        const uri: string = result.uri
-        const text: string = result.text
-        const modelName: string = result.model_name
+        const uri = result.uri
+        const text = result.text
+        const modelName = result.model_name
 
         expect(typeof uri).toBe("string")
         expect(typeof text).toBe("string")
@@ -448,7 +448,7 @@ describe("Validation Schemas", () => {
         const result = CreateEmbeddingSchema.parse(validData)
 
         // model_name should be string (with default value)
-        const modelName: string = result.model_name
+        const modelName = result.model_name
 
         expect(typeof modelName).toBe("string")
         expect(modelName).toBe("embeddinggemma:300m")

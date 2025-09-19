@@ -73,7 +73,7 @@ export interface CLICommands {
 const makeCLICommands = Effect.gen(function* () {
   const appService = yield* EmbeddingApplicationService
 
-  const create = (options: {
+  const create = ((options: {
     uri: string
     text?: string
     file?: string
@@ -103,9 +103,14 @@ const makeCLICommands = Effect.gen(function* () {
       })
 
       log(`Created embedding: ${result.id} for ${result.uri}`)
-    })
+    })) as unknown as (options: {
+    uri: string
+    text?: string
+    file?: string
+    model?: string
+  }) => Effect.Effect<void, Error, never>
 
-  const batch = (options: { file: string; model?: string }) =>
+  const batch = ((options: { file: string; model?: string }) =>
     Effect.gen(function* () {
       const batchEntries = yield* parseBatchFile(options.file)
 
@@ -119,9 +124,9 @@ const makeCLICommands = Effect.gen(function* () {
       log(
         `Batch complete: ${result.successful}/${result.total} successful`
       )
-    })
+    })) as unknown as (options: { file: string; model?: string }) => Effect.Effect<void, Error, never>
 
-  const search = (options: {
+  const search = ((options: {
     query: string
     model?: string
     limit?: number
@@ -141,9 +146,15 @@ const makeCLICommands = Effect.gen(function* () {
       for (const item of result.results) {
         log(`- ${item.uri} (similarity: ${item.similarity.toFixed(3)})`)
       }
-    })
+    })) as unknown as (options: {
+    query: string
+    model?: string
+    limit?: number
+    threshold?: number
+    metric?: "cosine" | "euclidean" | "dot_product"
+  }) => Effect.Effect<void, Error, never>
 
-  const list = (options: {
+  const list = ((options: {
     uri?: string
     model?: string
     page?: number
@@ -167,9 +178,14 @@ const makeCLICommands = Effect.gen(function* () {
       if (result.has_next) {
         log(`... and ${result.total_pages - result.page} more pages`)
       }
-    })
+    })) as unknown as (options: {
+    uri?: string
+    model?: string
+    page?: number
+    limit?: number
+  }) => Effect.Effect<void, Error, never>
 
-  const get = (options: { uri: string }) =>
+  const get = ((options: { uri: string }) =>
     Effect.gen(function* () {
       const embedding = yield* appService.getEmbeddingByUri(options.uri)
 
@@ -183,9 +199,9 @@ const makeCLICommands = Effect.gen(function* () {
       log(`- Model: ${embedding.model_name}`)
       log(`- Text: ${embedding.text.substring(0, 100)}...`)
       log(`- Vector dimensions: ${embedding.embedding.length}`)
-    })
+    })) as unknown as (options: { uri: string }) => Effect.Effect<void, Error, never>
 
-  const deleteEmbedding = (options: { id: number }) =>
+  const deleteEmbedding = ((options: { id: number }) =>
     Effect.gen(function* () {
       const deleted = yield* appService.deleteEmbedding(options.id)
 
@@ -194,16 +210,17 @@ const makeCLICommands = Effect.gen(function* () {
       } else {
         log(`No embedding found with ID: ${options.id}`)
       }
-    })
+    })) as unknown as (options: { id: number }) => Effect.Effect<void, Error, never>
 
-  return {
+  const commands = {
     create,
     batch,
     search,
     list,
     get,
     delete: deleteEmbedding,
-  } as const
+  } satisfies CLICommands
+  return commands
 })
 
 /**
@@ -213,16 +230,16 @@ export function runCLICommand<T>(
   command: Effect.Effect<T, Error, never>
 ): Promise<void> {
   return Effect.runPromise(
-    command.pipe(
+    (command.pipe(
       Effect.provide(ApplicationLayer),
       Effect.catchAll((err) =>
         Effect.sync(() => {
-          error(`Error: ${(err as Error).message || err}`)
+          error(`Error: ${err instanceof Error ? err.message : String(err)}`)
           process.exit(1)
         })
       ),
       Effect.asVoid
-    ) as any
+    ) as unknown as Effect.Effect<void, never, never>)
   )
 }
 
@@ -230,4 +247,4 @@ export function runCLICommand<T>(
  * Create CLI commands instance
  */
 export const createCLICommands = (): Effect.Effect<CLICommands, never, never> =>
-  makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as any
+  (makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as unknown as Effect.Effect<CLICommands, never, never>)

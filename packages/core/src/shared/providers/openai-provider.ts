@@ -2,7 +2,7 @@
  * OpenAI provider implementation using Vercel AI SDK
  */
 
-import { openai } from "@ai-sdk/openai"
+import { createOpenAI, type OpenAIProvider, type OpenAIProviderSettings } from "@ai-sdk/openai"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -27,11 +27,11 @@ export const OpenAIProviderService = Context.GenericTag<OpenAIProviderService>(
 
 const make = (config: OpenAIConfig) =>
   Effect.gen(function* () {
-    const client = openai({
+    const provider: OpenAIProvider = createOpenAI({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
       ...(config.organization && { organization: config.organization }),
-    } as any)
+    })
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -40,7 +40,7 @@ const make = (config: OpenAIConfig) =>
             request.modelName ?? config.defaultModel ?? "text-embedding-3-small"
 
           const result = await embed({
-            model: (client as any).textEmbeddingModel(modelName),
+            model: provider.textEmbeddingModel(modelName),
             value: request.text,
           })
 
@@ -57,7 +57,9 @@ const make = (config: OpenAIConfig) =>
           if (error && typeof error === "object" && "status" in error) {
             const statusCode = error.status
             const message =
-              (error as { message?: string }).message || "Unknown OpenAI error"
+              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+                ? error.message
+                : "Unknown OpenAI error"
 
             switch (statusCode) {
               case 401:

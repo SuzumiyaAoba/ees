@@ -23,9 +23,7 @@ import { AppLayer } from "./providers/main"
 const app = new OpenAPIHono()
 
 // Root endpoint
-app.openapi(rootRoute, (c) => {
-  return c.text("EES - Embeddings API Service")
-})
+app.openapi(rootRoute, (c) => c.text("EES - Embeddings API Service" as never))
 
 // Create embedding
 app.openapi(createEmbeddingRoute, async (c) => {
@@ -41,13 +39,13 @@ app.openapi(createEmbeddingRoute, async (c) => {
       })
     })
 
-    const result: CreateEmbeddingResponse = await Effect.runPromise(
+    const result = await Effect.runPromise(
       program.pipe(
-        Effect.provide(AppLayer),
-        Effect.catchAll((_error) => {
-          return Effect.fail(new Error("Failed to create embedding"))
-        })
-      )
+        Effect.catchAll(() =>
+          Effect.fail(new Error("Failed to create embedding"))
+        ),
+        Effect.provide(AppLayer)
+      ) as unknown as Effect.Effect<CreateEmbeddingResponse, never, never>
     )
 
     return c.json(result)
@@ -66,13 +64,13 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
       return yield* appService.createBatchEmbeddings(request)
     })
 
-    const result: BatchCreateEmbeddingResponse = await Effect.runPromise(
+    const result = await Effect.runPromise(
       program.pipe(
-        Effect.provide(AppLayer),
-        Effect.catchAll(() => {
-          return Effect.fail(new Error("Failed to create batch embeddings"))
-        })
-      )
+        Effect.catchAll(() =>
+          Effect.fail(new Error("Failed to create batch embeddings"))
+        ),
+        Effect.provide(AppLayer)
+      ) as unknown as Effect.Effect<BatchCreateEmbeddingResponse, never, never>
     )
 
     return c.json(result)
@@ -91,13 +89,13 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
       return yield* appService.searchEmbeddings(request)
     })
 
-    const result: SearchEmbeddingResponse = await Effect.runPromise(
+    const result = await Effect.runPromise(
       program.pipe(
-        Effect.provide(AppLayer),
-        Effect.catchAll(() => {
-          return Effect.fail(new Error("Failed to search embeddings"))
-        })
-      )
+        Effect.catchAll(() =>
+          Effect.fail(new Error("Failed to search embeddings"))
+        ),
+        Effect.provide(AppLayer)
+      ) as unknown as Effect.Effect<SearchEmbeddingResponse, never, never>
     )
 
     return c.json(result)
@@ -119,11 +117,9 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 
     const embedding: Embedding | null = await Effect.runPromise(
       program.pipe(
-        Effect.provide(AppLayer),
-        Effect.catchAll((_error) => {
-          return Effect.succeed(null)
-        })
-      )
+        Effect.catchAll(() => Effect.succeed(null)),
+        Effect.provide(AppLayer)
+      ) as unknown as Effect.Effect<Embedding | null, never, never>
     )
 
     if (!embedding) {
@@ -167,8 +163,12 @@ app.openapi(listEmbeddingsRoute, async (c) => {
       )
     })
 
-    const result: EmbeddingsListResponse = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+    const result = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer)) as unknown as Effect.Effect<
+        EmbeddingsListResponse,
+        never,
+        never
+      >
     )
 
     return c.json(result)
@@ -192,15 +192,19 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
       return yield* appService.deleteEmbedding(id)
     })
 
-    const deleted: boolean = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+    const deleted = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer)) as unknown as Effect.Effect<
+        boolean,
+        never,
+        never
+      >
     )
 
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)
     }
 
-    return c.json({ message: "Embedding deleted successfully" })
+    return c.json({ message: "Embedding deleted successfully" } as any, 200)
   } catch {
     return c.json({ error: "Failed to delete embedding" }, 500)
   }

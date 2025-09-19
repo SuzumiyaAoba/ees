@@ -64,7 +64,7 @@ export const createProviderLayer = (config: ProviderConfig) => {
       return createMistralProvider(config as MistralConfig)
     default:
       throw new Error(
-        `Unsupported provider type: ${(config as ProviderConfig).type}`
+        `Unsupported provider type: ${config.type}`
       )
   }
 }

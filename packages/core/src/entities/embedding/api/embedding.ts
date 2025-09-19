@@ -15,8 +15,8 @@ import { DatabaseQueryError } from "../../../shared/errors/database"
 import {
   EmbeddingProviderService,
   type EmbeddingRequest,
+  ProviderConnectionError,
   type ProviderAuthenticationError,
-  type ProviderConnectionError,
   type ProviderModelError,
   type ProviderRateLimitError,
 } from "../../../shared/providers"
@@ -482,6 +482,17 @@ const make = Effect.gen(function* () {
         `
       }
 
+      type VectorSearchRowRaw = {
+        id: number | string | null
+        uri: string | null
+        text: string | null
+        model_name: string | null
+        similarity?: number | string | null
+        distance?: number | string | null
+        created_at?: string | null
+        updated_at?: string | null
+      }
+
       const searchResults = yield* Effect.tryPromise({
         try: async () => {
           // Execute raw SQL for vector search using libSQL client
@@ -489,7 +500,7 @@ const make = Effect.gen(function* () {
             sql: vectorSearchQuery,
             args: [],
           })
-          return result.rows
+          return result.rows as unknown as Array<VectorSearchRowRaw>
         },
         catch: (error) =>
           new DatabaseQueryError({
@@ -498,30 +509,19 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      // Transform results to expected format
-      interface VectorSearchRow {
-        id: unknown
-        uri: unknown
-        text: unknown
-        model_name: unknown
-        similarity?: unknown
-        distance?: unknown
-        created_at: unknown
-        updated_at: unknown
-      }
-
-      const results = (searchResults as unknown as VectorSearchRow[])
+      // Transform results to expected format without unsafe casts
+      const results = searchResults
         .map((row) => ({
-          id: Number(row.id),
-          uri: String(row.uri),
-          text: String(row.text),
-          model_name: String(row.model_name),
+          id: Number(row["id"] ?? 0),
+          uri: String(row["uri"] ?? ""),
+          text: String(row["text"] ?? ""),
+          model_name: String(row["model_name"] ?? ""),
           similarity:
             metric === "cosine"
-              ? Number(row.similarity)
-              : 1.0 - Number(row.distance), // Convert distance to similarity
-          created_at: row.created_at ? String(row.created_at) : null,
-          updated_at: row.updated_at ? String(row.updated_at) : null,
+              ? Number(row["similarity"] ?? 0)
+              : 1.0 - Number(row["distance"] ?? 0),
+          created_at: row["created_at"] ? String(row["created_at"]) : null,
+          updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
         }))
         .filter(
           (result) =>
@@ -566,9 +566,12 @@ const make = Effect.gen(function* () {
       const currentProvider = yield* getCurrentProvider()
       if (currentProvider !== providerType) {
         return yield* Effect.fail(
-          new Error(
-            `Provider switching from ${currentProvider} to ${providerType} not yet supported`
-          )
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Provider switching from ${currentProvider} to ${providerType} not yet supported`,
+            errorCode: "PROVIDER_SWITCH_NOT_SUPPORTED",
+            cause: new Error(`Provider switching not implemented`),
+          })
         )
       }
 
@@ -576,7 +579,7 @@ const make = Effect.gen(function* () {
       return yield* createEmbedding(uri, text, modelName)
     })
 
-  return {
+  const service = {
     createEmbedding,
     createBatchEmbedding,
     getEmbedding,
@@ -588,9 +591,13 @@ const make = Effect.gen(function* () {
     getProviderModels,
     createEmbeddingWithProvider,
   } as const
+  return service satisfies typeof EmbeddingService.Service
 })
 
-export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make as any).pipe(
+export const EmbeddingServiceLive = Layer.effect(
+  EmbeddingService,
+  make
+).pipe(
   Layer.provide(DatabaseServiceLive),
   Layer.provideMerge(
     Layer.suspend(() => {
