@@ -5,13 +5,13 @@
 
 import { and, eq, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
-import { getDefaultProvider } from "@/shared/config/providers"
+import { getDefaultProvider } from "../../../shared/config/providers"
 import {
   DatabaseService,
   DatabaseServiceLive,
-} from "@/shared/database/connection"
-import { embeddings } from "@/shared/database/schema"
-import { DatabaseQueryError } from "@/shared/errors/database"
+} from "../../../shared/database/connection"
+import { embeddings } from "../../../shared/database/schema"
+import { DatabaseQueryError } from "../../../shared/errors/database"
 import {
   EmbeddingProviderService,
   type EmbeddingRequest,
@@ -19,8 +19,8 @@ import {
   type ProviderConnectionError,
   type ProviderModelError,
   type ProviderRateLimitError,
-} from "@/shared/providers"
-import { createEmbeddingProviderService } from "@/shared/providers/factory"
+} from "../../../shared/providers"
+import { createEmbeddingProviderService } from "../../../shared/providers/factory"
 import { parseStoredEmbeddingData } from "../lib/embedding-data"
 import type {
   BatchCreateEmbeddingRequest,

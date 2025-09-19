@@ -8,19 +8,19 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Layer } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { EmbeddingService } from "@/entities/embedding/api/embedding"
+import { EmbeddingService } from "@ees/core"
 import type {
   BatchCreateEmbeddingResponse,
   CreateEmbeddingResponse,
   Embedding,
   EmbeddingsListResponse,
   SearchEmbeddingResponse,
-} from "@/entities/embedding/model/embedding"
+} from "@ees/core"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
-} from "@/shared/application/embedding-application"
-import { DatabaseService } from "@/shared/database/connection"
+} from "@ees/core"
+import { DatabaseService } from "@ees/core"
 
 describe("CLI Application Service Layer", () => {
   let testDir: string

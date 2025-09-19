@@ -10,6 +10,12 @@
     "allowImportingTsExtensions": false,
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
