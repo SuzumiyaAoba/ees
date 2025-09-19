@@ -34,11 +34,12 @@ The only exceptions are:
 - The shell.nix automatically starts Ollama service and sets up the development environment
 
 ### Core Commands
-- `npm run dev` - Start development server with Vite
-- `npm run build` - Build for production using Vite
+- `npm run dev` - Start development server for API package
+- `npm run dev:web` - Start development server for web frontend
+- `npm run build` - Build all packages (core, cli, api, web)
 - `npm start` - Run production build
-- `npm test` - Run tests with Vitest (watch mode)
-- `npm run test:run` - Run tests once
+- `npm test` - Run tests across all workspaces (watch mode)
+- `npm run test:run` - Run tests once across all workspaces
 
 ### Code Quality
 - `npm run lint` - Check code with Biome linter
@@ -46,6 +47,11 @@ The only exceptions are:
 - `npm run type-check` - TypeScript type checking without emitting files
 
 **MANDATORY QUALITY CHECKS**: After any implementation or code change, you MUST run `npm run type-check` and `npm run lint` to ensure no errors exist. If errors occur, fix the problematic parts before proceeding or committing changes. This is a strict requirement for all development work.
+
+### Per-Package Commands
+- `npm run build --workspace=@ees/core` - Build core package only
+- `npm run test --workspace=@ees/cli` - Test CLI package only
+- `npm run dev --workspace=@ees/api` - Start API server in development mode
 
 ## Code Quality Standards
 
@@ -114,7 +120,7 @@ After creating a PR:
 - Integration tests should be added for complex workflows
 
 **Test Structure:**
-- Tests are located in `src/__tests__/` directory
+- Tests are located in `__tests__/` directories within each package
 - Use descriptive test names that explain the expected behavior
 - Group related tests using `describe` blocks
 - Include both positive and negative test cases
@@ -155,31 +161,64 @@ describe("PaginationService", () => {
 - **Framework**: Hono (lightweight web framework)
 - **Runtime**: Node.js with TypeScript
 - **Database**: libSQL with Drizzle ORM for type safety
-- **AI/ML**: Multi-provider embedding system via Vercel AI SDK (Ollama, OpenAI, Google AI)
-- **Default Model**: `nomic-embed-text` (Ollama)
+- **AI/ML**: Multi-provider embedding system via Vercel AI SDK (Ollama, OpenAI, Google AI, Cohere, Mistral)
+- **Default Provider**: Ollama with `nomic-embed-text` model
 - **Functional Programming**: Effect library for composable, type-safe operations
 - **Validation**: Zod schemas for runtime type checking
 - **Testing**: Vitest with Node.js environment
-- **Build**: Vite configured for Node.js library builds
+- **Build**: Vite for API, TypeScript for other packages
+- **Code Quality**: Biome for linting and formatting
+- **Monorepo**: npm workspaces
 
-### Application Architecture
+### Monorepo Structure
 
-**Effect-based API Implementation**:
-- `src/index.ts` - Effect-based Hono API with functional programming paradigm and type-safe error handling
+**Packages:**
+- `packages/core` - Shared business logic, types, database layer, and providers
+- `packages/api` - REST API server using Hono framework
+- `packages/cli` - Command-line interface using CAC
+- `web` - Web frontend (React/Next.js)
 
-**Effect-based Service Layer**:
-- `src/shared/database/connection.ts` - Database connection with Effect wrappers
-- `src/shared/providers/` - Multi-provider embedding system with unified interfaces
-- `src/entities/embedding/api/embedding.ts` - Core embedding business logic
-- `src/shared/application/layers.ts` - Effect dependency injection layer composition
+**Key Directories:**
+- `packages/core/src/shared/` - Shared utilities, database, config, providers
+- `packages/core/src/entities/embedding/` - Core embedding business logic
+- `packages/api/src/` - API routes, middleware, server setup
+- `packages/cli/src/` - CLI commands and interface
 
-**Error Handling**:
-- Tagged error types for domain-specific error handling
+### Multi-Provider AI Architecture
+
+The system supports multiple embedding providers through a unified interface:
+
+**Supported Providers:**
+- **Ollama** (default) - Local embeddings with `nomic-embed-text`
+- **OpenAI** - `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`
+- **Google AI** - `embedding-001`, `text-embedding-004`
+- **Cohere** - `embed-english-v3.0`, `embed-multilingual-v3.0`
+- **Mistral** - `mistral-embed`
+
+**Provider Implementation:**
+- Each provider in `packages/core/src/shared/providers/` implements a common `EmbeddingProvider` interface
+- Uses Vercel AI SDK with `createOpenAI`, `createCohere`, etc. factory functions
+- Unified error handling with tagged error types
+- Configuration through environment variables with `EES_` prefix
+
+### Effect-based Architecture
+
+The codebase uses Effect-ts for functional programming with composable, type-safe operations:
+
+**Error Handling:**
+- Tagged error types for domain-specific failures
 - `DatabaseError`, `DatabaseConnectionError`, `DatabaseQueryError`
 - `ProviderError`, `ProviderConnectionError`, `ProviderModelError`, `ProviderAuthenticationError`, `ProviderRateLimitError`
+- Compose error types in Effect signatures
+- Use `Effect.tryPromise` for async operations that may fail
 
-**Data Layer**:
-- `src/database/schema.ts` - Drizzle ORM schema definitions
+**Testing Strategy:**
+- Tests run with NODE_ENV=test for in-memory database
+- Effect programs can be tested in isolation using mock layers
+- Layer-based dependency injection for testability
+
+**Data Layer:**
+- `packages/core/src/shared/database/schema.ts` - Drizzle ORM schema definitions
 - Database uses libSQL with automatic schema initialization
 - Test environment uses in-memory database (`:memory:`)
 
