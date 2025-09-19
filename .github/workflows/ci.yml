@@ -31,13 +31,13 @@ jobs:
     # - name: Run type checking
     #   run: npm run type-check
 
+    - name: Build application
+      run: npm run build
+
     - name: Run tests
       run: |
         export NODE_ENV=test
         npm test
-
-    - name: Build application
-      run: npm run build
 
   # Temporarily disabled due to npmDepsHash mismatch
   # nix-build:
