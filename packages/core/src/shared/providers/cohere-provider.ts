@@ -2,7 +2,7 @@
  * Cohere provider implementation using Vercel AI SDK
  */
 
-import { cohere } from "@ai-sdk/cohere"
+import { cohere, type CohereProvider, type CohereProviderSettings } from "@ai-sdk/cohere"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -27,10 +27,11 @@ export const CohereProviderService = Context.GenericTag<CohereProviderService>(
 
 const make = (config: CohereConfig) =>
   Effect.gen(function* () {
-    const client = cohere({
+    const cohereClient = cohere({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    } as any)
+    } as CohereProviderSettings)
+    const client: CohereProvider = cohereClient as unknown as CohereProvider
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -39,7 +40,7 @@ const make = (config: CohereConfig) =>
             request.modelName ?? config.defaultModel ?? "embed-english-v3.0"
 
           const result = await embed({
-            model: (client as any).textEmbedding(modelName),
+            model: client.textEmbeddingModel(modelName),
             value: request.text,
           })
 

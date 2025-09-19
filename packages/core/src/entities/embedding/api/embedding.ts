@@ -590,7 +590,7 @@ const make = Effect.gen(function* () {
   } as const
 })
 
-export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make as any).pipe(
+export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
   Layer.provide(DatabaseServiceLive),
   Layer.provideMerge(
     Layer.suspend(() => {

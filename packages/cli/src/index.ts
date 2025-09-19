@@ -222,7 +222,7 @@ export function runCLICommand<T>(
         })
       ),
       Effect.asVoid
-    ) as any
+    ) as unknown as Effect.Effect<void, never, never>
   )
 }
 
@@ -230,4 +230,4 @@ export function runCLICommand<T>(
  * Create CLI commands instance
  */
 export const createCLICommands = (): Effect.Effect<CLICommands, never, never> =>
-  makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as any
+  makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as unknown as Effect.Effect<CLICommands, never, never>

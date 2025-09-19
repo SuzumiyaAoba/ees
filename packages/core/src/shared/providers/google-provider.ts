@@ -2,7 +2,7 @@
  * Google AI provider implementation using Vercel AI SDK
  */
 
-import { google } from "@ai-sdk/google"
+import { google, type GoogleGenerativeAIProvider, type GoogleGenerativeAIProviderSettings } from "@ai-sdk/google"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -27,10 +27,11 @@ export const GoogleProviderService = Context.GenericTag<GoogleProviderService>(
 
 const make = (config: GoogleConfig) =>
   Effect.gen(function* () {
-    const client = google({
+    const googleClient = google({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    } as any)
+    } as GoogleGenerativeAIProviderSettings)
+    const client: GoogleGenerativeAIProvider = googleClient as unknown as GoogleGenerativeAIProvider
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -39,7 +40,7 @@ const make = (config: GoogleConfig) =>
             request.modelName ?? config.defaultModel ?? "embedding-001"
 
           const result = await embed({
-            model: (client as any).textEmbeddingModel(modelName),
+            model: client.textEmbeddingModel(modelName),
             value: request.text,
           })
 

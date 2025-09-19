@@ -2,7 +2,7 @@
  * OpenAI provider implementation using Vercel AI SDK
  */
 
-import { openai } from "@ai-sdk/openai"
+import { openai, type OpenAIProvider, type OpenAIProviderSettings } from "@ai-sdk/openai"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -27,11 +27,12 @@ export const OpenAIProviderService = Context.GenericTag<OpenAIProviderService>(
 
 const make = (config: OpenAIConfig) =>
   Effect.gen(function* () {
-    const client = openai({
+    const openaiClient = openai({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
       ...(config.organization && { organization: config.organization }),
-    } as any)
+    } as OpenAIProviderSettings)
+    const client: OpenAIProvider = openaiClient as unknown as OpenAIProvider
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -40,7 +41,7 @@ const make = (config: OpenAIConfig) =>
             request.modelName ?? config.defaultModel ?? "text-embedding-3-small"
 
           const result = await embed({
-            model: (client as any).textEmbeddingModel(modelName),
+            model: client.textEmbeddingModel(modelName),
             value: request.text,
           })
 

@@ -2,7 +2,7 @@
  * Mistral provider implementation using Vercel AI SDK
  */
 
-import { mistral } from "@ai-sdk/mistral"
+import { mistral, type MistralProvider, type MistralProviderSettings } from "@ai-sdk/mistral"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
@@ -26,10 +26,11 @@ export const MistralProviderService =
 
 const make = (config: MistralConfig) =>
   Effect.gen(function* () {
-    const client = mistral({
+    const mistralClient = mistral({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    } as any)
+    } as MistralProviderSettings)
+    const client: MistralProvider = mistralClient as unknown as MistralProvider
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -38,7 +39,7 @@ const make = (config: MistralConfig) =>
             request.modelName ?? config.defaultModel ?? "mistral-embed"
 
           const result = await embed({
-            model: (client as any).textEmbedding(modelName),
+            model: client.textEmbedding(modelName),
             value: request.text,
           })
 
