@@ -248,10 +248,10 @@ describe("Environment Variable Utilities", () => {
       process.env.TEST_VAR = "test"
 
       // TypeScript should enforce these types at compile time
-      const envValue: string | undefined = getEnv("TEST_VAR")
-      const envWithDefault: string = getEnvWithDefault("TEST_VAR", "default")
-      const testEnv: boolean = isTestEnv()
-      const port: number = getPort()
+      const envValue = getEnv("TEST_VAR")
+      const envWithDefault = getEnvWithDefault("TEST_VAR", "default")
+      const testEnv = isTestEnv()
+      const port = getPort()
 
       expect(typeof envValue).toBe("string")
       expect(typeof envWithDefault).toBe("string")

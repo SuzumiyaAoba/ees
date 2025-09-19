@@ -192,7 +192,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
       return yield* appService.deleteEmbedding(id)
     })
 
-    const deleted: boolean = await Effect.runPromise(
+    const deleted = await Effect.runPromise(
       program.pipe(Effect.provide(AppLayer))
     )
 

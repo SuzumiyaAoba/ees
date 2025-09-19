@@ -27,13 +27,10 @@ export const CohereProviderService = Context.GenericTag<CohereProviderService>(
 
 const make = (config: CohereConfig) =>
   Effect.gen(function* () {
-    // Use type assertion to work around AI SDK type incompatibility
-    // The cohere function signature has changed but functionality remains the same
-    const cohereClient = (cohere as unknown as (settings: { apiKey: string; baseURL?: string }) => CohereProvider)({
+    const provider = (cohere as any)({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
-    const client: CohereProvider = cohereClient
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -42,7 +39,7 @@ const make = (config: CohereConfig) =>
             request.modelName ?? config.defaultModel ?? "embed-english-v3.0"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: (provider as any).textEmbeddingModel(modelName),
             value: request.text,
           })
 

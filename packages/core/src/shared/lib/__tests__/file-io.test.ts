@@ -226,7 +226,7 @@ describe("File I/O Utilities", () => {
       const batchData = [{ uri: "test", text: "content" }]
       await writeFile(batchFile, JSON.stringify(batchData), "utf-8")
 
-      const result: BatchEntry[] = await Effect.runPromise(
+      const result = await Effect.runPromise(
         parseBatchFile(batchFile)
       )
 

@@ -27,13 +27,10 @@ export const GoogleProviderService = Context.GenericTag<GoogleProviderService>(
 
 const make = (config: GoogleConfig) =>
   Effect.gen(function* () {
-    // Use type assertion to work around AI SDK type incompatibility
-    // The google function signature has changed but functionality remains the same
-    const googleClient = (google as unknown as (settings: { apiKey: string; baseURL?: string }) => GoogleGenerativeAIProvider)({
+    const provider = (google as any)({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
-    const client: GoogleGenerativeAIProvider = googleClient
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -42,7 +39,7 @@ const make = (config: GoogleConfig) =>
             request.modelName ?? config.defaultModel ?? "embedding-001"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: (provider as any).textEmbedding(modelName),
             value: request.text,
           })
 

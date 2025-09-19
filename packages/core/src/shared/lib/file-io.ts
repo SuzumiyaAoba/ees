@@ -29,9 +29,9 @@ export function readStdin(): Effect.Effect<string, Error> {
           output: process.stdout,
         })
 
-        const lines: string[] = []
+        const lines = []
 
-        rl.on("line", (line: string) => {
+        rl.on("line", (line) => {
           lines.push(line)
         })
 
@@ -39,7 +39,7 @@ export function readStdin(): Effect.Effect<string, Error> {
           resolve(lines.join("\n"))
         })
 
-        rl.on("error", (error: Error) => {
+        rl.on("error", (error) => {
           reject(error)
         })
       })

@@ -26,13 +26,10 @@ export const MistralProviderService =
 
 const make = (config: MistralConfig) =>
   Effect.gen(function* () {
-    // Use type assertion to work around AI SDK type incompatibility
-    // The mistral function signature has changed but functionality remains the same
-    const mistralClient = (mistral as unknown as (settings: { apiKey: string; baseURL?: string }) => MistralProvider)({
+    const provider = (mistral as any)({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
-    const client: MistralProvider = mistralClient
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -41,7 +38,7 @@ const make = (config: MistralConfig) =>
             request.modelName ?? config.defaultModel ?? "mistral-embed"
 
           const result = await embed({
-            model: client.textEmbedding(modelName),
+            model: (provider as any).textEmbedding(modelName),
             value: request.text,
           })
 

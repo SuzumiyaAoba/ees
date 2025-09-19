@@ -193,7 +193,7 @@ export function getMistralConfig(): MistralConfig | null {
  * Get all available provider configurations from environment
  */
 export function getAvailableProviders(): ProviderConfig[] {
-  const providers: ProviderConfig[] = []
+  const providers = []
 
   // Always include Ollama as it's the default/fallback
   providers.push(getOllamaConfig())
@@ -263,7 +263,7 @@ export function getDefaultProvider(): ProviderConfig {
  * Validate provider configuration
  */
 export function validateProviderConfig(config: ProviderConfig): string[] {
-  const errors: string[] = []
+  const errors = []
 
   switch (config.type) {
     case "openai": {
