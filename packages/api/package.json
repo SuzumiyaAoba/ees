@@ -1,0 +1,48 @@
+{
+  "name": "@ees/api",
+  "version": "1.0.0",
+  "description": "EES API Server - REST API for embedding services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "vite build",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "dev:vite": "run-p dev:build dev:server",
+    "dev:build": "vite build --watch",
+    "dev:server": "nodemon dist/index.js",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["ees", "embedding", "api", "server"],
+  "author": "SuzumiyaAoba",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "nodemon": "^3.1.10",
+    "npm-run-all2": "^8.0.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@ees/core": "file:../core",
+    "@ai-sdk/anthropic": "^2.0.17",
+    "@ai-sdk/azure": "^2.0.32",
+    "@ai-sdk/cohere": "^2.0.10",
+    "@ai-sdk/google": "^2.0.14",
+    "@ai-sdk/mistral": "^2.0.14",
+    "@ai-sdk/openai": "^2.0.31",
+    "@hono/node-server": "^1.12.0",
+    "@hono/swagger-ui": "^0.5.2",
+    "@hono/zod-openapi": "^1.1.0",
+    "ai": "^5.0.45",
+    "hono": "^4.9.7",
+    "ml-distance": "^4.0.1",
+    "ollama": "^0.5.17",
+    "ollama-ai-provider-v2": "^1.3.1"
+  }
+}
