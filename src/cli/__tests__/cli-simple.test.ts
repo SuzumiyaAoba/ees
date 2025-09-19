@@ -39,7 +39,7 @@ describe("CLI Application Service Layer", () => {
       delete: ReturnType<typeof vi.fn>
     }
   }
-  let mockLayer: Layer.Layer<EmbeddingApplicationService>
+  let mockLayer: Layer.Layer<typeof EmbeddingApplicationService>
 
   beforeEach(async () => {
     // Create temporary test directory
