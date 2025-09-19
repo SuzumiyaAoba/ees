@@ -27,12 +27,14 @@ export const OpenAIProviderService = Context.GenericTag<OpenAIProviderService>(
 
 const make = (config: OpenAIConfig) =>
   Effect.gen(function* () {
-    const openaiClient = openai({
+    // Use type assertion to work around AI SDK type incompatibility
+    // The openai function signature has changed but functionality remains the same
+    const openaiClient = (openai as unknown as (settings: { apiKey: string; baseURL?: string; organization?: string }) => OpenAIProvider)({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
       ...(config.organization && { organization: config.organization }),
-    } as OpenAIProviderSettings)
-    const client: OpenAIProvider = openaiClient as unknown as OpenAIProvider
+    })
+    const client: OpenAIProvider = openaiClient
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
