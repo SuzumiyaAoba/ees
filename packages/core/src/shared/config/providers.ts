@@ -267,53 +267,47 @@ export function validateProviderConfig(config: ProviderConfig): string[] {
 
   switch (config.type) {
     case "openai": {
-      const openaiConfig = config as OpenAIConfig
-      if (!openaiConfig.apiKey) {
+      if (!config.apiKey) {
         errors.push("OpenAI API key is required")
       }
       break
     }
     case "google": {
-      const googleConfig = config as GoogleConfig
-      if (!googleConfig.apiKey) {
+      if (!config.apiKey) {
         errors.push("Google AI API key is required")
       }
       break
     }
     case "ollama": {
-      const ollamaConfig = config as OllamaConfig
-      if (!ollamaConfig.baseUrl) {
+      if (!config.baseUrl) {
         errors.push("Ollama base URL is required")
       }
       break
     }
     case "azure": {
-      const azureConfig = config as AzureConfig
-      if (!azureConfig.apiKey) {
+      if (!config.apiKey) {
         errors.push("Azure API key is required")
       }
-      if (!azureConfig.baseUrl) {
+      if (!config.baseUrl) {
         errors.push("Azure base URL is required")
       }
       break
     }
     case "cohere": {
-      const cohereConfig = config as CohereConfig
-      if (!cohereConfig.apiKey) {
+      if (!config.apiKey) {
         errors.push("Cohere API key is required")
       }
       break
     }
     case "mistral": {
-      const mistralConfig = config as MistralConfig
-      if (!mistralConfig.apiKey) {
+      if (!config.apiKey) {
         errors.push("Mistral API key is required")
       }
       break
     }
     default:
       errors.push(
-        `Unsupported provider type: ${(config as ProviderConfig).type}`
+        `Unsupported provider type: ${config.type}`
       )
   }
 

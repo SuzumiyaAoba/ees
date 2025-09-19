@@ -60,7 +60,9 @@ const make = (config: OpenAIConfig) =>
           if (error && typeof error === "object" && "status" in error) {
             const statusCode = error.status
             const message =
-              (error as { message?: string }).message || "Unknown OpenAI error"
+              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+                ? error.message
+                : "Unknown OpenAI error"
 
             switch (statusCode) {
               case 401:

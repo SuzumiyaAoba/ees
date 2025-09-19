@@ -58,7 +58,9 @@ const make = (config: MistralConfig) =>
           if (error && typeof error === "object" && "status" in error) {
             const statusCode = error.status
             const message =
-              (error as { message?: string }).message || "Unknown Mistral error"
+              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+                ? error.message
+                : "Unknown Mistral error"
 
             switch (statusCode) {
               case 401:

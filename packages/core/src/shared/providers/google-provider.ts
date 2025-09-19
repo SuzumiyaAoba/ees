@@ -59,8 +59,9 @@ const make = (config: GoogleConfig) =>
           if (error && typeof error === "object" && "status" in error) {
             const statusCode = error.status
             const message =
-              (error as { message?: string }).message ||
-              "Unknown Google AI error"
+              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
+                ? error.message
+                : "Unknown Google AI error"
 
             switch (statusCode) {
               case 401:

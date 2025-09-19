@@ -217,7 +217,7 @@ export function runCLICommand<T>(
       Effect.provide(ApplicationLayer),
       Effect.catchAll((err) =>
         Effect.sync(() => {
-          error(`Error: ${(err as Error).message || err}`)
+          error(`Error: ${err instanceof Error ? err.message : String(err)}`)
           process.exit(1)
         })
       ),
