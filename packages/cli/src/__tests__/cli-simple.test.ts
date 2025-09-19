@@ -37,7 +37,7 @@ describe("CLI Application Service Layer", () => {
       delete: ReturnType<typeof vi.fn>
     }
   }
-  let mockLayer: Layer.Layer<EmbeddingApplicationService>
+  let mockLayer: Layer.Layer<typeof EmbeddingApplicationService>
 
   beforeEach(async () => {
     // Create temporary test directory
@@ -67,7 +67,7 @@ describe("CLI Application Service Layer", () => {
     // First provide the base services, then build the application service on top
     const baseLayer = Layer.mergeAll(
       Layer.succeed(DatabaseService, mockDatabaseService),
-      Layer.succeed(EmbeddingService, mockEmbeddingService)
+      Layer.succeed(EmbeddingService, mockEmbeddingService as any)
     )
 
     mockLayer = Layer.provide(EmbeddingApplicationServiceLive, baseLayer)
@@ -103,7 +103,7 @@ describe("CLI Application Service Layer", () => {
             text: "Test content",
             modelName: "test-model",
           })
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toEqual(mockResponse)
@@ -137,7 +137,7 @@ describe("CLI Application Service Layer", () => {
             ],
             model_name: "test-model",
           })
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toEqual(mockResponse)
@@ -175,7 +175,7 @@ describe("CLI Application Service Layer", () => {
             threshold: 0.8,
             metric: "cosine",
           })
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toEqual(mockResponse)
@@ -208,7 +208,7 @@ describe("CLI Application Service Layer", () => {
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
           return yield* appService.getEmbeddingByUri("test-doc")
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toEqual(mockEmbedding)
@@ -250,7 +250,7 @@ describe("CLI Application Service Layer", () => {
             page: 1,
             limit: 10,
           })
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toEqual(mockResponse)
@@ -271,7 +271,7 @@ describe("CLI Application Service Layer", () => {
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
           return yield* appService.deleteEmbedding(123)
-        }).pipe(Effect.provide(mockLayer))
+        }).pipe(Effect.provide(mockLayer) as any)
       )
 
       expect(result).toBe(true)

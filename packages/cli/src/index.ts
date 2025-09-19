@@ -28,12 +28,12 @@ export interface CLICommands {
     text?: string
     file?: string
     model?: string
-  }): Effect.Effect<void, Error>
+  }): Effect.Effect<void, Error, never>
 
   /**
    * Create multiple embeddings from batch file
    */
-  batch(options: { file: string; model?: string }): Effect.Effect<void, Error>
+  batch(options: { file: string; model?: string }): Effect.Effect<void, Error, never>
 
   /**
    * Search for similar embeddings
@@ -44,7 +44,7 @@ export interface CLICommands {
     limit?: number
     threshold?: number
     metric?: "cosine" | "euclidean" | "dot_product"
-  }): Effect.Effect<void, Error>
+  }): Effect.Effect<void, Error, never>
 
   /**
    * List all embeddings with optional filters
@@ -54,17 +54,17 @@ export interface CLICommands {
     model?: string
     page?: number
     limit?: number
-  }): Effect.Effect<void, Error>
+  }): Effect.Effect<void, Error, never>
 
   /**
    * Get embedding by URI
    */
-  get(options: { uri: string }): Effect.Effect<void, Error>
+  get(options: { uri: string }): Effect.Effect<void, Error, never>
 
   /**
    * Delete embedding by ID
    */
-  delete(options: { id: number }): Effect.Effect<void, Error>
+  delete(options: { id: number }): Effect.Effect<void, Error, never>
 }
 
 /**
@@ -210,24 +210,24 @@ const makeCLICommands = Effect.gen(function* () {
  * Run CLI command with proper error handling and layer provision
  */
 export function runCLICommand<T>(
-  command: Effect.Effect<T, Error>
+  command: Effect.Effect<T, Error, never>
 ): Promise<void> {
   return Effect.runPromise(
     command.pipe(
       Effect.provide(ApplicationLayer),
-      Effect.catchAll((error) =>
+      Effect.catchAll((err) =>
         Effect.sync(() => {
-          error(`Error: ${error.message}`)
+          error(`Error: ${(err as Error).message || err}`)
           process.exit(1)
         })
       ),
       Effect.asVoid
-    )
+    ) as any
   )
 }
 
 /**
  * Create CLI commands instance
  */
-export const createCLICommands = (): Effect.Effect<CLICommands, never> =>
-  makeCLICommands.pipe(Effect.provide(ApplicationLayer))
+export const createCLICommands = (): Effect.Effect<CLICommands, never, never> =>
+  makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as any
