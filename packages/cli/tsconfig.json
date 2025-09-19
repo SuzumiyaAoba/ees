@@ -5,8 +5,8 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "noEmit": false,
+    "composite": true,
     "allowImportingTsExtensions": false,
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -18,12 +18,13 @@
     "skipLibCheck": true,
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false,
-    "noUncheckedIndexedAccess": false,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**/*"]
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    {
+      "path": "../core"
+    }
+  ]
 }

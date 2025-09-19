@@ -31,7 +31,7 @@ const make = (config: OpenAIConfig) =>
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
       ...(config.organization && { organization: config.organization }),
-    })
+    } as any)
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -40,7 +40,7 @@ const make = (config: OpenAIConfig) =>
             request.modelName ?? config.defaultModel ?? "text-embedding-3-small"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: (client as any).textEmbeddingModel(modelName),
             value: request.text,
           })
 

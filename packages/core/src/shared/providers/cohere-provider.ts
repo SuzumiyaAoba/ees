@@ -30,7 +30,7 @@ const make = (config: CohereConfig) =>
     const client = cohere({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    })
+    } as any)
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -39,7 +39,7 @@ const make = (config: CohereConfig) =>
             request.modelName ?? config.defaultModel ?? "embed-english-v3.0"
 
           const result = await embed({
-            model: client.textEmbedding(modelName),
+            model: (client as any).textEmbedding(modelName),
             value: request.text,
           })
 

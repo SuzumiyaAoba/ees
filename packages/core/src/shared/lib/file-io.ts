@@ -70,8 +70,8 @@ export function parseBatchFile(
           if (
             typeof item !== "object" ||
             item === null ||
-            !item.uri ||
-            !item.text
+            !("uri" in item) ||
+            !("text" in item)
           ) {
             throw new Error(
               `Invalid batch entry at index ${index}: must have 'uri' and 'text' fields`
@@ -98,8 +98,8 @@ export function parseBatchFile(
             if (
               typeof item !== "object" ||
               item === null ||
-              !item.uri ||
-              !item.text
+              !("uri" in item) ||
+              !("text" in item)
             ) {
               throw new Error(
                 `Invalid batch entry at line ${index + 1}: must have 'uri' and 'text' fields`

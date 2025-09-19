@@ -90,7 +90,7 @@ export interface EmbeddingService {
   readonly getProviderModels: (
     providerType?: string
   ) => Effect.Effect<
-    Array<{ name: string; provider: string; dimensions?: number }>,
+    Array<{ name: string; provider: string; dimensions?: number | undefined }>,
     ProviderConnectionError | ProviderAuthenticationError
   >
 
@@ -112,61 +112,6 @@ export interface EmbeddingService {
 export const EmbeddingService =
   Context.GenericTag<EmbeddingService>("EmbeddingService")
 
-// Similarity calculation helper functions
-const calculateCosineSimilarity = (vecA: number[], vecB: number[]): number => {
-  if (vecA.length !== vecB.length) {
-    throw new Error("Vectors must have the same dimension")
-  }
-
-  let dotProduct = 0
-  let normA = 0
-  let normB = 0
-
-  for (let i = 0; i < vecA.length; i++) {
-    const a = vecA[i] ?? 0
-    const b = vecB[i] ?? 0
-    dotProduct += a * b
-    normA += a * a
-    normB += b * b
-  }
-
-  if (normA === 0 || normB === 0) {
-    return 0
-  }
-
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
-}
-
-const calculateEuclideanDistance = (vecA: number[], vecB: number[]): number => {
-  if (vecA.length !== vecB.length) {
-    throw new Error("Vectors must have the same dimension")
-  }
-
-  let sum = 0
-  for (let i = 0; i < vecA.length; i++) {
-    const a = vecA[i] ?? 0
-    const b = vecB[i] ?? 0
-    const diff = a - b
-    sum += diff * diff
-  }
-
-  return Math.sqrt(sum)
-}
-
-const calculateDotProduct = (vecA: number[], vecB: number[]): number => {
-  if (vecA.length !== vecB.length) {
-    throw new Error("Vectors must have the same dimension")
-  }
-
-  let dotProduct = 0
-  for (let i = 0; i < vecA.length; i++) {
-    const a = vecA[i] ?? 0
-    const b = vecB[i] ?? 0
-    dotProduct += a * b
-  }
-
-  return dotProduct
-}
 
 // Note: _calculateSimilarity function was removed as it's unused
 // Individual similarity functions are kept for potential future use
@@ -565,7 +510,7 @@ const make = Effect.gen(function* () {
         updated_at: unknown
       }
 
-      const results = (searchResults as VectorSearchRow[])
+      const results = (searchResults as unknown as VectorSearchRow[])
         .map((row) => ({
           id: Number(row.id),
           uri: String(row.uri),
@@ -645,7 +590,7 @@ const make = Effect.gen(function* () {
   } as const
 })
 
-export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
+export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make as any).pipe(
   Layer.provide(DatabaseServiceLive),
   Layer.provideMerge(
     Layer.suspend(() => {
