@@ -3,7 +3,7 @@ import {
   CreateEmbeddingRequestSchema,
   CreateEmbeddingResponseSchema,
   ErrorResponseSchema,
-} from "@/entities/embedding/model/openapi"
+} from "@ees/core"
 
 // Create embedding route
 export const createEmbeddingRoute = createRoute({
