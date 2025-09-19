@@ -63,7 +63,7 @@ export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
   limit?: number
-  threshold?: number
+  threshold?: number | undefined
   metric?: "cosine" | "euclidean" | "dot_product"
 }
 
