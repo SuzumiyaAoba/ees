@@ -5,7 +5,7 @@ import {
   IdParamSchema,
   NotFoundResponseSchema,
   ValidationErrorResponseSchema,
-} from "@/entities/embedding/model/openapi"
+} from "@ees/core"
 
 // Delete embedding route
 export const deleteEmbeddingRoute = createRoute({

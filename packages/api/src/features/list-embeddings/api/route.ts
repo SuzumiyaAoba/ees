@@ -6,7 +6,7 @@ import {
   ErrorResponseSchema,
   NotFoundResponseSchema,
   UriParamSchema,
-} from "@/entities/embedding/model/openapi"
+} from "@ees/core"
 
 // List embeddings route
 export const listEmbeddingsRoute = createRoute({
