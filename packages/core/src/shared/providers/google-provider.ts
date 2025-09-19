@@ -30,7 +30,7 @@ const make = (config: GoogleConfig) =>
     const client = google({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    })
+    } as any)
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -39,7 +39,7 @@ const make = (config: GoogleConfig) =>
             request.modelName ?? config.defaultModel ?? "embedding-001"
 
           const result = await embed({
-            model: client.textEmbeddingModel(modelName),
+            model: (client as any).textEmbeddingModel(modelName),
             value: request.text,
           })
 

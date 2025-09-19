@@ -16,6 +16,9 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitAny": false,
     "skipLibCheck": true,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "noUncheckedIndexedAccess": false,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]

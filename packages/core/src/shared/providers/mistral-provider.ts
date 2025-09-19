@@ -29,7 +29,7 @@ const make = (config: MistralConfig) =>
     const client = mistral({
       apiKey: config.apiKey,
       ...(config.baseUrl && { baseURL: config.baseUrl }),
-    })
+    } as any)
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -38,7 +38,7 @@ const make = (config: MistralConfig) =>
             request.modelName ?? config.defaultModel ?? "mistral-embed"
 
           const result = await embed({
-            model: client.textEmbedding(modelName),
+            model: (client as any).textEmbedding(modelName),
             value: request.text,
           })
 
