@@ -3,14 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "web"
+    "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/core && (npm run build --workspace=packages/cli || echo 'CLI build failed, continuing...') && npm run build --workspace=@ees/api && npm run build --workspace=web",
+    "build": "npm run build --workspace=packages/core && (npm run build --workspace=packages/cli || echo 'CLI build failed, continuing...') && npm run build --workspace=@ees/api && npm run build --workspace=packages/web",
     "start": "npm run start --workspace=packages/api",
     "dev": "npm run dev --workspace=packages/api",
-    "dev:web": "npm run dev --workspace=web",
+    "dev:web": "npm run dev --workspace=packages/web",
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "format": "biome check --write .",
