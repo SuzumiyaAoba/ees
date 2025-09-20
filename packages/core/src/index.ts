@@ -1,10 +1,10 @@
 // Core EES package - shared types, utilities, and business logic
 
 // Re-export shared modules
-export * from './shared/index.js'
+export * from './shared/index'
 
 // Re-export entities (only non-conflicting exports)
-export { EmbeddingService } from './entities/embedding/index.js'
+export { EmbeddingService } from './entities/embedding/index'
 export type {
   CreateEmbeddingRequest,
   BatchCreateEmbeddingRequest,
@@ -14,7 +14,7 @@ export type {
   SearchEmbeddingResponse,
   EmbeddingsListResponse,
   Embedding
-} from './entities/embedding/model/embedding.js'
+} from './entities/embedding/model/embedding'
 
 // Export OpenAPI schemas for API package consumption
 export {
@@ -34,18 +34,18 @@ export {
   ErrorResponseSchema,
   NotFoundResponseSchema,
   ValidationErrorResponseSchema,
-} from './entities/embedding/model/openapi.js'
+} from './entities/embedding/model/openapi'
 
 // Explicitly export application layer and helpers for external packages
 export {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
-} from './shared/application/embedding-application.js'
+} from './shared/application/embedding-application'
 
 export {
   CoreApplicationLayer,
   ApplicationLayer,
-} from './shared/application/layers.js'
+} from './shared/application/layers'
 
 export {
   getPort,
@@ -57,6 +57,6 @@ export {
   parseBatchFile,
   readStdin,
   readTextFile,
-} from './shared/lib/index.js'
+} from './shared/lib/index'
 
-export { DatabaseService } from './shared/database/connection.js'
+export { DatabaseService } from './shared/database/connection'

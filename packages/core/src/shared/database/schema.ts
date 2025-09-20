@@ -13,7 +13,7 @@ export const embeddings = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     uri: text("uri").notNull().unique(),
     text: text("text").notNull(),
-    modelName: text("model_name").notNull().default("embeddinggemma:300m"),
+    modelName: text("model_name").notNull().default("nomic-embed-text"),
     embedding: blob("embedding").notNull(),
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),

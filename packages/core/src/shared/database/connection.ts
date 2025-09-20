@@ -93,7 +93,7 @@ const make = Effect.gen(function* () {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           uri TEXT NOT NULL UNIQUE,
           text TEXT NOT NULL,
-          model_name TEXT NOT NULL DEFAULT 'embeddinggemma:300m',
+          model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
           embedding F32_BLOB(768) NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP
