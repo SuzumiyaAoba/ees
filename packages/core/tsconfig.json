@@ -8,8 +8,9 @@
     "composite": true,
     "noEmit": false,
     "allowImportingTsExtensions": false,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2022",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -19,6 +20,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": false,
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]

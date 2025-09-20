@@ -23,9 +23,9 @@ export const CreateEmbeddingRequestSchema = z
       description: "Text content to generate embedding for",
       example: "This is a sample text for embedding generation.",
     }),
-    model_name: z.string().optional().default("embeddinggemma:300m").openapi({
+    model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Name of the embedding model to use",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
   })
   .openapi("CreateEmbeddingRequest")
@@ -50,9 +50,9 @@ export const BatchCreateEmbeddingRequestSchema = z
       .openapi({
         description: "Array of texts to process (max 100 items)",
       }),
-    model_name: z.string().optional().default("embeddinggemma:300m").openapi({
+    model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Name of the embedding model to use for all texts",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
   })
   .openapi("BatchCreateEmbeddingRequest")
@@ -91,7 +91,7 @@ export const EmbeddingQuerySchema = z.object({
     .openapi({
       param: { name: "model_name", in: "query" },
       description: "Filter by model name (exact match)",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
   page: z
     .string()
@@ -130,7 +130,7 @@ export const CreateEmbeddingResponseSchema = z
     }),
     model_name: z.string().openapi({
       description: "Model used for embedding generation",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
     message: z.string().openapi({
       description: "Success message",
@@ -154,7 +154,7 @@ export const BatchCreateEmbeddingResponseSchema = z
           }),
           model_name: z.string().openapi({
             description: "Model used for embedding generation",
-            example: "embeddinggemma:300m",
+            example: "nomic-embed-text",
           }),
           status: z.enum(["success", "error"]).openapi({
             description: "Processing status",
@@ -190,9 +190,9 @@ export const SearchEmbeddingRequestSchema = z
       description: "Text query to search for similar embeddings",
       example: "machine learning algorithms",
     }),
-    model_name: z.string().optional().default("embeddinggemma:300m").openapi({
+    model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Model name to use for query embedding generation",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
     limit: z.number().int().min(1).max(100).optional().default(10).openapi({
       description: "Maximum number of results to return (max 100)",
@@ -229,7 +229,7 @@ export const SearchEmbeddingResultSchema = z
     }),
     model_name: z.string().openapi({
       description: "Model used for embedding",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
     similarity: z.number().openapi({
       description: "Similarity score (higher = more similar)",
@@ -257,7 +257,7 @@ export const SearchEmbeddingResponseSchema = z
     }),
     model_name: z.string().openapi({
       description: "Model used for query embedding",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
     metric: z.string().openapi({
       description: "Distance metric used for similarity calculation",
@@ -290,7 +290,7 @@ export const EmbeddingSchema = z
     }),
     model_name: z.string().openapi({
       description: "Model used for embedding",
-      example: "embeddinggemma:300m",
+      example: "nomic-embed-text",
     }),
     embedding: z.array(z.number()).openapi({
       description: "Embedding vector",
