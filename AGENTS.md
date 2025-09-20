@@ -63,6 +63,39 @@ The only exceptions are:
 
 ## Code Quality Standards
 
+### Import Path Standards
+
+**MANDATORY**: All imports must use the `@/` path alias format instead of relative paths (like `../` or `../../`).
+
+**Required Import Style:**
+```typescript
+// ✅ Correct - Use @/ path alias
+import { EmbeddingService } from "@/entities/embedding/api/embedding"
+import { DatabaseService } from "@/shared/database/database-service"
+import { ProviderModelError } from "@/shared/providers/types"
+
+// ❌ Incorrect - Relative paths not allowed
+import { EmbeddingService } from "../api/embedding"
+import { DatabaseService } from "../../../shared/database/database-service"
+import { ProviderModelError } from "../types"
+```
+
+**Path Mapping Configuration:**
+- The `@/` alias maps to `packages/core/src/` for the core package
+- This is configured in `tsconfig.json` with `"@/*": ["./*"]` under `paths`
+- All test files, implementation files, and modules must follow this convention
+
+**Benefits:**
+- **Consistency**: Uniform import style across the entire codebase
+- **Maintainability**: Easier to refactor and move files without breaking imports
+- **Readability**: Clear indication of module location without relative path complexity
+- **IDE Support**: Better autocomplete and navigation with absolute paths
+
+**Enforcement:**
+- All new code must use `@/` imports exclusively
+- When editing existing files, convert relative imports to `@/` format
+- Code reviews should reject PRs with relative import paths
+
 ### Biome Configuration Policy
 
 **IMPORTANT**: The `biome.json` configuration file is strictly protected and MUST NOT be edited by Claude Code.
