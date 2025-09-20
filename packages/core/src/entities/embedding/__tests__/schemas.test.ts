@@ -7,7 +7,7 @@ describe("Validation Schemas", () => {
       const validData = {
         uri: "file://test.txt",
         text: "Test document content",
-        model_name: "embeddinggemma:300m",
+        model_name: "nomic-embed-text",
       }
 
       const result = CreateEmbeddingSchema.safeParse(validData)
@@ -28,7 +28,7 @@ describe("Validation Schemas", () => {
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.model_name).toBe("embeddinggemma:300m")
+        expect(result.data.model_name).toBe("nomic-embed-text")
       }
     })
 
@@ -40,7 +40,7 @@ describe("Validation Schemas", () => {
 
       const result = CreateEmbeddingSchema.parse(inputData)
 
-      expect(result.model_name).toBe("embeddinggemma:300m")
+      expect(result.model_name).toBe("nomic-embed-text")
     })
 
     it("should preserve custom model_name when provided", () => {
@@ -355,7 +355,7 @@ describe("Validation Schemas", () => {
     describe("Model name validation", () => {
       it("should accept standard model names", () => {
         const modelNames = [
-          "embeddinggemma:300m",
+          "nomic-embed-text",
           "llama2:7b",
           "mistral:latest",
           "custom-model:v1.0",
@@ -451,7 +451,7 @@ describe("Validation Schemas", () => {
         const modelName = result.model_name
 
         expect(typeof modelName).toBe("string")
-        expect(modelName).toBe("embeddinggemma:300m")
+        expect(modelName).toBe("nomic-embed-text")
       })
     })
 
