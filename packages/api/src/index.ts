@@ -1,2 +1,2 @@
-// Main application entry point
-export { default } from "./app"
+// Start the server
+import "./server"

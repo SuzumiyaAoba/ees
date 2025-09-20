@@ -13,9 +13,8 @@ import { EmbeddingApplicationServiceLive } from "./embedding-application"
  * Core application layer including all business logic services
  * Independent of presentation layer (web, CLI, etc.)
  */
-export const CoreApplicationLayer = Layer.mergeAll(
-  EmbeddingServiceLive,
-  EmbeddingApplicationServiceLive
+export const CoreApplicationLayer = EmbeddingApplicationServiceLive.pipe(
+  Layer.provide(EmbeddingServiceLive)
 )
 
 /**

@@ -20,7 +20,10 @@ import { EmbeddingApplicationService, getPort } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
 
+console.log("Initializing Hono app...")
 const app = new OpenAPIHono()
+
+console.log("Setting up routes...")
 
 // Root endpoint
 app.openapi(rootRoute, (c) => c.text("EES - Embeddings API Service" as never))
@@ -41,15 +44,17 @@ app.openapi(createEmbeddingRoute, async (c) => {
 
     const result = await Effect.runPromise(
       program.pipe(
-        Effect.catchAll(() =>
-          Effect.fail(new Error("Failed to create embedding"))
-        ),
+        Effect.catchAll((error) => {
+          console.error("Detailed create embedding error:", error)
+          return Effect.fail(new Error(`Failed to create embedding: ${error}`))
+        }),
         Effect.provide(AppLayer)
       ) as unknown as Effect.Effect<CreateEmbeddingResponse, never, never>
     )
 
     return c.json(result, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to create embedding:", error)
     return c.json({ error: "Failed to create embedding" }, 500)
   }
 })
@@ -74,7 +79,8 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     )
 
     return c.json(result, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to create batch embeddings:", error)
     return c.json({ error: "Failed to create batch embeddings" }, 500)
   }
 })
@@ -99,7 +105,8 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     )
 
     return c.json(result, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to search embeddings:", error)
     return c.json({ error: "Failed to search embeddings" }, 500)
   }
 })
@@ -127,7 +134,8 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     }
 
     return c.json(embedding, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to retrieve embedding:", error)
     return c.json({ error: "Failed to retrieve embedding" }, 500)
   }
 })
@@ -136,31 +144,30 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 app.openapi(listEmbeddingsRoute, async (c) => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
+
+    // Build filters object, always include page and limit for pagination
     const filters: {
       uri?: string
       modelName?: string
-      page?: number
-      limit?: number
-    } = {}
+      page: number
+      limit: number
+    } = {
+      page: page || 1,
+      limit: limit || 10,
+    }
 
-    if (uri) {
+    // Only add optional filters if they were explicitly provided
+    const queryParams = c.req.query()
+    if (queryParams.uri) {
       filters.uri = uri
     }
-    if (model_name) {
+    if (queryParams.model_name) {
       filters.modelName = model_name
-    }
-    if (page) {
-      filters.page = page
-    }
-    if (limit) {
-      filters.limit = limit
     }
 
     const program = Effect.gen(function* () {
       const appService = yield* EmbeddingApplicationService
-      return yield* appService.listEmbeddings(
-        Object.keys(filters).length > 0 ? filters : undefined
-      )
+      return yield* appService.listEmbeddings(filters)
     })
 
     const result = await Effect.runPromise(
@@ -172,7 +179,8 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     )
 
     return c.json(result, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to retrieve embeddings:", error)
     return c.json({ error: "Failed to retrieve embeddings" }, 500)
   }
 })
@@ -205,7 +213,8 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     }
 
     return c.json({ message: "Embedding deleted successfully" } as any, 200)
-  } catch {
+  } catch (error) {
+    console.error("Failed to delete embedding:", error)
     return c.json({ error: "Failed to delete embedding" }, 500)
   }
 })
@@ -244,21 +253,5 @@ app.doc("/openapi.json", {
 // Swagger UI
 app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
-// Start server if this is the main module
-if (require.main === module) {
-  const port = getPort(3000)
-
-  // Use Hono's serve method for Node.js
-  const { serve } = require("@hono/node-server")
-  serve(
-    {
-      fetch: app.fetch,
-      port,
-    },
-    () => {
-      // Server callback
-    }
-  )
-}
 
 export default app
