@@ -29,9 +29,9 @@ export const parseStoredEmbeddingData = (
         parsedData = Array.from(float32Array)
       } else if (data instanceof Uint8Array) {
         // Handle Uint8Array - could be F32_BLOB or legacy JSON
-        // Try to interpret as F32_BLOB first
-        if (data.length % 4 === 0) {
-          // Length is multiple of 4, likely F32_BLOB
+        // Try to interpret as F32_BLOB first (must be multiple of 4 bytes and reasonable size)
+        if (data.length % 4 === 0 && data.length >= 16) {
+          // Length is multiple of 4 and at least 16 bytes (4 floats minimum), likely F32_BLOB
           const float32Array = new Float32Array(data.buffer, data.byteOffset, data.length / 4)
           parsedData = Array.from(float32Array)
         } else {
