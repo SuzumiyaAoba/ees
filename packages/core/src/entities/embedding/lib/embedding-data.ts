@@ -14,45 +14,52 @@ export class EmbeddingDataParseError extends Error {
 
 /**
  * Safely parse stored embedding data from database
- * Handles both Uint8Array and string formats with proper validation
+ * Handles F32_BLOB (ArrayBuffer), Uint8Array, and string formats with proper validation
  */
 export const parseStoredEmbeddingData = (
   data: unknown
 ): Effect.Effect<number[], EmbeddingDataParseError> =>
   Effect.gen(function* () {
-    // First validate the raw data format
-    const validationResult = StoredEmbeddingDataSchema.safeParse(data)
-    if (!validationResult.success) {
-      return yield* Effect.fail(
-        new EmbeddingDataParseError(
-          `Invalid stored embedding data format: ${validationResult.error.message}`,
-          validationResult.error
-        )
-      )
-    }
-
-    const storedData = validationResult.data
     let parsedData: unknown
 
     try {
-      if (storedData instanceof Uint8Array) {
-        // Convert Uint8Array to string, then parse JSON
-        const jsonString = Buffer.from(storedData).toString()
-        parsedData = JSON.parse(jsonString)
-      } else if (typeof storedData === "string") {
-        // Parse JSON string directly
-        parsedData = JSON.parse(storedData)
+      if (data instanceof ArrayBuffer) {
+        // Handle libSQL F32_BLOB format (ArrayBuffer with 32-bit floats)
+        const float32Array = new Float32Array(data)
+        parsedData = Array.from(float32Array)
       } else {
-        return yield* Effect.fail(
-          new EmbeddingDataParseError(
-            "Stored data must be Uint8Array or string"
+        // First validate the raw data format for legacy formats
+        const validationResult = StoredEmbeddingDataSchema.safeParse(data)
+        if (!validationResult.success) {
+          return yield* Effect.fail(
+            new EmbeddingDataParseError(
+              `Invalid stored embedding data format: ${validationResult.error.message}`,
+              validationResult.error
+            )
           )
-        )
+        }
+
+        const storedData = validationResult.data
+
+        if (storedData instanceof Uint8Array) {
+          // Convert Uint8Array to string, then parse JSON (legacy format)
+          const jsonString = Buffer.from(storedData).toString()
+          parsedData = JSON.parse(jsonString)
+        } else if (typeof storedData === "string") {
+          // Parse JSON string directly (legacy format)
+          parsedData = JSON.parse(storedData)
+        } else {
+          return yield* Effect.fail(
+            new EmbeddingDataParseError(
+              "Stored data must be ArrayBuffer, Uint8Array, or string"
+            )
+          )
+        }
       }
     } catch (error) {
       return yield* Effect.fail(
         new EmbeddingDataParseError(
-          "Failed to parse JSON from stored embedding data",
+          "Failed to parse embedding data from stored format",
           error
         )
       )

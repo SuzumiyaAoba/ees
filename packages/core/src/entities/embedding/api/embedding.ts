@@ -130,31 +130,27 @@ const make = Effect.gen(function* () {
       const embeddingResponse =
         yield* providerService.generateEmbedding(embeddingRequest)
 
-      // Convert embedding array to libSQL vector format
-      // For libSQL vector search, we store embeddings as JSON string that can be converted with vector() function
-      const embeddingData = JSON.stringify(embeddingResponse.embedding)
+      // Convert embedding array to libSQL F32_BLOB format using vector() function
+      const embeddingVector = JSON.stringify(embeddingResponse.embedding)
 
-      // Insert or update embedding in database
+      // Insert or update embedding in database using raw SQL with vector() function
       const result = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(embeddings)
-            .values({
-              uri,
-              text,
-              modelName: embeddingResponse.model,
-              embedding: Buffer.from(embeddingData),
-            })
-            .onConflictDoUpdate({
-              target: embeddings.uri,
-              set: {
-                text,
-                modelName: embeddingResponse.model,
-                embedding: Buffer.from(embeddingData),
-                updatedAt: new Date().toISOString(),
-              },
-            })
-            .returning({ id: embeddings.id }),
+        try: async () => {
+          const insertResult = await client.execute({
+            sql: `
+              INSERT INTO embeddings (uri, text, model_name, embedding)
+              VALUES (?, ?, ?, vector(?))
+              ON CONFLICT(uri) DO UPDATE SET
+                text = excluded.text,
+                model_name = excluded.model_name,
+                embedding = excluded.embedding,
+                updated_at = CURRENT_TIMESTAMP
+              RETURNING id
+            `,
+            args: [uri, text, embeddingResponse.model, embeddingVector]
+          })
+          return insertResult.rows
+        },
         catch: (error) =>
           new DatabaseQueryError({
             message: "Failed to save embedding to database",
@@ -163,7 +159,7 @@ const make = Effect.gen(function* () {
       })
 
       return {
-        id: result[0]?.id ?? 0,
+        id: Number(result[0]?.["id"] ?? 0),
         uri,
         model_name: embeddingResponse.model,
         message: "Embedding created successfully",
@@ -189,30 +185,27 @@ const make = Effect.gen(function* () {
           const embeddingResponse =
             yield* providerService.generateEmbedding(embeddingRequest)
 
-          // Convert embedding array to libSQL vector format
-          const embeddingData = JSON.stringify(embeddingResponse.embedding)
+          // Convert embedding array to libSQL F32_BLOB format using vector() function
+          const embeddingVector = JSON.stringify(embeddingResponse.embedding)
 
-          // Insert or update embedding in database
+          // Insert or update embedding in database using raw SQL with vector() function
           const insertResult = yield* Effect.tryPromise({
-            try: () =>
-              db
-                .insert(embeddings)
-                .values({
-                  uri,
-                  text,
-                  modelName: embeddingResponse.model,
-                  embedding: Buffer.from(embeddingData),
-                })
-                .onConflictDoUpdate({
-                  target: embeddings.uri,
-                  set: {
-                    text,
-                    modelName: embeddingResponse.model,
-                    embedding: Buffer.from(embeddingData),
-                    updatedAt: new Date().toISOString(),
-                  },
-                })
-                .returning({ id: embeddings.id }),
+            try: async () => {
+              const result = await client.execute({
+                sql: `
+                  INSERT INTO embeddings (uri, text, model_name, embedding)
+                  VALUES (?, ?, ?, vector(?))
+                  ON CONFLICT(uri) DO UPDATE SET
+                    text = excluded.text,
+                    model_name = excluded.model_name,
+                    embedding = excluded.embedding,
+                    updated_at = CURRENT_TIMESTAMP
+                  RETURNING id
+                `,
+                args: [uri, text, embeddingResponse.model, embeddingVector]
+              })
+              return result.rows
+            },
             catch: (error) =>
               new DatabaseQueryError({
                 message: `Failed to save embedding for URI ${uri}`,
@@ -221,7 +214,7 @@ const make = Effect.gen(function* () {
           })
 
           return {
-            id: insertResult[0]?.id ?? 0,
+            id: Number(insertResult[0]?.["id"] ?? 0),
             uri,
             model_name: embeddingResponse.model,
             status: "success" as const,
@@ -455,13 +448,13 @@ const make = Effect.gen(function* () {
             e.uri,
             e.text,
             e.model_name,
-            (1.0 - vector_distance_cos(e.embedding, vector('${queryVector}'))) as similarity,
+            (1.0 - vector_distance_cos(e.embedding, vector(?))) as similarity,
             e.created_at,
             e.updated_at
-          FROM vector_top_k('idx_embeddings_vector', vector('${queryVector}'), ${limit}) as v
+          FROM vector_top_k('idx_embeddings_vector', vector(?), ?) as v
           INNER JOIN embeddings as e ON v.id = e.rowid
-          WHERE e.model_name = '${actualModelName}'
-          ${threshold ? `AND (1.0 - vector_distance_cos(e.embedding, vector('${queryVector}'))) >= ${threshold}` : ""}
+          WHERE e.model_name = ?
+          ${threshold ? `AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ?` : ""}
           ORDER BY similarity DESC
         `
       } else {
@@ -472,13 +465,13 @@ const make = Effect.gen(function* () {
             uri,
             text,
             model_name,
-            vector_distance_cos(embedding, vector('${queryVector}')) as distance,
+            vector_distance_cos(embedding, vector(?)) as distance,
             created_at,
             updated_at
           FROM embeddings
-          WHERE model_name = '${actualModelName}'
+          WHERE model_name = ?
           ORDER BY distance ASC
-          LIMIT ${limit}
+          LIMIT ?
         `
       }
 
@@ -496,9 +489,18 @@ const make = Effect.gen(function* () {
       const searchResults = yield* Effect.tryPromise({
         try: async () => {
           // Execute raw SQL for vector search using libSQL client
+          let args: any[]
+          if (metric === "cosine") {
+            args = threshold
+              ? [queryVector, queryVector, limit, actualModelName, queryVector, threshold]
+              : [queryVector, queryVector, limit, actualModelName]
+          } else {
+            args = [queryVector, actualModelName, limit]
+          }
+
           const result = await client.execute({
             sql: vectorSearchQuery,
-            args: [],
+            args,
           })
           return result.rows as unknown as Array<VectorSearchRowRaw>
         },
@@ -509,7 +511,7 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      // Transform results to expected format without unsafe casts
+      // Transform results to expected format
       const results = searchResults
         .map((row) => ({
           id: Number(row["id"] ?? 0),
@@ -525,7 +527,7 @@ const make = Effect.gen(function* () {
         }))
         .filter(
           (result) =>
-            // Apply threshold filter if specified
+            // Apply threshold filter if specified for non-cosine metrics
             !threshold || result.similarity >= threshold
         )
 
