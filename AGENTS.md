@@ -54,6 +54,13 @@ The only exceptions are:
 - `npm run dev --workspace=@ees/api` - Start API server in development mode
 - `npm run dev --workspace=packages/web` - Start web frontend in development mode
 
+### Testing Commands
+- `npm test` - Run all tests in watch mode across workspaces
+- `npm run test:run` - Run all tests once (CI mode)
+- `npm run test --workspace=@ees/core` - Run core package tests only
+- `npm run test --workspace=@ees/api` - Run API package tests only
+- `npm run test:watch --workspace=@ees/core` - Run core tests in watch mode
+
 ## Code Quality Standards
 
 ### Biome Configuration Policy
@@ -177,13 +184,14 @@ describe("PaginationService", () => {
 - `packages/core` - Shared business logic, types, database layer, and providers
 - `packages/api` - REST API server using Hono framework
 - `packages/cli` - Command-line interface using CAC
-- `packages/web` - Web frontend (React/Next.js)
+- `packages/web` - Web frontend (React/Vite)
 
 **Key Directories:**
 - `packages/core/src/shared/` - Shared utilities, database, config, providers
 - `packages/core/src/entities/embedding/` - Core embedding business logic
 - `packages/api/src/` - API routes, middleware, server setup
 - `packages/cli/src/` - CLI commands and interface
+- `packages/web/src/` - React web frontend components
 
 ### Multi-Provider AI Architecture
 
@@ -228,53 +236,29 @@ The codebase uses Effect-ts for functional programming with composable, type-saf
 The codebase is designed with a clear separation of concerns to support multiple interfaces (web API and CLI) while sharing core business logic.
 
 **Application Layer** (Framework-agnostic):
-- `src/shared/application/embedding-application.ts` - Core application service interface independent of HTTP frameworks
-- `src/shared/application/layers.ts` - Composed Effect layers for dependency injection
-- `src/shared/application/index.ts` - Application layer exports
+- Core application service interface independent of HTTP frameworks
+- Composed Effect layers for dependency injection
+- Shared business logic between interfaces
 
 **Web Interface**:
-- `src/app/index.ts` - Hono web API routes using the shared application layer
-- `src/app/providers/main.ts` - Web-specific layer composition
-- `src/features/` - Web route definitions and validation schemas
+- Hono web API routes using the shared application layer
+- Web-specific layer composition
+- React frontend with TypeScript
 
 **CLI Interface**:
-- `src/cli/index.ts` - Command-line interface using the same application services
-- `src/shared/lib/console.ts` - CLI output helpers with proper linting compliance
+- Command-line interface using the same application services
+- CLI output helpers with proper linting compliance
 
 **Shared Core Logic**:
-- `src/entities/embedding/api/embedding.ts` - Core embedding service (domain layer)
-- `src/shared/lib/env.ts` - Environment variable helpers
-- `src/shared/lib/console.ts` - Console output utilities
+- Core embedding service (domain layer)
+- Environment variable helpers
+- Console output utilities
 
 **Architecture Benefits**:
 - **Reusability**: Core business logic is shared between web and CLI interfaces
 - **Testability**: Application services can be tested independently of presentation layer
 - **Maintainability**: Clear separation between framework-specific code and business logic
 - **Extensibility**: Easy to add new interfaces (e.g., gRPC, GraphQL) using the same core services
-
-**Usage Examples**:
-
-Web API (using Hono framework):
-```typescript
-const program = Effect.gen(function* () {
-  const appService = yield* EmbeddingApplicationService
-  return yield* appService.createEmbedding({ uri, text, modelName })
-})
-
-const result = await Effect.runPromise(
-  program.pipe(Effect.provide(AppLayer))
-)
-```
-
-CLI (framework-independent):
-```typescript
-const program = Effect.gen(function* () {
-  const appService = yield* EmbeddingApplicationService
-  return yield* appService.createEmbedding({ uri, text, modelName })
-})
-
-await runCLICommand(program)
-```
 
 ### CLI Usage Examples
 
@@ -326,22 +310,6 @@ ees get --uri "doc1"
 ees delete --id 123
 ```
 
-**File Format Examples:**
-
-JSON Array (`batch.json`):
-```json
-[
-  {"uri": "doc1", "text": "First document content"},
-  {"uri": "doc2", "text": "Second document content"}
-]
-```
-
-NDJSON (`batch.jsonl`):
-```jsonl
-{"uri": "doc1", "text": "First document content"}
-{"uri": "doc2", "text": "Second document content"}
-```
-
 ### API Endpoints
 
 **Embeddings API**:
@@ -353,8 +321,8 @@ NDJSON (`batch.jsonl`):
 - `DELETE /embeddings/{id}` - Delete embedding by ID
 
 **Request/Response Types**:
-- Input validation via Zod schemas in `src/schemas/`
-- Type definitions in `src/types/embedding.ts`
+- Input validation via Zod schemas
+- Type definitions for embedding operations
 
 ### Development Environment
 
@@ -364,12 +332,6 @@ NDJSON (`batch.jsonl`):
 - Automatic Ollama service startup and data directory creation
 - Cross-platform support (Linux, macOS)
 - Lock file ensures reproducible builds across machines
-
-**Legacy Nix Shell**:
-- Traditional shell.nix for compatibility
-- Auto-installs dependencies and sets up git hooks
-- Starts Ollama service automatically
-- Creates data directory for libSQL
 
 **Code Quality Tools**:
 - Biome for formatting and linting (replaces Prettier + ESLint)
