@@ -32,7 +32,18 @@ import type {
   SearchEmbeddingResponse,
 } from "../model/embedding"
 
+/**
+ * Multi-provider embedding service interface
+ * Provides operations for creating, searching, and managing embeddings
+ */
 export interface EmbeddingService {
+  /**
+   * Create an embedding for the given text using the configured provider
+   * @param uri - Unique identifier for the text content
+   * @param text - Text content to generate embedding for
+   * @param modelName - Optional model name to use (defaults to provider's default)
+   * @returns Effect containing the embedding creation result
+   */
   readonly createEmbedding: (
     uri: string,
     text: string,
@@ -46,6 +57,11 @@ export interface EmbeddingService {
     | DatabaseQueryError
   >
 
+  /**
+   * Create multiple embeddings in a single batch operation
+   * @param request - Batch request containing multiple texts to embed
+   * @returns Effect containing batch processing results with success/failure counts
+   */
   readonly createBatchEmbedding: (
     request: BatchCreateEmbeddingRequest
   ) => Effect.Effect<
@@ -57,10 +73,20 @@ export interface EmbeddingService {
     | DatabaseQueryError
   >
 
+  /**
+   * Retrieve a specific embedding by its URI
+   * @param uri - Unique identifier for the embedding
+   * @returns Effect containing the embedding data or null if not found
+   */
   readonly getEmbedding: (
     uri: string
   ) => Effect.Effect<Embedding | null, DatabaseQueryError>
 
+  /**
+   * List all embeddings with optional filtering and pagination
+   * @param filters - Optional filters for URI, model name, and pagination
+   * @returns Effect containing paginated list of embeddings
+   */
   readonly getAllEmbeddings: (filters?: {
     uri?: string
     model_name?: string
@@ -68,10 +94,20 @@ export interface EmbeddingService {
     limit?: number
   }) => Effect.Effect<EmbeddingsListResponse, DatabaseQueryError>
 
+  /**
+   * Delete an embedding by its ID
+   * @param id - Database ID of the embedding to delete
+   * @returns Effect containing boolean indicating success
+   */
   readonly deleteEmbedding: (
     id: number
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
+  /**
+   * Search for similar embeddings using vector similarity
+   * @param request - Search request with query text and similarity parameters
+   * @returns Effect containing search results ranked by similarity
+   */
   readonly searchEmbeddings: (
     request: SearchEmbeddingRequest
   ) => Effect.Effect<
@@ -83,10 +119,23 @@ export interface EmbeddingService {
     | DatabaseQueryError
   >
 
+  /**
+   * List all available embedding providers
+   * @returns Effect containing array of provider names
+   */
   readonly listProviders: () => Effect.Effect<string[], never>
 
+  /**
+   * Get the currently configured provider
+   * @returns Effect containing the current provider name
+   */
   readonly getCurrentProvider: () => Effect.Effect<string, never>
 
+  /**
+   * Get available models for a provider
+   * @param providerType - Optional provider name (defaults to current provider)
+   * @returns Effect containing array of available models
+   */
   readonly getProviderModels: (
     providerType?: string
   ) => Effect.Effect<
@@ -94,6 +143,14 @@ export interface EmbeddingService {
     ProviderConnectionError | ProviderAuthenticationError
   >
 
+  /**
+   * Create an embedding using a specific provider
+   * @param providerType - Name of the provider to use
+   * @param uri - Unique identifier for the text content
+   * @param text - Text content to generate embedding for
+   * @param modelName - Optional model name to use
+   * @returns Effect containing the embedding creation result
+   */
   readonly createEmbeddingWithProvider: (
     providerType: string,
     uri: string,
@@ -489,7 +546,7 @@ const make = Effect.gen(function* () {
       const searchResults = yield* Effect.tryPromise({
         try: async () => {
           // Execute raw SQL for vector search using libSQL client
-          let args: any[]
+          let args: (string | number)[]
           if (metric === "cosine") {
             args = threshold
               ? [queryVector, queryVector, limit, actualModelName, queryVector, threshold]

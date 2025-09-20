@@ -2,7 +2,7 @@
  * OpenAI provider implementation using Vercel AI SDK
  */
 
-import { createOpenAI, type OpenAIProvider, type OpenAIProviderSettings } from "@ai-sdk/openai"
+import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {

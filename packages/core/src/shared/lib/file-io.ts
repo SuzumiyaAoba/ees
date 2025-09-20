@@ -8,7 +8,13 @@ import { createInterface } from "node:readline"
 import { Effect } from "effect"
 
 /**
- * Read text content from a file
+ * Read text content from a file using Effect-based error handling
+ * @param filePath - Absolute path to the file to read
+ * @returns Effect containing the file content as UTF-8 string or an Error
+ * @example
+ * ```typescript
+ * const content = yield* readTextFile("/path/to/file.txt")
+ * ```
  */
 export function readTextFile(filePath: string): Effect.Effect<string, Error> {
   return Effect.tryPromise({
@@ -18,7 +24,12 @@ export function readTextFile(filePath: string): Effect.Effect<string, Error> {
 }
 
 /**
- * Read text from stdin
+ * Read text from standard input (stdin) using readline interface
+ * @returns Effect containing all lines from stdin joined with newlines or an Error
+ * @example
+ * ```typescript
+ * const input = yield* readStdin()
+ * ```
  */
 export function readStdin(): Effect.Effect<string, Error> {
   return Effect.tryPromise({
@@ -29,7 +40,7 @@ export function readStdin(): Effect.Effect<string, Error> {
           output: process.stdout,
         })
 
-        const lines = []
+        const lines: string[] = []
 
         rl.on("line", (line) => {
           lines.push(line)
@@ -49,13 +60,31 @@ export function readStdin(): Effect.Effect<string, Error> {
 }
 
 /**
- * Parse batch file containing JSON entries
+ * Represents a single entry in a batch file for embedding operations
  */
 export interface BatchEntry {
+  /** Unique identifier for the text content */
   uri: string
+  /** Text content to generate embedding for */
   text: string
 }
 
+/**
+ * Parse a batch file containing JSON entries for bulk embedding operations
+ * Supports both JSON array format and newline-delimited JSON (NDJSON) format
+ * @param filePath - Path to the batch file to parse
+ * @returns Effect containing array of batch entries or an Error
+ * @example
+ * JSON Array format:
+ * ```json
+ * [{"uri": "doc1", "text": "First document"}, {"uri": "doc2", "text": "Second document"}]
+ * ```
+ * NDJSON format:
+ * ```
+ * {"uri": "doc1", "text": "First document"}
+ * {"uri": "doc2", "text": "Second document"}
+ * ```
+ */
 export function parseBatchFile(
   filePath: string
 ): Effect.Effect<BatchEntry[], Error> {

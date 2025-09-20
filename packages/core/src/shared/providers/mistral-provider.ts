@@ -2,7 +2,7 @@
  * Mistral provider implementation using Vercel AI SDK
  */
 
-import { createMistral, type MistralProvider, type MistralProviderSettings } from "@ai-sdk/mistral"
+import { createMistral, type MistralProvider } from "@ai-sdk/mistral"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {

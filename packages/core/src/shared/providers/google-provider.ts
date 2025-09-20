@@ -2,7 +2,7 @@
  * Google AI provider implementation using Vercel AI SDK
  */
 
-import { createGoogleGenerativeAI, type GoogleGenerativeAIProvider, type GoogleGenerativeAIProviderSettings } from "@ai-sdk/google"
+import { createGoogleGenerativeAI, type GoogleGenerativeAIProvider } from "@ai-sdk/google"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {

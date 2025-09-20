@@ -2,7 +2,7 @@
  * Cohere provider implementation using Vercel AI SDK
  */
 
-import { createCohere, type CohereProvider, type CohereProviderSettings } from "@ai-sdk/cohere"
+import { createCohere, type CohereProvider } from "@ai-sdk/cohere"
 import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
 import type {
