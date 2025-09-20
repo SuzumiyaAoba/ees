@@ -195,6 +195,115 @@ describe("EmbeddingDataParser", () => {
 
       expect(Exit.isFailure(result)).toBe(true)
     })
+
+    describe("F32_BLOB minimum size constraint (regression tests)", () => {
+      it("should treat small Uint8Array as JSON, not F32_BLOB (4 bytes)", async () => {
+        // This specific test case was the source of the CI failure
+        const smallData = new Uint8Array([0xFF, 0xFE, 0xFD, 0xFC])
+
+        const result = await Effect.runPromiseExit(
+          parseStoredEmbeddingData(smallData)
+        )
+
+        // Should fail because it's treated as JSON and invalid JSON parsing
+        expect(Exit.isFailure(result)).toBe(true)
+        if (Exit.isFailure(result)) {
+          expect(result.cause._tag).toBe("Fail")
+          const error = (result.cause as { error: EmbeddingDataParseError }).error
+          expect(error.message).toContain("Failed to parse embedding data")
+        }
+      })
+
+      it("should treat small Uint8Array as JSON, not F32_BLOB (8 bytes)", async () => {
+        const smallData = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
+
+        const result = await Effect.runPromiseExit(
+          parseStoredEmbeddingData(smallData)
+        )
+
+        // Should fail because it's treated as JSON and invalid JSON parsing
+        expect(Exit.isFailure(result)).toBe(true)
+      })
+
+      it("should treat small Uint8Array as JSON, not F32_BLOB (12 bytes)", async () => {
+        const smallData = new Uint8Array(12).fill(0xFF)
+
+        const result = await Effect.runPromiseExit(
+          parseStoredEmbeddingData(smallData)
+        )
+
+        // Should fail because it's treated as JSON and invalid JSON parsing
+        expect(Exit.isFailure(result)).toBe(true)
+      })
+
+      it("should parse realistic F32_BLOB data (16+ bytes) correctly", async () => {
+        // Create realistic 4-dimensional embedding vector (16 bytes)
+        const testVector = [0.1, -0.2, 0.3, -0.4]
+        const float32Array = new Float32Array(testVector)
+        const uint8Array = new Uint8Array(float32Array.buffer)
+
+        const result = await Effect.runPromise(
+          parseStoredEmbeddingData(uint8Array)
+        )
+
+        expect(result).toHaveLength(4)
+        expect(result[0]).toBeCloseTo(0.1, 6)
+        expect(result[1]).toBeCloseTo(-0.2, 6)
+        expect(result[2]).toBeCloseTo(0.3, 6)
+        expect(result[3]).toBeCloseTo(-0.4, 6)
+      })
+
+      it("should parse large F32_BLOB data (768 dimensions like real embeddings)", async () => {
+        // Create realistic large embedding vector like nomic-embed-text (768 dimensions)
+        const testVector = Array.from({ length: 768 }, (_, i) => Math.sin(i * 0.01))
+        const float32Array = new Float32Array(testVector)
+        const uint8Array = new Uint8Array(float32Array.buffer)
+
+        const result = await Effect.runPromise(
+          parseStoredEmbeddingData(uint8Array)
+        )
+
+        expect(result).toHaveLength(768)
+        expect(result[0]).toBeCloseTo(0, 6)
+        expect(result[100]).toBeCloseTo(Math.sin(1), 6)
+        expect(result[767]).toBeCloseTo(Math.sin(7.67), 6)
+      })
+
+      it("should handle edge case: exactly 16 bytes (minimum threshold)", async () => {
+        // Test the exact boundary condition
+        const testVector = [1.0, 2.0, 3.0, 4.0] // Exactly 16 bytes
+        const float32Array = new Float32Array(testVector)
+        const uint8Array = new Uint8Array(float32Array.buffer)
+
+        expect(uint8Array.length).toBe(16) // Verify it's exactly 16 bytes
+
+        const result = await Effect.runPromise(
+          parseStoredEmbeddingData(uint8Array)
+        )
+
+        expect(result).toHaveLength(4)
+        expect(result).toEqual([1.0, 2.0, 3.0, 4.0])
+      })
+
+      it("should fail on malformed data that meets size but not format requirements", async () => {
+        // Create 16 bytes of data that's divisible by 4 but results in invalid vectors
+        const testVector = [NaN, Infinity, -Infinity, 0]
+        const float32Array = new Float32Array(testVector)
+        const uint8Array = new Uint8Array(float32Array.buffer)
+
+        const result = await Effect.runPromiseExit(
+          parseStoredEmbeddingData(uint8Array)
+        )
+
+        // Should fail validation because of special float values
+        expect(Exit.isFailure(result)).toBe(true)
+        if (Exit.isFailure(result)) {
+          expect(result.cause._tag).toBe("Fail")
+          const error = (result.cause as { error: EmbeddingDataParseError }).error
+          expect(error.message).toContain("Invalid embedding vector format")
+        }
+      })
+    })
   })
 
   describe("validateEmbeddingVector", () => {
