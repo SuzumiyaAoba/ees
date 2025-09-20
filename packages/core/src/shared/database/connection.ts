@@ -83,9 +83,11 @@ const make = Effect.gen(function* () {
       `)
 
       // Create vector index for efficient similarity search
-      await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding, 'metric=cosine'))
-      `)
+      // Note: libsql_vector_idx might not be available in all libsql versions
+      // Commenting out for compatibility
+      // await client.execute(`
+      //   CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding, 'metric=cosine'))
+      // `)
     },
     catch: (error) =>
       new DatabaseConnectionError({

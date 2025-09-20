@@ -1,10 +1,8 @@
 /**
- * Ollama provider implementation using Vercel AI SDK
+ * Ollama provider implementation using direct API calls
  */
 
-import { embed } from "ai"
 import { Context, Effect, Layer } from "effect"
-import { createOllama } from "ollama-ai-provider-v2"
 import type {
   EmbeddingProvider,
   EmbeddingRequest,
@@ -20,11 +18,17 @@ export const OllamaProviderService = Context.GenericTag<OllamaProviderService>(
   "OllamaProviderService"
 )
 
+interface OllamaEmbedResponse {
+  embeddings: number[][]
+  model: string
+  total_duration?: number
+  load_duration?: number
+  prompt_eval_count?: number
+}
+
 const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
-    const ollama = createOllama({
-      baseURL: config.baseUrl ?? "http://localhost:11434/api",
-    })
+    const baseUrl = config.baseUrl ?? "http://localhost:11434"
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
@@ -32,17 +36,35 @@ const make = (config: OllamaConfig) =>
           const modelName =
             request.modelName ?? config.defaultModel ?? "nomic-embed-text"
 
-          const result = await embed({
-            model: ollama.textEmbeddingModel(modelName),
-            value: request.text,
+          const response = await fetch(`${baseUrl}/api/embed`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: modelName,
+              input: [request.text],
+            }),
           })
 
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+          }
+
+          const result = await response.json() as OllamaEmbedResponse
+
+          if (!result.embeddings || !Array.isArray(result.embeddings) || result.embeddings.length === 0) {
+            throw new Error("Invalid response format from Ollama API")
+          }
+
+          const embedding = result.embeddings[0]
+
           return {
-            embedding: result.embedding,
+            embedding,
             model: modelName,
             provider: "ollama",
-            dimensions: result.embedding.length,
-            tokensUsed: result.usage?.tokens,
+            dimensions: embedding.length,
+            tokensUsed: undefined, // Ollama doesn't provide token usage in embed API
           } satisfies EmbeddingResponse
         },
         catch: (error) =>
