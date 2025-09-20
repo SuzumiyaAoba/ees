@@ -2,11 +2,7 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
 import type {
-  BatchCreateEmbeddingResponse,
-  CreateEmbeddingResponse,
   Embedding,
-  EmbeddingsListResponse,
-  SearchEmbeddingResponse,
 } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
@@ -61,7 +57,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
           return Effect.fail(new Error(`Failed to create embedding: ${error}`))
         }),
         Effect.provide(AppLayer)
-      ) as unknown as Effect.Effect<CreateEmbeddingResponse, never, never>
+      )
     )
 
     return c.json(result, 200)
@@ -90,7 +86,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
           Effect.fail(new Error("Failed to create batch embeddings"))
         ),
         Effect.provide(AppLayer)
-      ) as unknown as Effect.Effect<BatchCreateEmbeddingResponse, never, never>
+      )
     )
 
     return c.json(result, 200)
@@ -119,7 +115,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
           Effect.fail(new Error("Failed to search embeddings"))
         ),
         Effect.provide(AppLayer)
-      ) as unknown as Effect.Effect<SearchEmbeddingResponse, never, never>
+      )
     )
 
     return c.json(result, 200)
@@ -147,7 +143,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
       program.pipe(
         Effect.catchAll(() => Effect.succeed(null)),
         Effect.provide(AppLayer)
-      ) as unknown as Effect.Effect<Embedding | null, never, never>
+      )
     )
 
     if (!embedding) {
@@ -195,11 +191,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as unknown as Effect.Effect<
-        EmbeddingsListResponse,
-        never,
-        never
-      >
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
@@ -228,18 +220,14 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     })
 
     const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as unknown as Effect.Effect<
-        boolean,
-        never,
-        never
-      >
+      program.pipe(Effect.provide(AppLayer))
     )
 
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)
     }
 
-    return c.json({ message: "Embedding deleted successfully" } as any, 200)
+    return c.json({ message: "Embedding deleted successfully" }, 200)
   } catch (error) {
     console.error("Failed to delete embedding:", error)
     return c.json({ error: "Failed to delete embedding" }, 500)

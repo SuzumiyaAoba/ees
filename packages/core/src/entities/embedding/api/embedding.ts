@@ -649,7 +649,7 @@ const make = Effect.gen(function* () {
     getCurrentProvider,
     getProviderModels,
     createEmbeddingWithProvider,
-  } as const
+  }
   return service satisfies typeof EmbeddingService.Service
 })
 
