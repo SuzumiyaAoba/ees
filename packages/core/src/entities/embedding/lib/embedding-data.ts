@@ -27,8 +27,23 @@ export const parseStoredEmbeddingData = (
         // Handle libSQL F32_BLOB format (ArrayBuffer with 32-bit floats)
         const float32Array = new Float32Array(data)
         parsedData = Array.from(float32Array)
+      } else if (data instanceof Uint8Array) {
+        // Handle Uint8Array - could be F32_BLOB or legacy JSON
+        // Try to interpret as F32_BLOB first
+        if (data.length % 4 === 0) {
+          // Length is multiple of 4, likely F32_BLOB
+          const float32Array = new Float32Array(data.buffer, data.byteOffset, data.length / 4)
+          parsedData = Array.from(float32Array)
+        } else {
+          // Fallback to legacy JSON format
+          const jsonString = Buffer.from(data).toString()
+          parsedData = JSON.parse(jsonString)
+        }
+      } else if (typeof data === "string") {
+        // Parse JSON string directly (legacy format)
+        parsedData = JSON.parse(data)
       } else {
-        // First validate the raw data format for legacy formats
+        // First validate the raw data format for other legacy formats
         const validationResult = StoredEmbeddingDataSchema.safeParse(data)
         if (!validationResult.success) {
           return yield* Effect.fail(
