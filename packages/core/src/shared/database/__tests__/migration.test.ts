@@ -29,7 +29,7 @@ describe("Database Migration Logic", () => {
       execute: vi.fn(),
     }
 
-    mockCreateClient.mockReturnValue(mockClient as any)
+    mockCreateClient.mockReturnValue(mockClient as ReturnType<typeof createClient>)
 
     // Mock console.log to capture migration messages
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {})

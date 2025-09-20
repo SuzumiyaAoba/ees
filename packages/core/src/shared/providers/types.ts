@@ -7,7 +7,8 @@ import type { Effect } from "effect"
 import { Data } from "effect"
 
 /**
- * Configuration for different embedding providers
+ * Base configuration interface for all embedding providers
+ * Contains common settings shared across different provider implementations
  */
 export interface ProviderConfig {
   readonly type: "ollama" | "openai" | "google" | "azure" | "cohere" | "mistral"
@@ -16,25 +17,46 @@ export interface ProviderConfig {
   readonly defaultModel?: string
 }
 
+/**
+ * Configuration for Ollama local embedding provider
+ * Ollama runs locally and provides free embedding models
+ */
 export interface OllamaConfig extends ProviderConfig {
   readonly type: "ollama"
-  readonly baseUrl?: string // Default: http://localhost:11434
-  readonly defaultModel?: string // Default: nomic-embed-text
+  /** Base URL for Ollama API endpoint @default "http://localhost:11434" */
+  readonly baseUrl?: string
+  /** Default model name to use @default "nomic-embed-text" */
+  readonly defaultModel?: string
 }
 
+/**
+ * Configuration for OpenAI embedding provider
+ * Requires API key and provides high-quality embeddings
+ */
 export interface OpenAIConfig extends ProviderConfig {
   readonly type: "openai"
+  /** OpenAI API key for authentication */
   readonly apiKey: string
-  readonly baseUrl?: string // Default: https://api.openai.com/v1
-  readonly defaultModel?: string // Default: text-embedding-3-small
+  /** Base URL for OpenAI API @default "https://api.openai.com/v1" */
+  readonly baseUrl?: string
+  /** Default model name @default "text-embedding-3-small" */
+  readonly defaultModel?: string
+  /** OpenAI organization ID (optional) */
   readonly organization?: string
 }
 
+/**
+ * Configuration for Google AI embedding provider
+ * Uses Google AI Studio for embeddings
+ */
 export interface GoogleConfig extends ProviderConfig {
   readonly type: "google"
+  /** Google AI API key for authentication */
   readonly apiKey: string
-  readonly baseUrl?: string // Default: Google AI Studio endpoint
-  readonly defaultModel?: string // Default: embedding-001
+  /** Base URL for Google AI API endpoint */
+  readonly baseUrl?: string
+  /** Default model name @default "embedding-001" */
+  readonly defaultModel?: string
 }
 
 export interface AzureConfig extends ProviderConfig {
@@ -60,32 +82,47 @@ export interface MistralConfig extends ProviderConfig {
 }
 
 /**
- * Model information from providers
+ * Information about an embedding model from a provider
+ * Contains metadata about model capabilities and pricing
  */
 export interface ModelInfo {
+  /** Model name as recognized by the provider */
   readonly name: string
+  /** Provider that offers this model */
   readonly provider: string
+  /** Number of dimensions in the embedding vector */
   readonly dimensions?: number | undefined
+  /** Maximum number of tokens the model can process */
   readonly maxTokens?: number | undefined
+  /** Cost per token for using this model */
   readonly pricePerToken?: number | undefined
 }
 
 /**
- * Embedding generation request
+ * Request object for generating an embedding
+ * Contains the text to embed and optional model selection
  */
 export interface EmbeddingRequest {
+  /** Text content to generate embedding for */
   readonly text: string
+  /** Optional model name to use (defaults to provider's default) */
   readonly modelName?: string | undefined
 }
 
 /**
- * Embedding generation response
+ * Response object containing generated embedding and metadata
+ * Returned by all embedding providers in a standardized format
  */
 export interface EmbeddingResponse {
+  /** The generated embedding as a vector of numbers */
   readonly embedding: number[]
+  /** Name of the model used to generate the embedding */
   readonly model: string
+  /** Name of the provider that generated the embedding */
   readonly provider: string
+  /** Number of dimensions in the embedding vector */
   readonly dimensions: number
+  /** Number of tokens consumed (if available from provider) */
   readonly tokensUsed?: number
 }
 

@@ -57,14 +57,14 @@ const make = (config: OllamaConfig) =>
             throw new Error("Invalid response format from Ollama API")
           }
 
-          const embedding = result.embeddings[0]
+          const embedding = result.embeddings[0] as number[]
 
           return {
             embedding,
             model: modelName,
             provider: "ollama",
             dimensions: embedding.length,
-            tokensUsed: undefined, // Ollama doesn't provide token usage in embed API
+            // Ollama doesn't provide token usage in embed API, so omit the property
           } satisfies EmbeddingResponse
         },
         catch: (error) =>
