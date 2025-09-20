@@ -16,19 +16,31 @@ import {
   listEmbeddingsRoute,
 } from "@/features/list-embeddings"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
-import { EmbeddingApplicationService, getPort } from "@ees/core"
+import { EmbeddingApplicationService } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
+
+/**
+ * EES (Embeddings API Service) - Main application
+ *
+ * A Hono-based REST API for managing text embeddings using multiple providers.
+ * Supports creating, searching, listing, and deleting embeddings with OpenAPI documentation.
+ */
 
 console.log("Initializing Hono app...")
 const app = new OpenAPIHono()
 
 console.log("Setting up routes...")
 
-// Root endpoint
+/**
+ * Root endpoint - Health check and service identification
+ */
 app.openapi(rootRoute, (c) => c.text("EES - Embeddings API Service" as never))
 
-// Create embedding
+/**
+ * Create embedding endpoint
+ * Generates a new embedding for the provided text using the configured provider
+ */
 app.openapi(createEmbeddingRoute, async (c) => {
   try {
     const { uri, text, model_name } = c.req.valid("json")
@@ -59,7 +71,10 @@ app.openapi(createEmbeddingRoute, async (c) => {
   }
 })
 
-// Batch create embeddings
+/**
+ * Batch create embeddings endpoint
+ * Processes multiple texts in a single request for efficient bulk embedding generation
+ */
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
   try {
     const request = c.req.valid("json")
@@ -85,7 +100,10 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
   }
 })
 
-// Search embeddings
+/**
+ * Search embeddings endpoint
+ * Finds similar embeddings using vector similarity search with configurable metrics
+ */
 app.openapi(searchEmbeddingsRoute, async (c) => {
   try {
     const request = c.req.valid("json")
@@ -111,7 +129,10 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
   }
 })
 
-// Get embedding by URI
+/**
+ * Get embedding by URI endpoint
+ * Retrieves a specific embedding using its unique URI identifier
+ */
 app.openapi(getEmbeddingByUriRoute, async (c) => {
   try {
     const { uri } = c.req.valid("param")
@@ -140,7 +161,10 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
   }
 })
 
-// Get all embeddings
+/**
+ * List embeddings endpoint
+ * Returns paginated list of embeddings with optional filtering by URI and model
+ */
 app.openapi(listEmbeddingsRoute, async (c) => {
   try {
     const { uri, model_name, page, limit } = c.req.valid("query")
@@ -158,10 +182,10 @@ app.openapi(listEmbeddingsRoute, async (c) => {
 
     // Only add optional filters if they were explicitly provided
     const queryParams = c.req.query()
-    if (queryParams.uri) {
+    if (queryParams["uri"] && uri) {
       filters.uri = uri
     }
-    if (queryParams.model_name) {
+    if (queryParams["model_name"] && model_name) {
       filters.modelName = model_name
     }
 
@@ -185,7 +209,10 @@ app.openapi(listEmbeddingsRoute, async (c) => {
   }
 })
 
-// Delete embedding
+/**
+ * Delete embedding endpoint
+ * Removes an embedding from the database by its ID
+ */
 app.openapi(deleteEmbeddingRoute, async (c) => {
   try {
     const { id: idStr } = c.req.valid("param")
@@ -219,7 +246,10 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
   }
 })
 
-// OpenAPI documentation endpoints
+/**
+ * OpenAPI specification endpoint
+ * Provides machine-readable API documentation in OpenAPI 3.0 format
+ */
 app.doc("/openapi.json", {
   openapi: "3.0.0",
   info: {
@@ -250,7 +280,10 @@ app.doc("/openapi.json", {
   ],
 })
 
-// Swagger UI
+/**
+ * Swagger UI endpoint
+ * Interactive API documentation interface for testing and exploration
+ */
 app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 

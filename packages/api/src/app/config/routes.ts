@@ -1,6 +1,14 @@
+/**
+ * API route definitions for the EES (Embeddings API Service)
+ * Contains OpenAPI route specifications for health check and service endpoints
+ */
+
 import { createRoute } from "@hono/zod-openapi"
 
-// Root endpoint
+/**
+ * Root/health check endpoint route definition
+ * Provides basic service status and identification
+ */
 export const rootRoute = createRoute({
   method: "get",
   path: "/",
