@@ -244,21 +244,5 @@ app.doc("/openapi.json", {
 // Swagger UI
 app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
-// Start server if this is the main module
-if (require.main === module) {
-  const port = getPort(3000)
-
-  // Use Hono's serve method for Node.js
-  const { serve } = require("@hono/node-server")
-  serve(
-    {
-      fetch: app.fetch,
-      port,
-    },
-    () => {
-      // Server callback
-    }
-  )
-}
 
 export default app
