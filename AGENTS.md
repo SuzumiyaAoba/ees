@@ -52,6 +52,7 @@ The only exceptions are:
 - `npm run build --workspace=@ees/core` - Build core package only
 - `npm run test --workspace=@ees/cli` - Test CLI package only
 - `npm run dev --workspace=@ees/api` - Start API server in development mode
+- `npm run dev --workspace=packages/web` - Start web frontend in development mode
 
 ## Code Quality Standards
 
@@ -176,7 +177,7 @@ describe("PaginationService", () => {
 - `packages/core` - Shared business logic, types, database layer, and providers
 - `packages/api` - REST API server using Hono framework
 - `packages/cli` - Command-line interface using CAC
-- `web` - Web frontend (React/Next.js)
+- `packages/web` - Web frontend (React/Next.js)
 
 **Key Directories:**
 - `packages/core/src/shared/` - Shared utilities, database, config, providers
