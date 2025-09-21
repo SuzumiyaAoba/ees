@@ -6,9 +6,9 @@
  */
 
 import { Layer } from "effect"
-import { EmbeddingServiceLive } from "@/entities/embedding/api/embedding.js"
+import { EmbeddingServiceLive } from "../../entities/embedding/api/embedding.js"
 import { EmbeddingApplicationServiceLive } from "./embedding-application"
-import { ModelManagerLive } from "@/shared/models"
+import { ModelManagerLive } from "../models"
 
 /**
  * Core application layer including all business logic services
