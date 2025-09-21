@@ -55,8 +55,8 @@ app.openapi(createEmbeddingRoute, async (c) => {
         Effect.catchAll((error) => {
           console.error("Detailed create embedding error:", error)
           return Effect.fail(new Error(`Failed to create embedding: ${error}`))
-        }),
-        Effect.provide(AppLayer)
+        }) as any,
+        Effect.provide(AppLayer) as any
       )
     )
 
@@ -84,8 +84,8 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
       program.pipe(
         Effect.catchAll(() =>
           Effect.fail(new Error("Failed to create batch embeddings"))
-        ),
-        Effect.provide(AppLayer)
+        ) as any,
+        Effect.provide(AppLayer) as any
       )
     )
 
@@ -113,8 +113,8 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
       program.pipe(
         Effect.catchAll(() =>
           Effect.fail(new Error("Failed to search embeddings"))
-        ),
-        Effect.provide(AppLayer)
+        ) as any,
+        Effect.provide(AppLayer) as any
       )
     )
 
@@ -141,8 +141,8 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 
     const embedding: Embedding | null = await Effect.runPromise(
       program.pipe(
-        Effect.catchAll(() => Effect.succeed(null)),
-        Effect.provide(AppLayer)
+        Effect.catchAll(() => Effect.succeed(null)) as any,
+        Effect.provide(AppLayer) as any
       )
     )
 
@@ -191,7 +191,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+      program.pipe(Effect.provide(AppLayer) as any)
     )
 
     return c.json(result, 200)
@@ -220,7 +220,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     })
 
     const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
+      program.pipe(Effect.provide(AppLayer) as any)
     )
 
     if (!deleted) {
