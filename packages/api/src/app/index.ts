@@ -13,6 +13,7 @@ import {
 } from "@/features/list-embeddings"
 import { listModelsRoute } from "@/features/list-models"
 import { migrationApp } from "@/features/migrate-embeddings"
+import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
@@ -45,6 +46,11 @@ app.route("/", migrationApp)
  * Upload routes - File upload and processing
  */
 app.route("/", uploadApp)
+
+/**
+ * Provider management routes - Provider status and model discovery
+ */
+app.route("/", providerApp)
 
 /**
  * Create embedding endpoint
@@ -299,6 +305,10 @@ app.doc("/openapi.json", {
     {
       name: "Models",
       description: "Model information and availability endpoints",
+    },
+    {
+      name: "Providers",
+      description: "Provider management and status endpoints",
     },
   ],
 })
