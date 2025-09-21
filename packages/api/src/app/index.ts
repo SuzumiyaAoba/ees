@@ -51,15 +51,13 @@ app.openapi(createEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(AppLayer)
-      ) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to create embedding:", error)
-    return c.json({ error: "Failed to create embedding" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -77,15 +75,13 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(AppLayer)
-      ) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to create batch embeddings:", error)
-    return c.json({ error: "Failed to create batch embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -103,15 +99,13 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(AppLayer)
-      ) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to search embeddings:", error)
-    return c.json({ error: "Failed to search embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -132,11 +126,10 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     let embedding: Embedding | null
     try {
       embedding = await Effect.runPromise(
-        program.pipe(
-          Effect.provide(AppLayer)
-        ) as Effect.Effect<never, never, never>
+        program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
       )
-    } catch {
+    } catch (error) {
+      console.error("Failed to retrieve embedding:", error)
       embedding = null
     }
 
@@ -190,8 +183,8 @@ app.openapi(listEmbeddingsRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to retrieve embeddings:", error)
-    return c.json({ error: "Failed to retrieve embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -223,8 +216,8 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
 
     return c.json({ message: "Embedding deleted successfully" }, 200)
   } catch (error) {
-    console.error("Failed to delete embedding:", error)
-    return c.json({ error: "Failed to delete embedding" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
