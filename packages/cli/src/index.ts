@@ -8,6 +8,7 @@
 import { Effect } from "effect"
 import {
   EmbeddingApplicationService,
+  ModelManagerTag,
   ApplicationLayer,
   parseBatchFile,
   readStdin,
@@ -65,6 +66,15 @@ export interface CLICommands {
    * Delete embedding by ID
    */
   delete(options: { id: number }): Effect.Effect<void, Error, never>
+
+  /**
+   * List available models from all configured providers
+   */
+  models(options?: {
+    provider?: string
+    available?: boolean
+    format?: "table" | "json" | "list"
+  }): Effect.Effect<void, Error, never>
 }
 
 /**
@@ -72,6 +82,7 @@ export interface CLICommands {
  */
 const makeCLICommands = Effect.gen(function* () {
   const appService = yield* EmbeddingApplicationService
+  const modelManager = yield* ModelManagerTag
 
   const create = ((options: {
     uri: string
@@ -212,6 +223,76 @@ const makeCLICommands = Effect.gen(function* () {
       }
     })) as unknown as (options: { id: number }) => Effect.Effect<void, Error, never>
 
+  const models = ((options?: {
+    provider?: string
+    available?: boolean
+    format?: "table" | "json" | "list"
+  }) =>
+    Effect.gen(function* () {
+      const allModels = yield* modelManager.listAvailableModels()
+
+      // Filter models based on options
+      let filteredModels = allModels
+
+      if (options?.provider) {
+        filteredModels = filteredModels.filter(
+          (model) => model.provider === options.provider
+        )
+      }
+
+      if (options?.available !== undefined) {
+        filteredModels = filteredModels.filter(
+          (model) => model.available === options.available
+        )
+      }
+
+      const format = options?.format || "table"
+
+      // Format output based on requested format
+      switch (format) {
+        case "json":
+          log(JSON.stringify(filteredModels, null, 2))
+          break
+
+        case "list":
+          log(`Available Models (${filteredModels.length}):`)
+          for (const model of filteredModels) {
+            const status = model.available ? "✓" : "✗"
+            log(`${status} ${model.name} (${model.provider})`)
+          }
+          break
+
+        case "table":
+        default:
+          log(`Available Models (${filteredModels.length}):`)
+          log("─".repeat(80))
+          log(
+            `${"Name".padEnd(25)} ${"Provider".padEnd(12)} ${"Dimensions".padEnd(12)} ${"Status".padEnd(8)} Description`
+          )
+          log("─".repeat(80))
+
+          for (const model of filteredModels) {
+            const name = (model.displayName || model.name).padEnd(25)
+            const provider = model.provider.padEnd(12)
+            const dimensions = model.dimensions.toString().padEnd(12)
+            const status = (model.available ? "Available" : "Offline").padEnd(8)
+            const description = model.description || ""
+
+            log(`${name} ${provider} ${dimensions} ${status} ${description}`)
+          }
+          log("─".repeat(80))
+
+          // Show provider summary
+          const providers = Array.from(new Set(filteredModels.map((m) => m.provider)))
+          log(`\nProviders: ${providers.join(", ")}`)
+          break
+      }
+    })) as unknown as (options?: {
+    provider?: string
+    available?: boolean
+    format?: "table" | "json" | "list"
+  }) => Effect.Effect<void, Error, never>
+
   const commands = {
     create,
     batch,
@@ -219,6 +300,7 @@ const makeCLICommands = Effect.gen(function* () {
     list,
     get,
     delete: deleteEmbedding,
+    models,
   } satisfies CLICommands
   return commands
 })

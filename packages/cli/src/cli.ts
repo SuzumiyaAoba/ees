@@ -104,6 +104,25 @@ async function main() {
       )
     })
 
+  // List available models command
+  cli
+    .command("models", "List available embedding models")
+    .option("-p, --provider <provider>", "Filter by provider (ollama, openai, etc.)")
+    .option("--available", "Show only available models")
+    .option("--unavailable", "Show only unavailable models")
+    .option("-f, --format <format>", "Output format (table, json, list)", { default: "table" })
+    .action(async (options: any) => {
+      const available = options.available ? true : options.unavailable ? false : undefined
+
+      await runCLICommand(
+        commands.models({
+          provider: options.provider,
+          available,
+          format: options.format,
+        })
+      )
+    })
+
   // Global options
   cli.help()
   cli.version("1.0.0")
