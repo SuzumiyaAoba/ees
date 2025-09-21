@@ -14,6 +14,7 @@ import {
 import { listModelsRoute } from "@/features/list-models"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
+import { uploadApp } from "@/features/upload-embeddings"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
@@ -39,6 +40,11 @@ app.openapi(rootRoute, (c) => c.text("EES - Embeddings API Service" as never))
  * Migration routes - Model migration and compatibility
  */
 app.route("/", migrationApp)
+
+/**
+ * Upload routes - File upload and processing
+ */
+app.route("/", uploadApp)
 
 /**
  * Create embedding endpoint
