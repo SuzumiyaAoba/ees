@@ -9,8 +9,8 @@ import type {
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError
-} from "@/shared/providers/types"
-import type { DatabaseQueryError } from "@/shared/errors/database"
+} from "../providers/types"
+import type { DatabaseQueryError } from "../errors/database"
 
 /**
  * Comprehensive model information for model management
