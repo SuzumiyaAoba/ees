@@ -7,7 +7,6 @@ import type {
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
   EmbeddingsListResponse,
-  ProviderInfo,
   ErrorResponse,
   MigrationRequest,
   MigrationResponse,
@@ -94,21 +93,45 @@ class ApiClient {
   }
 
   // Provider operations
-  async getProviders(): Promise<string[]> {
-    return this.request<string[]>('/providers')
+  async getProviders(): Promise<Array<{
+    name: string
+    displayName?: string
+    description?: string
+    status: 'online' | 'offline' | 'unknown'
+    version?: string
+    modelCount?: number
+  }>> {
+    return this.request('/providers')
   }
 
-  async getProviderModels(provider?: string): Promise<ProviderInfo[]> {
+  async getProviderModels(provider?: string): Promise<Array<{
+    name: string
+    displayName?: string
+    provider: string
+    dimensions?: number
+    maxTokens?: number
+    pricePerToken?: number
+    size?: number
+    modified_at?: string
+    digest?: string
+  }>> {
     const url = provider ? `/providers/models?provider=${provider}` : '/providers/models'
-    return this.request<ProviderInfo[]>(url)
+    return this.request(url)
   }
 
-  async getCurrentProvider(): Promise<{ provider: string }> {
-    return this.request<{ provider: string }>('/providers/current')
+  async getCurrentProvider(): Promise<{
+    provider: string
+    configuration?: Record<string, unknown>
+  }> {
+    return this.request('/providers/current')
   }
 
-  async getOllamaStatus(): Promise<{ version?: string; status: 'online' | 'offline' }> {
-    return this.request<{ version?: string; status: 'online' | 'offline' }>('/ollama/status')
+  async getOllamaStatus(): Promise<{
+    status: 'online' | 'offline'
+    version?: string
+    models?: string[]
+  }> {
+    return this.request('/ollama/status')
   }
 
   // File upload helper

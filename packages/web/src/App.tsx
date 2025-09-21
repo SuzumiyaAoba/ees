@@ -4,7 +4,7 @@ import { Search, List, Upload, Settings, Database, ArrowLeftRight } from 'lucide
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
-import { ProviderConfig } from '@/components/ProviderConfig'
+import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import type { Embedding, SearchResult } from '@/types/api'
 
@@ -63,7 +63,7 @@ function AppContent() {
           // You could show a notification or refresh the embeddings list
         }} />
       case 'config':
-        return <ProviderConfig />
+        return <ProviderManagement />
       default:
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
     }
