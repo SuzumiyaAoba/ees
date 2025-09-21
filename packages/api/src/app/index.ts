@@ -11,8 +11,9 @@ import {
   getEmbeddingByUriRoute,
   listEmbeddingsRoute,
 } from "@/features/list-embeddings"
+import { listModelsRoute } from "@/features/list-models"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
-import { EmbeddingApplicationService } from "@ees/core"
+import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
 
@@ -222,6 +223,37 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
 })
 
 /**
+ * List available models endpoint
+ * Returns all models available through configured providers including environment variables and Ollama response
+ */
+app.openapi(listModelsRoute, async (c) => {
+  try {
+    const program = Effect.gen(function* () {
+      const modelManager = yield* ModelManagerTag
+      const models = yield* modelManager.listAvailableModels()
+
+      // Extract unique providers from models
+      const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
+
+      return {
+        models,
+        count: models.length,
+        providers
+      }
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    console.error("Failed to retrieve models:", error)
+    return c.json({ error: "Failed to retrieve models from providers" }, 500)
+  }
+})
+
+/**
  * OpenAPI specification endpoint
  * Provides machine-readable API documentation in OpenAPI 3.0 format
  */
@@ -251,6 +283,10 @@ app.doc("/openapi.json", {
     {
       name: "Embeddings",
       description: "Embedding generation and management endpoints",
+    },
+    {
+      name: "Models",
+      description: "Model information and availability endpoints",
     },
   ],
 })
