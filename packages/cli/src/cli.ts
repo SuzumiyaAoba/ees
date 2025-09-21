@@ -104,6 +104,59 @@ async function main() {
       )
     })
 
+  // Models command
+  cli
+    .command("models", "List available models")
+    .action(async () => {
+      await runCLICommand(commands.models())
+    })
+
+  // Upload command
+  cli
+    .command("upload <files...>", "Upload files and create embeddings")
+    .option("-m, --model <model>", "Model name for embeddings")
+    .action(async (files: string[], options: any) => {
+      await runCLICommand(
+        commands.upload({
+          files,
+          model: options.model,
+        })
+      )
+    })
+
+  // Migrate command
+  cli
+    .command("migrate <fromModel> <toModel>", "Migrate embeddings between models")
+    .option("--dry-run", "Perform a dry run without actual migration")
+    .action(async (fromModel: string, toModel: string, options: any) => {
+      await runCLICommand(
+        commands.migrate({
+          fromModel,
+          toModel,
+          dryRun: options.dryRun,
+        })
+      )
+    })
+
+  // Providers command with subcommands
+  cli
+    .command("providers <action>", "Provider management")
+    .option("-p, --provider <provider>", "Filter by provider name")
+    .action(async (action: string, options: any) => {
+      const validActions = ["list", "current", "models", "ollama-status"]
+      if (!validActions.includes(action)) {
+        console.error(`Invalid action: ${action}. Valid actions: ${validActions.join(", ")}`)
+        process.exit(1)
+      }
+
+      await runCLICommand(
+        commands.providers({
+          action: action as "list" | "current" | "models" | "ollama-status",
+          provider: options.provider,
+        })
+      )
+    })
+
   // Global options
   cli.help()
   cli.version("1.0.0")
