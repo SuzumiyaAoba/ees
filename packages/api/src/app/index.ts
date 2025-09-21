@@ -12,6 +12,7 @@ import {
   listEmbeddingsRoute,
 } from "@/features/list-embeddings"
 import { listModelsRoute } from "@/features/list-models"
+import { migrationApp } from "@/features/migrate-embeddings"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
@@ -33,6 +34,11 @@ console.log("Setting up routes...")
  * Root endpoint - Health check and service identification
  */
 app.openapi(rootRoute, (c) => c.text("EES - Embeddings API Service" as never))
+
+/**
+ * Migration routes - Model migration and compatibility
+ */
+app.route("/", migrationApp)
 
 /**
  * Create embedding endpoint

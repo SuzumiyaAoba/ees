@@ -92,3 +92,58 @@ export interface ProviderInfo {
 export interface ErrorResponse {
   error: string
 }
+
+// Migration-related types
+export interface MigrationRequest {
+  fromModel: string
+  toModel: string
+  options?: {
+    readonly preserveOriginal?: boolean
+    readonly batchSize?: number
+    readonly continueOnError?: boolean
+    readonly metadata?: Record<string, unknown>
+  }
+}
+
+export interface MigrationResponse {
+  readonly totalProcessed: number
+  readonly successful: number
+  readonly failed: number
+  readonly duration: number
+  readonly details: ReadonlyArray<{
+    readonly id: number
+    readonly uri: string
+    readonly status: 'success' | 'error'
+    readonly error?: string
+  }>
+}
+
+export interface CompatibilityCheckRequest {
+  readonly sourceModel: string
+  readonly targetModel: string
+}
+
+export interface CompatibilityResponse {
+  readonly compatible: boolean
+  readonly reason?: string
+  readonly similarityScore?: number
+}
+
+export interface ModelInfo {
+  name: string
+  displayName?: string
+  provider: string
+  dimensions: number
+  maxTokens: number
+  available: boolean
+  description?: string
+  version?: string
+  languages?: string[]
+  pricePerToken?: number
+}
+
+export interface ListModelsResponse {
+  models: ModelInfo[]
+  count: number
+  providers: string[]
+}
