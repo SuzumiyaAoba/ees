@@ -17,7 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*", "../core/src/*"]
+      "@/*": ["./src/*"],
+      "@/core/*": ["../core/src/*"]
     }
   },
   "include": ["src"],
