@@ -201,6 +201,6 @@ export interface EmbeddingProvider {
     modelName: string
   ) => Effect.Effect<
     ModelInfo | null,
-    ProviderConnectionError | ProviderAuthenticationError
+    ProviderConnectionError | ProviderAuthenticationError | ProviderModelError
   >
 }
