@@ -51,19 +51,13 @@ app.openapi(createEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.catchAll((error) => {
-          console.error("Detailed create embedding error:", error)
-          return Effect.fail(new Error(`Failed to create embedding: ${error}`))
-        }) as any,
-        Effect.provide(AppLayer) as any
-      )
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to create embedding:", error)
-    return c.json({ error: "Failed to create embedding" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -81,18 +75,13 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.catchAll(() =>
-          Effect.fail(new Error("Failed to create batch embeddings"))
-        ) as any,
-        Effect.provide(AppLayer) as any
-      )
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to create batch embeddings:", error)
-    return c.json({ error: "Failed to create batch embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -110,18 +99,13 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(
-        Effect.catchAll(() =>
-          Effect.fail(new Error("Failed to search embeddings"))
-        ) as any,
-        Effect.provide(AppLayer) as any
-      )
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to search embeddings:", error)
-    return c.json({ error: "Failed to search embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -139,12 +123,15 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
       return yield* appService.getEmbeddingByUri(decodedUri)
     })
 
-    const embedding: Embedding | null = await Effect.runPromise(
-      program.pipe(
-        Effect.catchAll(() => Effect.succeed(null)) as any,
-        Effect.provide(AppLayer) as any
+    let embedding: Embedding | null
+    try {
+      embedding = await Effect.runPromise(
+        program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
       )
-    )
+    } catch (error) {
+      console.error("Failed to retrieve embedding:", error)
+      embedding = null
+    }
 
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
@@ -191,13 +178,13 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer) as any)
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Failed to retrieve embeddings:", error)
-    return c.json({ error: "Failed to retrieve embeddings" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 
@@ -220,7 +207,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     })
 
     const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer) as any)
+      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
     )
 
     if (!deleted) {
@@ -229,8 +216,8 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
 
     return c.json({ message: "Embedding deleted successfully" }, 200)
   } catch (error) {
-    console.error("Failed to delete embedding:", error)
-    return c.json({ error: "Failed to delete embedding" }, 500)
+    console.error("Unexpected error:", error)
+    return c.json({ error: "Internal server error" }, 500)
   }
 })
 

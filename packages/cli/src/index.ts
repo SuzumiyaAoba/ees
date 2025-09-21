@@ -230,7 +230,7 @@ export function runCLICommand<T>(
   command: Effect.Effect<T, Error, never>
 ): Promise<void> {
   return Effect.runPromise(
-    (command.pipe(
+    command.pipe(
       Effect.provide(ApplicationLayer),
       Effect.catchAll((err) =>
         Effect.sync(() => {
@@ -239,7 +239,7 @@ export function runCLICommand<T>(
         })
       ),
       Effect.asVoid
-    ) as unknown as Effect.Effect<void, never, never>)
+    ) as Effect.Effect<void, never, never>
   )
 }
 
@@ -247,4 +247,4 @@ export function runCLICommand<T>(
  * Create CLI commands instance
  */
 export const createCLICommands = (): Effect.Effect<CLICommands, never, never> =>
-  (makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as unknown as Effect.Effect<CLICommands, never, never>)
+  makeCLICommands.pipe(Effect.provide(ApplicationLayer)) as Effect.Effect<CLICommands, never, never>

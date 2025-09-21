@@ -186,19 +186,35 @@ describe("EmbeddingService", () => {
 
           if (result.length === 0) return null
 
-          const row = result[0] as any
+          const row = result[0]
+          if (!row || typeof row !== 'object') {
+            throw new Error('Invalid query result')
+          }
+
+          const record = row as Record<string, unknown>
+          if (
+            typeof record.id !== 'number' ||
+            typeof record.uri !== 'string' ||
+            typeof record.text !== 'string' ||
+            typeof record.model_name !== 'string' ||
+            typeof record.embedding !== 'string' ||
+            typeof record.created_at !== 'string' ||
+            typeof record.updated_at !== 'string'
+          ) {
+            throw new Error('Invalid row structure')
+          }
           return {
-            id: row.id,
-            uri: row.uri,
-            text: row.text,
-            model_name: row.model_name,
-            embedding: JSON.parse(row.embedding),
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            id: record.id,
+            uri: record.uri,
+            text: record.text,
+            model_name: record.model_name,
+            embedding: JSON.parse(record.embedding),
+            created_at: record.created_at,
+            updated_at: record.updated_at,
           }
         })
 
-        const searchEmbeddings = (request: any) => Effect.gen(function* () {
+        const searchEmbeddings = (request: SearchEmbeddingRequest) => Effect.gen(function* () {
           const embeddingRequest = { text: request.query, modelName: request.model_name }
           const embeddingResponse = yield* providerService.generateEmbedding(embeddingRequest)
           const embeddingVector = JSON.stringify(embeddingResponse.embedding)
@@ -295,8 +311,8 @@ describe("EmbeddingService", () => {
       })
     )
 
-    const providerLayer = Layer.succeed(EmbeddingProviderService, mockProvider as any)
-    const databaseLayer = Layer.succeed(DatabaseService, mockDatabase as any)
+    const providerLayer = Layer.succeed(EmbeddingProviderService, mockProvider)
+    const databaseLayer = Layer.succeed(DatabaseService, mockDatabase)
 
     return Layer.provide(
       testEmbeddingServiceLayer,
