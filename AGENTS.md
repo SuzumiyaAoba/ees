@@ -187,11 +187,43 @@ After creating a PR:
 ### Unit Testing Policy
 **Mandatory Testing Rule**: After implementing any new feature or functionality, unit tests MUST be added to ensure code quality and prevent regressions.
 
+### Test-Driven Development (TDD) for Bug Fixes
+
+**MANDATORY**: When fixing bugs, you MUST follow Test-Driven Development practices:
+
+1. **Write Failing Test First** - Before making any code changes, implement a unit test that reproduces the bug
+2. **Verify Test Failure** - Run the test to confirm it fails due to the bug
+3. **Fix the Bug** - Make minimal code changes to fix the issue
+4. **Verify Test Passes** - Confirm the test now passes with the fix
+5. **Refactor if Needed** - Improve code quality while keeping tests green
+
+**TDD Workflow Example:**
+```typescript
+// 1. Write failing test
+describe("Bug fix: user creation with invalid email", () => {
+  it("should throw ValidationError for invalid email format", () => {
+    expect(() => createUser({ email: "invalid-email" }))
+      .toThrow(ValidationError)
+  })
+})
+
+// 2. Run test - should FAIL
+// 3. Fix the bug in createUser function
+// 4. Run test - should PASS
+// 5. Refactor if needed
+```
+
+**Benefits of TDD for Bug Fixes:**
+- **Prevents regression** - Ensures the same bug doesn't reoccur
+- **Documents the bug** - Test serves as documentation of the issue
+- **Validates the fix** - Confirms the solution actually resolves the problem
+- **Improves confidence** - Provides safety net for future changes
+
 **When to Add Tests:**
 1. **New API endpoints** - Add comprehensive tests covering success cases, error cases, validation, and edge cases
 2. **New service methods** - Test all public methods with various inputs and error conditions
 3. **New business logic** - Cover all code paths including happy path and error scenarios
-4. **Bug fixes** - Add regression tests to prevent the same bug from reoccurring
+4. **Bug fixes** - **MUST follow TDD approach** - Write failing test first, then fix
 5. **Feature enhancements** - Update existing tests and add new ones for new functionality
 
 **Test Coverage Requirements:**
