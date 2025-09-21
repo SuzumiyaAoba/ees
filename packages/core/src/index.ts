@@ -43,6 +43,11 @@ export {
 } from './shared/application/embedding-application'
 
 export {
+  ModelManagerTag,
+  ModelManagerLive,
+} from './shared/models/index'
+
+export {
   CoreApplicationLayer,
   ApplicationLayer,
 } from './shared/application/layers'

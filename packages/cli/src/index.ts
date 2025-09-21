@@ -12,8 +12,10 @@ import {
   parseBatchFile,
   readStdin,
   readTextFile,
+  processFiles,
   log,
   error,
+  ModelManagerTag,
 } from "@ees/core"
 
 /**
@@ -65,6 +67,36 @@ export interface CLICommands {
    * Delete embedding by ID
    */
   delete(options: { id: number }): Effect.Effect<void, Error, never>
+
+  /**
+   * List available models
+   */
+  models(): Effect.Effect<void, Error, never>
+
+  /**
+   * Upload files and create embeddings
+   */
+  upload(options: {
+    files: string[]
+    model?: string
+  }): Effect.Effect<void, Error, never>
+
+  /**
+   * Migrate embeddings between models
+   */
+  migrate(options: {
+    fromModel: string
+    toModel: string
+    dryRun?: boolean
+  }): Effect.Effect<void, Error, never>
+
+  /**
+   * Provider management commands
+   */
+  providers(options: {
+    action: "list" | "current" | "models" | "ollama-status"
+    provider?: string
+  }): Effect.Effect<void, Error, never>
 }
 
 /**
@@ -72,6 +104,7 @@ export interface CLICommands {
  */
 const makeCLICommands = Effect.gen(function* () {
   const appService = yield* EmbeddingApplicationService
+  const modelManager = yield* ModelManagerTag
 
   const create = ((options: {
     uri: string
@@ -212,6 +245,167 @@ const makeCLICommands = Effect.gen(function* () {
       }
     })) as unknown as (options: { id: number }) => Effect.Effect<void, Error, never>
 
+  const models = (() =>
+    Effect.gen(function* () {
+      const modelList = yield* modelManager.listAvailableModels()
+
+      log("Available models:")
+      for (const model of modelList) {
+        log(`- ${model.name} (${model.provider})`)
+        if (model.dimensions) log(`  Dimensions: ${model.dimensions}`)
+        if (model.maxTokens) log(`  Max tokens: ${model.maxTokens}`)
+      }
+
+      log(`\nTotal: ${modelList.length} models`)
+    })) as unknown as () => Effect.Effect<void, Error, never>
+
+  const upload = ((options: { files: string[]; model?: string }) =>
+    Effect.gen(function* () {
+      log(`Uploading ${options.files.length} file(s)...`)
+
+      let successful = 0
+      let failed = 0
+
+      for (const filePath of options.files) {
+        try {
+          // Read file as File object (simplified approach)
+          const fs = yield* Effect.tryPromise({
+            try: () => import("fs/promises"),
+            catch: () => new Error("Failed to import fs"),
+          })
+
+          const content = yield* Effect.tryPromise({
+            try: () => fs.readFile(filePath, "utf-8"),
+            catch: () => new Error(`Failed to read file: ${filePath}`),
+          })
+
+          // Create embedding from file content
+          const result = yield* appService.createEmbedding({
+            uri: filePath,
+            text: content,
+            modelName: options.model,
+          })
+
+          log(`✓ Created embedding for ${filePath} (ID: ${result.id})`)
+          successful++
+        } catch (error) {
+          log(`✗ Failed to process ${filePath}: ${error}`)
+          failed++
+        }
+      }
+
+      log(`\nUpload complete: ${successful} successful, ${failed} failed`)
+    })) as unknown as (options: { files: string[]; model?: string }) => Effect.Effect<void, Error, never>
+
+  const migrate = ((options: { fromModel: string; toModel: string; dryRun?: boolean }) =>
+    Effect.gen(function* () {
+      // Check model compatibility
+      const compatibility = yield* modelManager.validateModelCompatibility(
+        options.fromModel,
+        options.toModel
+      )
+
+      if (!compatibility.compatible) {
+        log(`Models are not compatible: ${compatibility.reason}`)
+        return
+      }
+
+      log(`Migration from ${options.fromModel} to ${options.toModel}`)
+      log(`Compatibility: ${compatibility.reason}`)
+
+      if (options.dryRun) {
+        log("Dry run mode - no actual migration performed")
+        return
+      }
+
+      // Perform migration using ModelManager
+      const result = yield* modelManager.migrateEmbeddings(
+        options.fromModel,
+        options.toModel
+      )
+
+      log(`Migration complete: ${result.successful} embeddings migrated`)
+      if (result.failed > 0) {
+        log(`Failed migrations: ${result.failed}`)
+      }
+      log(`Total processed: ${result.totalProcessed}`)
+      log(`Duration: ${result.duration}ms`)
+    })) as unknown as (options: { fromModel: string; toModel: string; dryRun?: boolean }) => Effect.Effect<void, Error, never>
+
+  const providers = ((options: { action: "list" | "current" | "models" | "ollama-status"; provider?: string }) =>
+    Effect.gen(function* () {
+      switch (options.action) {
+        case "list": {
+          // Static provider information for now
+          const providerList = [
+            { name: "ollama", status: "online", description: "Local AI model provider" },
+            { name: "openai", status: "unknown", description: "OpenAI embedding models" },
+            { name: "google", status: "unknown", description: "Google AI embedding models" },
+            { name: "cohere", status: "unknown", description: "Cohere embedding models" },
+            { name: "mistral", status: "unknown", description: "Mistral embedding models" },
+          ]
+
+          log("Available providers:")
+          for (const provider of providerList) {
+            log(`- ${provider.name} (${provider.status}): ${provider.description}`)
+          }
+          break
+        }
+
+        case "current": {
+          log("Current provider: ollama")
+          log("Configuration:")
+          log("  Base URL: http://localhost:11434")
+          log("  Default model: nomic-embed-text")
+          break
+        }
+
+        case "models": {
+          const modelList = yield* modelManager.listAvailableModels()
+          const filteredModels = options.provider
+            ? modelList.filter(m => m.provider === options.provider)
+            : modelList
+
+          if (options.provider) {
+            log(`Models for provider ${options.provider}:`)
+          } else {
+            log("All provider models:")
+          }
+
+          for (const model of filteredModels) {
+            log(`- ${model.name} (${model.provider})`)
+            if (model.dimensions) log(`  Dimensions: ${model.dimensions}`)
+          }
+          break
+        }
+
+        case "ollama-status": {
+          try {
+            // Try to check Ollama status
+            const response = yield* Effect.tryPromise({
+              try: () => fetch("http://localhost:11434/api/version"),
+              catch: () => new Error("Ollama service unavailable"),
+            })
+
+            if (response.ok) {
+              const data = yield* Effect.tryPromise({
+                try: () => response.json() as Promise<{ version?: string }>,
+                catch: () => new Error("Failed to parse response"),
+              })
+
+              log("Ollama status: online")
+              log(`Version: ${data.version || "unknown"}`)
+            } else {
+              log("Ollama status: offline")
+            }
+          } catch {
+            log("Ollama status: offline")
+          }
+          break
+        }
+      }
+    })) as unknown as (options: { action: "list" | "current" | "models" | "ollama-status"; provider?: string }) => Effect.Effect<void, Error, never>
+
   const commands = {
     create,
     batch,
@@ -219,6 +413,10 @@ const makeCLICommands = Effect.gen(function* () {
     list,
     get,
     delete: deleteEmbedding,
+    models,
+    upload,
+    migrate,
+    providers,
   } satisfies CLICommands
   return commands
 })
