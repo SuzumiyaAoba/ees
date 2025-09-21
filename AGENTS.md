@@ -96,6 +96,46 @@ import { ProviderModelError } from "../types"
 - When editing existing files, convert relative imports to `@/` format
 - Code reviews should reject PRs with relative import paths
 
+### TypeScript Type Safety Policy
+
+**MANDATORY**: The use of `any` type is strictly prohibited in all production code.
+
+**Type Safety Requirements**:
+- **NO `any` types** in production code - use proper TypeScript types
+- Use union types, generics, or `unknown` instead of `any`
+- Define proper interfaces and types for all data structures
+- Use type assertions only when absolutely necessary with proper type guards
+- Prefer type-safe alternatives like `Record<string, unknown>` over `any`
+
+**Acceptable Alternatives to `any`**:
+```typescript
+// ✅ Use specific types
+interface UserData {
+  name: string
+  age: number
+}
+
+// ✅ Use generics
+function process<T>(data: T): T {
+  return data
+}
+
+// ✅ Use unknown for truly unknown data
+function parseJson(json: string): unknown {
+  return JSON.parse(json)
+}
+
+// ✅ Use union types
+type Status = "pending" | "completed" | "failed"
+
+// ❌ Never use any
+function badFunction(data: any): any {
+  return data
+}
+```
+
+**Exception**: The `any` type is only permitted in test files under `src/__tests__/**/*` where mocking or testing scenarios require it.
+
 ### Biome Configuration Policy
 
 **IMPORTANT**: The `biome.json` configuration file is strictly protected and MUST NOT be edited by Claude Code.
@@ -107,7 +147,7 @@ import { ProviderModelError } from "../types"
 
 **Required Approach**:
 - Fix all linting errors by improving the code quality, not by relaxing rules
-- Use proper TypeScript types instead of `any` where possible
+- Use proper TypeScript types instead of `any` (see TypeScript Type Safety Policy above)
 - Follow established patterns and best practices
 - Maintain consistent code quality standards across the entire codebase
 

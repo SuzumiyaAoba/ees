@@ -186,7 +186,15 @@ describe("EmbeddingService", () => {
 
           if (result.length === 0) return null
 
-          const row = result[0] as any
+          const row = result[0] as {
+            id: number
+            uri: string
+            text: string
+            model_name: string
+            embedding: string
+            created_at: string
+            updated_at: string
+          }
           return {
             id: row.id,
             uri: row.uri,
@@ -198,7 +206,7 @@ describe("EmbeddingService", () => {
           }
         })
 
-        const searchEmbeddings = (request: any) => Effect.gen(function* () {
+        const searchEmbeddings = (request: SearchEmbeddingRequest) => Effect.gen(function* () {
           const embeddingRequest = { text: request.query, modelName: request.model_name }
           const embeddingResponse = yield* providerService.generateEmbedding(embeddingRequest)
           const embeddingVector = JSON.stringify(embeddingResponse.embedding)
@@ -295,8 +303,8 @@ describe("EmbeddingService", () => {
       })
     )
 
-    const providerLayer = Layer.succeed(EmbeddingProviderService, mockProvider as any)
-    const databaseLayer = Layer.succeed(DatabaseService, mockDatabase as any)
+    const providerLayer = Layer.succeed(EmbeddingProviderService, mockProvider)
+    const databaseLayer = Layer.succeed(DatabaseService, mockDatabase)
 
     return Layer.provide(
       testEmbeddingServiceLayer,
