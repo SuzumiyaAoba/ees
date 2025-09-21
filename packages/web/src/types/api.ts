@@ -98,35 +98,35 @@ export interface MigrationRequest {
   fromModel: string
   toModel: string
   options?: {
-    preserveOriginal?: boolean
-    batchSize?: number
-    continueOnError?: boolean
-    metadata?: Record<string, unknown>
+    readonly preserveOriginal?: boolean
+    readonly batchSize?: number
+    readonly continueOnError?: boolean
+    readonly metadata?: Record<string, unknown>
   }
 }
 
 export interface MigrationResponse {
-  totalProcessed: number
-  successful: number
-  failed: number
-  duration: number
-  details: Array<{
-    id: number
-    uri: string
-    status: 'success' | 'error'
-    error?: string
+  readonly totalProcessed: number
+  readonly successful: number
+  readonly failed: number
+  readonly duration: number
+  readonly details: ReadonlyArray<{
+    readonly id: number
+    readonly uri: string
+    readonly status: 'success' | 'error'
+    readonly error?: string
   }>
 }
 
 export interface CompatibilityCheckRequest {
-  sourceModel: string
-  targetModel: string
+  readonly sourceModel: string
+  readonly targetModel: string
 }
 
 export interface CompatibilityResponse {
-  compatible: boolean
-  reason?: string
-  similarityScore?: number
+  readonly compatible: boolean
+  readonly reason?: string
+  readonly similarityScore?: number
 }
 
 export interface ModelInfo {

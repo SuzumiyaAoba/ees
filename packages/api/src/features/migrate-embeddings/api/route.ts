@@ -6,6 +6,29 @@
 import { createRoute, z } from "@hono/zod-openapi"
 
 /**
+ * Migration options schema
+ */
+const MigrationOptionsSchema = z.object({
+  preserveOriginal: z.boolean().optional().openapi({
+    description: "Whether to preserve original embeddings during migration",
+    example: false
+  }),
+  batchSize: z.number().int().min(1).max(1000).optional().openapi({
+    description: "Batch size for processing",
+    example: 100
+  }),
+  continueOnError: z.boolean().optional().openapi({
+    description: "Whether to continue on individual failures",
+    example: true
+  }),
+  metadata: z.record(z.string(), z.unknown()).optional().openapi({
+    description: "Custom metadata to add to migrated embeddings"
+  })
+}).openapi({
+  description: "Migration configuration options"
+})
+
+/**
  * Migration request schema
  */
 const MigrationRequestSchema = z.object({
@@ -17,25 +40,7 @@ const MigrationRequestSchema = z.object({
     description: "Target model name to migrate to",
     example: "nomic-embed-text"
   }),
-  options: z.object({
-    preserveOriginal: z.boolean().optional().openapi({
-      description: "Whether to preserve original embeddings during migration",
-      example: false
-    }),
-    batchSize: z.number().int().min(1).max(1000).optional().openapi({
-      description: "Batch size for processing",
-      example: 100
-    }),
-    continueOnError: z.boolean().optional().openapi({
-      description: "Whether to continue on individual failures",
-      example: true
-    }),
-    metadata: z.record(z.string(), z.unknown()).optional().openapi({
-      description: "Custom metadata to add to migrated embeddings"
-    })
-  }).optional().openapi({
-    description: "Migration configuration options"
-  })
+  options: MigrationOptionsSchema.optional()
 })
 
 /**
@@ -135,13 +140,16 @@ export const migrateEmbeddingsRoute = createRoute({
   summary: "Migrate embeddings between models",
   description: "Migrate all embeddings from one model to another, regenerating vectors with the target model",
   tags: ["Models"],
-  requestBody: {
-    content: {
-      "application/json": {
-        schema: MigrationRequestSchema as any,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: MigrationRequestSchema,
+        },
       },
+      description: "Migration configuration",
+      required: true,
     },
-    description: "Migration configuration",
   },
   responses: {
     200: {
@@ -189,13 +197,16 @@ export const checkCompatibilityRoute = createRoute({
   summary: "Check model compatibility",
   description: "Validate if embeddings can be migrated between two models",
   tags: ["Models"],
-  requestBody: {
-    content: {
-      "application/json": {
-        schema: CompatibilityCheckRequestSchema as any,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: CompatibilityCheckRequestSchema,
+        },
       },
+      description: "Models to check compatibility for",
+      required: true,
     },
-    description: "Models to check compatibility for",
   },
   responses: {
     200: {

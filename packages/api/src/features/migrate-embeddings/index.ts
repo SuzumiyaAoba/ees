@@ -9,8 +9,6 @@ import { ModelManagerTag } from "@ees/core"
 import {
   migrateEmbeddingsRoute,
   checkCompatibilityRoute,
-  type MigrationRequest,
-  type CompatibilityCheckRequest,
 } from "./api/route"
 
 /**
@@ -18,41 +16,35 @@ import {
  */
 export const migrationApp = new OpenAPIHono()
 
-// Add middleware to inject AppLayer
-migrationApp.use("*", async (c: any, next: any) => {
-  // Set AppLayer from parent app context
-  if (!c.get("AppLayer")) {
-    // This should be set by the parent app, but we'll import it as fallback
-    const { AppLayer } = await import("@/app/providers/main")
-    c.set("AppLayer", AppLayer)
-  }
-  await next()
-})
-
 /**
  * Handler for migrating embeddings between models
  */
-migrationApp.openapi(migrateEmbeddingsRoute, async (c: any) => {
-  const { fromModel, toModel, options } = await c.req.json() as MigrationRequest
+migrationApp.openapi(migrateEmbeddingsRoute, async (c) => {
+  const { fromModel, toModel, options } = c.req.valid("json")
+
+  // Import AppLayer dynamically
+  const { AppLayer } = await import("@/app/providers/main")
 
   const migrationProgram = Effect.gen(function* () {
     const modelManager = yield* ModelManagerTag
 
-    // Type-safe options handling
-    const migrationOptions = options ? {
-      preserveOriginal: options.preserveOriginal,
-      batchSize: options.batchSize,
-      continueOnError: options.continueOnError,
-      metadata: options.metadata,
-    } : undefined
+    // Type-safe options handling - only include defined properties
+    const migrationOptions = options ? Object.fromEntries(
+      Object.entries({
+        preserveOriginal: options.preserveOriginal,
+        batchSize: options.batchSize,
+        continueOnError: options.continueOnError,
+        metadata: options.metadata,
+      }).filter(([, value]) => value !== undefined)
+    ) : undefined
 
-    return yield* modelManager.migrateEmbeddings(fromModel, toModel, migrationOptions as any)
+    return yield* modelManager.migrateEmbeddings(fromModel, toModel, migrationOptions)
   })
 
   try {
-    const result = await Effect.runPromise(migrationProgram.pipe(
-      Effect.provide(c.get("AppLayer"))
-    ) as any)
+    const result = await Effect.runPromise(
+      migrationProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<import("@ees/core").MigrationResult, Error, never>
+    )
 
     return c.json(result, 200)
   } catch (error) {
@@ -102,8 +94,11 @@ migrationApp.openapi(migrateEmbeddingsRoute, async (c: any) => {
 /**
  * Handler for checking model compatibility
  */
-migrationApp.openapi(checkCompatibilityRoute, async (c: any) => {
-  const { sourceModel, targetModel } = await c.req.json() as CompatibilityCheckRequest
+migrationApp.openapi(checkCompatibilityRoute, async (c) => {
+  const { sourceModel, targetModel } = c.req.valid("json")
+
+  // Import AppLayer dynamically
+  const { AppLayer } = await import("@/app/providers/main")
 
   const compatibilityProgram = Effect.gen(function* () {
     const modelManager = yield* ModelManagerTag
@@ -111,9 +106,9 @@ migrationApp.openapi(checkCompatibilityRoute, async (c: any) => {
   })
 
   try {
-    const result = await Effect.runPromise(compatibilityProgram.pipe(
-      Effect.provide(c.get("AppLayer"))
-    ) as any)
+    const result = await Effect.runPromise(
+      compatibilityProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<import("@ees/core").ModelCompatibility, Error, never>
+    )
 
     return c.json(result, 200)
   } catch (error) {
