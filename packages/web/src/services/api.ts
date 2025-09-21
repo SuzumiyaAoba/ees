@@ -9,6 +9,11 @@ import type {
   EmbeddingsListResponse,
   ProviderInfo,
   ErrorResponse,
+  MigrationRequest,
+  MigrationResponse,
+  CompatibilityCheckRequest,
+  CompatibilityResponse,
+  ListModelsResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -127,6 +132,25 @@ class ApiClient {
     }
 
     return response.json()
+  }
+
+  // Migration operations
+  async migrateEmbeddings(data: MigrationRequest): Promise<MigrationResponse> {
+    return this.request<MigrationResponse>('/models/migrate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async checkModelCompatibility(data: CompatibilityCheckRequest): Promise<CompatibilityResponse> {
+    return this.request<CompatibilityResponse>('/models/compatibility', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getModels(): Promise<ListModelsResponse> {
+    return this.request<ListModelsResponse>('/models')
   }
 }
 

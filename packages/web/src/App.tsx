@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, Database } from 'lucide-react'
+import { Search, List, Upload, Settings, Database, ArrowLeftRight } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { ProviderConfig } from '@/components/ProviderConfig'
+import { ModelMigration } from '@/components/ModelMigration'
 import type { Embedding, SearchResult } from '@/types/api'
 
 // Create a client
@@ -17,7 +18,7 @@ const queryClient = new QueryClient({
   },
 })
 
-type TabType = 'search' | 'list' | 'upload' | 'config'
+type TabType = 'search' | 'list' | 'upload' | 'config' | 'migration'
 
 interface TabItem {
   id: TabType
@@ -29,6 +30,7 @@ const tabs: TabItem[] = [
   { id: 'search', label: 'Search', icon: Search },
   { id: 'list', label: 'Browse', icon: List },
   { id: 'upload', label: 'Upload', icon: Upload },
+  { id: 'migration', label: 'Migration', icon: ArrowLeftRight },
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
@@ -55,6 +57,11 @@ function AppContent() {
         return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} />
       case 'upload':
         return <FileUpload />
+      case 'migration':
+        return <ModelMigration onMigrationComplete={(result) => {
+          console.log('Migration completed:', result)
+          // You could show a notification or refresh the embeddings list
+        }} />
       case 'config':
         return <ProviderConfig />
       default:
