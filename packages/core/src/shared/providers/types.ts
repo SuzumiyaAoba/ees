@@ -200,7 +200,7 @@ export interface EmbeddingProvider {
   readonly getModelInfo: (
     modelName: string
   ) => Effect.Effect<
-    ModelInfo,
+    ModelInfo | null,
     ProviderConnectionError | ProviderAuthenticationError | ProviderModelError
   >
 }

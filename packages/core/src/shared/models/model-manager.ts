@@ -64,6 +64,11 @@ const make = Effect.gen(function* () {
   const getModelInfo = (modelName: string): Effect.Effect<ModelManagerInfo, ModelManagerError> =>
     Effect.gen(function* () {
       const providerModelInfo = yield* providerService.getModelInfo(modelName)
+      if (providerModelInfo === null) {
+        return yield* Effect.fail(
+          new ModelNotFoundError(`Model '${modelName}' not found`, modelName)
+        )
+      }
       return mapProviderModelInfo(providerModelInfo)
     }).pipe(
       Effect.catchTag("ProviderModelError", (error) =>
