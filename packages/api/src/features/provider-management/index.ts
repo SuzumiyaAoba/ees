@@ -1,0 +1,281 @@
+/**
+ * Provider Management API Implementation
+ * Handles provider listing, status checking, and model discovery
+ */
+
+import { OpenAPIHono } from "@hono/zod-openapi"
+import { Effect } from "effect"
+import {
+  listProvidersRoute,
+  getCurrentProviderRoute,
+  listProviderModelsRoute,
+  getOllamaStatusRoute,
+  type ProviderInfo,
+  type ProviderModel,
+  type OllamaStatus,
+  type CurrentProvider,
+} from "./api/route"
+
+/**
+ * Provider management feature app with handlers
+ */
+export const providerApp = new OpenAPIHono()
+
+/**
+ * Handler for listing all available providers
+ */
+providerApp.openapi(listProvidersRoute, async (c) => {
+  try {
+    // Import AppLayer dynamically
+    const { AppLayer } = await import("@/app/providers/main")
+
+    const listProvidersProgram = Effect.gen(function* () {
+      // For now, return static provider information
+      // This will be enhanced with actual provider checking
+      const providers: ProviderInfo[] = [
+        {
+          name: "ollama",
+          displayName: "Ollama",
+          description: "Local AI model provider",
+          status: "online",
+          version: "0.1.0",
+          modelCount: 5,
+        },
+        {
+          name: "openai",
+          displayName: "OpenAI",
+          description: "OpenAI embedding models",
+          status: "unknown",
+        },
+        {
+          name: "google",
+          displayName: "Google AI",
+          description: "Google AI embedding models",
+          status: "unknown",
+        },
+        {
+          name: "cohere",
+          displayName: "Cohere",
+          description: "Cohere embedding models",
+          status: "unknown",
+        },
+        {
+          name: "mistral",
+          displayName: "Mistral",
+          description: "Mistral embedding models",
+          status: "unknown",
+        },
+      ]
+
+      return providers
+    })
+
+    const result = await Effect.runPromise(
+      listProvidersProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<ProviderInfo[], Error, never>
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    console.error("Error listing providers:", error)
+    return c.json(
+      { error: "Failed to list providers" },
+      500
+    )
+  }
+})
+
+/**
+ * Handler for getting current active provider
+ */
+providerApp.openapi(getCurrentProviderRoute, async (c) => {
+  try {
+    // Import AppLayer dynamically
+    const { AppLayer } = await import("@/app/providers/main")
+
+    const getCurrentProviderProgram = Effect.gen(function* () {
+      // For now, return Ollama as the default provider
+      // This will be enhanced with actual provider configuration checking
+      const currentProvider: CurrentProvider = {
+        provider: "ollama",
+        configuration: {
+          baseUrl: "http://localhost:11434",
+          model: "nomic-embed-text",
+        },
+      }
+
+      return currentProvider
+    })
+
+    const result = await Effect.runPromise(
+      getCurrentProviderProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<CurrentProvider, Error, never>
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    console.error("Error getting current provider:", error)
+    return c.json(
+      { error: "Failed to get current provider" },
+      500
+    )
+  }
+})
+
+/**
+ * Handler for listing provider models
+ */
+providerApp.openapi(listProviderModelsRoute, async (c) => {
+  try {
+    // Import AppLayer dynamically
+    const { AppLayer } = await import("@/app/providers/main")
+
+    const { provider } = c.req.valid("query")
+
+    const listModelsProgram = Effect.gen(function* () {
+      // For now, return static model information
+      // This will be enhanced with actual provider model discovery
+      const allModels: ProviderModel[] = [
+        {
+          name: "nomic-embed-text",
+          displayName: "Nomic Embed Text",
+          provider: "ollama",
+          dimensions: 768,
+          maxTokens: 8192,
+          size: 274301440,
+          modified_at: "2024-01-01T00:00:00Z",
+          digest: "sha256:abc123",
+        },
+        {
+          name: "text-embedding-3-small",
+          displayName: "Text Embedding 3 Small",
+          provider: "openai",
+          dimensions: 1536,
+          maxTokens: 8191,
+          pricePerToken: 0.00002,
+        },
+        {
+          name: "text-embedding-3-large",
+          displayName: "Text Embedding 3 Large",
+          provider: "openai",
+          dimensions: 3072,
+          maxTokens: 8191,
+          pricePerToken: 0.00013,
+        },
+        {
+          name: "embed-english-v3.0",
+          displayName: "Embed English v3.0",
+          provider: "cohere",
+          dimensions: 1024,
+          maxTokens: 512,
+          pricePerToken: 0.0001,
+        },
+        {
+          name: "mistral-embed",
+          displayName: "Mistral Embed",
+          provider: "mistral",
+          dimensions: 1024,
+          maxTokens: 8192,
+          pricePerToken: 0.0001,
+        },
+      ]
+
+      // Filter by provider if specified
+      const filteredModels = provider
+        ? allModels.filter((model) => model.provider === provider)
+        : allModels
+
+      // Return 404 if provider specified but no models found
+      if (provider && filteredModels.length === 0) {
+        return yield* Effect.fail(new Error("Provider not found"))
+      }
+
+      return filteredModels
+    })
+
+    const result = await Effect.runPromise(
+      listModelsProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<ProviderModel[], Error, never>
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    console.error("Error listing provider models:", error)
+    if (error instanceof Error && error.message === "Provider not found") {
+      return c.json(
+        { error: "Provider not found" },
+        404
+      )
+    }
+    return c.json(
+      { error: "Failed to list provider models" },
+      500
+    )
+  }
+})
+
+/**
+ * Handler for getting Ollama status
+ */
+providerApp.openapi(getOllamaStatusRoute, async (c) => {
+  try {
+    // Import AppLayer dynamically
+    const { AppLayer } = await import("@/app/providers/main")
+
+    const getOllamaStatusProgram = Effect.gen(function* () {
+      // Try to connect to Ollama service
+      try {
+        const response = yield* Effect.tryPromise({
+          try: () => fetch("http://localhost:11434/api/version"),
+          catch: () => new Error("Ollama service unavailable"),
+        })
+
+        if (!response.ok) {
+          return yield* Effect.fail(new Error("Ollama service unavailable"))
+        }
+
+        const versionData = yield* Effect.tryPromise({
+          try: () => response.json() as Promise<{ version?: string }>,
+          catch: () => new Error("Failed to parse Ollama version"),
+        })
+
+        // Get list of available models
+        const modelsResponse = yield* Effect.tryPromise({
+          try: () => fetch("http://localhost:11434/api/tags"),
+          catch: () => new Error("Failed to get Ollama models"),
+        })
+
+        let models: string[] = []
+        if (modelsResponse.ok) {
+          const modelsData = yield* Effect.tryPromise({
+            try: () => modelsResponse.json() as Promise<{ models?: Array<{ name: string }> }>,
+            catch: () => new Error("Failed to parse Ollama models"),
+          })
+          models = modelsData.models?.map((m) => m.name) || []
+        }
+
+        const ollamaStatus: OllamaStatus = {
+          status: "online",
+          version: versionData.version || "unknown",
+          models,
+        }
+
+        return ollamaStatus
+      } catch {
+        return yield* Effect.fail(new Error("Ollama service unavailable"))
+      }
+    })
+
+    const result = await Effect.runPromise(
+      getOllamaStatusProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<OllamaStatus, Error, never>
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    console.error("Error getting Ollama status:", error)
+    return c.json(
+      {
+        status: "offline" as const,
+        error: "Ollama service unavailable",
+      },
+      503
+    )
+  }
+})
