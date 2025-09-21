@@ -57,6 +57,13 @@ export {
   parseBatchFile,
   readStdin,
   readTextFile,
+  processFile,
+  processFiles,
+  type FileProcessorError,
+  type FileProcessingResult,
+  UnsupportedFileTypeError,
+  FileProcessingError,
+  FileTooLargeError,
 } from './shared/lib/index'
 
 export { DatabaseService } from './shared/database/connection'
