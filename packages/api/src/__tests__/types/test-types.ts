@@ -54,6 +54,36 @@ export interface ValidationErrorResponse {
   }
 }
 
+// Batch operation response types
+export interface BatchResult {
+  results: Array<{
+    success: boolean
+    embedding?: EmbeddingResponse
+    error?: string
+  }>
+  summary: {
+    total: number
+    successful: number
+    failed: number
+  }
+}
+
+// Search result response types
+export interface SearchResults {
+  results: Array<{
+    id: number
+    uri: string
+    text: string
+    score: number
+    model_name: string
+    embedding: number[]
+    created_at: string
+  }>
+  query: string
+  metric?: string
+  model_name?: string
+}
+
 // Generic API response validation
 export function isEmbeddingResponse(obj: unknown): obj is EmbeddingResponse {
   return (
