@@ -5,14 +5,14 @@
 
 import { count, eq, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
-import { DatabaseService } from "@/core/shared/database/connection"
-import { embeddings } from "@/core/shared/database/schema"
-import { DatabaseQueryError } from "@/core/shared/errors/database"
+import { DatabaseService } from "../database/connection"
+import { embeddings } from "../database/schema"
+import { DatabaseQueryError } from "../errors/database"
 import {
   EmbeddingProviderService,
   type EmbeddingRequest,
   type ModelInfo as ProviderModelInfo,
-} from "@/core/shared/providers"
+} from "../providers"
 import type {
   ModelManagerInfo,
   ModelCompatibility,
