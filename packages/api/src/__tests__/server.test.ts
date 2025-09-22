@@ -23,12 +23,12 @@ vi.mock("../app", () => ({
 }))
 
 describe("Server Components", () => {
-  let originalProcessExit: any
-  let originalConsoleLog: any
-  let originalConsoleError: any
-  let mockProcessExit: any
-  let mockConsoleLog: any
-  let mockConsoleError: any
+  let originalProcessExit: typeof process.exit
+  let originalConsoleLog: typeof console.log
+  let originalConsoleError: typeof console.error
+  let mockProcessExit: ReturnType<typeof vi.fn>
+  let mockConsoleLog: ReturnType<typeof vi.fn>
+  let mockConsoleError: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     // Mock process and console methods
@@ -40,7 +40,7 @@ describe("Server Components", () => {
     mockConsoleLog = vi.fn()
     mockConsoleError = vi.fn()
 
-    process.exit = mockProcessExit as any
+    process.exit = mockProcessExit as unknown as typeof process.exit
     console.log = mockConsoleLog
     console.error = mockConsoleError
 

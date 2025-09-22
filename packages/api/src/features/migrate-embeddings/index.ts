@@ -11,6 +11,11 @@ import {
   checkCompatibilityRoute,
 } from "./api/route"
 
+interface TaggedError {
+  _tag: string
+  message: string
+}
+
 /**
  * Migration feature app with handlers
  */
@@ -50,7 +55,7 @@ migrationApp.openapi(migrateEmbeddingsRoute, async (c) => {
   } catch (error) {
     // Handle specific error types
     if (error && typeof error === "object" && "_tag" in error) {
-      const errorObj = error as any
+      const errorObj = error as TaggedError
       switch (errorObj._tag) {
         case "ModelNotFoundError":
           return c.json(
@@ -114,7 +119,7 @@ migrationApp.openapi(checkCompatibilityRoute, async (c) => {
   } catch (error) {
     // Handle specific error types
     if (error && typeof error === "object" && "_tag" in error) {
-      const errorObj = error as any
+      const errorObj = error as TaggedError
       switch (errorObj._tag) {
         case "ModelNotFoundError":
           return c.json(

@@ -5,6 +5,14 @@
 
 import { beforeAll, afterAll, beforeEach, afterEach } from "vitest"
 import app from "@/app"
+import { parseJsonResponse, isEmbeddingResponse, type EmbeddingResponse } from "./types/test-types"
+
+interface GlobalWithConsole {
+  __originalConsole?: {
+    log: typeof console.log
+    error: typeof console.error
+  }
+}
 
 // Global test state
 export const testState = {
@@ -30,7 +38,7 @@ export async function setupE2ETests(): Promise<void> {
       console.error = () => {}
 
       // Store original functions for cleanup
-      ;(global as any).__originalConsole = {
+      ;(global as GlobalWithConsole).__originalConsole = {
         log: originalConsoleLog,
         error: originalConsoleError
       }
@@ -55,9 +63,10 @@ export async function setupE2ETests(): Promise<void> {
 
   afterAll(async () => {
     // Restore console functions
-    if ((global as any).__originalConsole) {
-      console.log = (global as any).__originalConsole.log
-      console.error = (global as any).__originalConsole.error
+    const globalWithConsole = global as GlobalWithConsole
+    if (globalWithConsole.__originalConsole) {
+      console.log = globalWithConsole.__originalConsole.log
+      console.error = globalWithConsole.__originalConsole.error
     }
 
     // Final cleanup
@@ -150,7 +159,7 @@ export async function createTestEmbedding(
   uri: string,
   text: string,
   modelName?: string
-): Promise<any> {
+): Promise<EmbeddingResponse> {
   const response = await app.request("/embeddings", {
     method: "POST",
     headers: {
@@ -164,7 +173,7 @@ export async function createTestEmbedding(
   })
 
   if (response.status === 200) {
-    const embedding = await response.json() as any
+    const embedding = await parseJsonResponse(response, isEmbeddingResponse)
     registerEmbeddingForCleanup(embedding.id)
     return embedding
   }

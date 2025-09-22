@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from "vitest"
 import app from "@/app"
+import { parseJsonResponse, isOpenAPISpec } from "../types/test-types"
 
 describe("Health Check and Documentation E2E Tests", () => {
   describe("GET / (Health Check)", () => {
@@ -37,7 +38,7 @@ describe("Health Check and Documentation E2E Tests", () => {
       expect(response.status).toBe(200)
       expect(response.headers.get("content-type")).toContain("application/json")
 
-      const spec = await response.json() as any
+      const spec = await parseJsonResponse(response, isOpenAPISpec)
 
       // Validate OpenAPI 3.0 structure
       expect(spec).toHaveProperty("openapi")
@@ -72,7 +73,7 @@ describe("Health Check and Documentation E2E Tests", () => {
 
     it("should have proper license information", async () => {
       const response = await app.request("/openapi.json")
-      const spec = await response.json() as any
+      const spec = await parseJsonResponse(response, isOpenAPISpec)
 
       expect(spec.info).toHaveProperty("license")
       expect(spec.info.license).toHaveProperty("name", "MIT")
