@@ -3,169 +3,337 @@
 /**
  * CLI Entry Point for EES (Embeddings Service)
  *
- * Command-line interface using CAC for parsing and the core EES business logic
+ * Command-line interface using citty for parsing and the core EES business logic
  */
 
-import { cac } from "cac"
+import { defineCommand, runMain } from "citty"
 import { Effect } from "effect"
 import { createCLICommands, runCLICommand } from "./index.js"
 
-const cli = cac("ees")
-
-async function main() {
-  const commands = await Effect.runPromise(createCLICommands())
-
-  // Create embedding command
-  cli
-    .command("create <uri>", "Create embedding from text")
-    .option("-t, --text <text>", "Text content to embed")
-    .option("-f, --file <file>", "Read text from file")
-    .option("-m, --model <model>", "Model name for embedding")
-    .action(async (uri: string, options: any) => {
-      await runCLICommand(
-        commands.create({
-          uri,
-          text: options.text,
-          file: options.file,
-          model: options.model,
-        })
-      )
-    })
-
-  // Batch create embeddings command
-  cli
-    .command("batch <file>", "Create multiple embeddings from batch file")
-    .option("-m, --model <model>", "Model name for embeddings")
-    .action(async (file: string, options: any) => {
-      await runCLICommand(
-        commands.batch({
-          file,
-          model: options.model,
-        })
-      )
-    })
-
-  // Search embeddings command
-  cli
-    .command("search <query>", "Search for similar embeddings")
-    .option("-m, --model <model>", "Model name to search in")
-    .option("-l, --limit <limit>", "Maximum number of results", { default: 10 })
-    .option("-t, --threshold <threshold>", "Similarity threshold", {
-      default: 0.0,
-    })
-    .option(
-      "--metric <metric>",
-      "Distance metric (cosine, euclidean, dot_product)",
-      { default: "cosine" }
+// Create sub-commands
+const createCommand = defineCommand({
+  meta: {
+    name: "create",
+    description: "Create embedding from text",
+  },
+  args: {
+    uri: {
+      type: "positional",
+      description: "URI for the embedding",
+      required: true,
+    },
+    text: {
+      type: "string",
+      alias: "t",
+      description: "Text content to embed",
+    },
+    file: {
+      type: "string",
+      alias: "f",
+      description: "Read text from file",
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Model name for embedding",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.create({
+        uri: args.uri,
+        text: args.text,
+        file: args.file,
+        model: args.model,
+      })
     )
-    .action(async (query: string, options: any) => {
-      await runCLICommand(
-        commands.search({
-          query,
-          model: options.model,
-          limit: Number.parseInt(options.limit, 10),
-          threshold: Number.parseFloat(options.threshold),
-          metric: options.metric,
-        })
-      )
-    })
-
-  // List embeddings command
-  cli
-    .command("list", "List all embeddings")
-    .option("-u, --uri <uri>", "Filter by URI pattern")
-    .option("-m, --model <model>", "Filter by model name")
-    .option("-p, --page <page>", "Page number", { default: 1 })
-    .option("-l, --limit <limit>", "Items per page", { default: 10 })
-    .action(async (options: any) => {
-      await runCLICommand(
-        commands.list({
-          uri: options.uri,
-          model: options.model,
-          page: Number.parseInt(options.page, 10),
-          limit: Number.parseInt(options.limit, 10),
-        })
-      )
-    })
-
-  // Get embedding command
-  cli
-    .command("get <uri>", "Get embedding by URI")
-    .action(async (uri: string) => {
-      await runCLICommand(commands.get({ uri }))
-    })
-
-  // Delete embedding command
-  cli
-    .command("delete <id>", "Delete embedding by ID")
-    .action(async (id: string) => {
-      await runCLICommand(
-        commands.delete({ id: Number.parseInt(id, 10) })
-      )
-    })
-
-  // Models command
-  cli
-    .command("models", "List available models")
-    .action(async () => {
-      await runCLICommand(commands.models())
-    })
-
-  // Upload command
-  cli
-    .command("upload <files...>", "Upload files and create embeddings")
-    .option("-m, --model <model>", "Model name for embeddings")
-    .action(async (files: string[], options: any) => {
-      await runCLICommand(
-        commands.upload({
-          files,
-          model: options.model,
-        })
-      )
-    })
-
-  // Migrate command
-  cli
-    .command("migrate <fromModel> <toModel>", "Migrate embeddings between models")
-    .option("--dry-run", "Perform a dry run without actual migration")
-    .action(async (fromModel: string, toModel: string, options: any) => {
-      await runCLICommand(
-        commands.migrate({
-          fromModel,
-          toModel,
-          dryRun: options.dryRun,
-        })
-      )
-    })
-
-  // Providers command with subcommands
-  cli
-    .command("providers <action>", "Provider management")
-    .option("-p, --provider <provider>", "Filter by provider name")
-    .action(async (action: string, options: any) => {
-      const validActions = ["list", "current", "models", "ollama-status"]
-      if (!validActions.includes(action)) {
-        console.error(`Invalid action: ${action}. Valid actions: ${validActions.join(", ")}`)
-        process.exit(1)
-      }
-
-      await runCLICommand(
-        commands.providers({
-          action: action as "list" | "current" | "models" | "ollama-status",
-          provider: options.provider,
-        })
-      )
-    })
-
-  // Global options
-  cli.help()
-  cli.version("1.0.0")
-
-  // Parse CLI arguments
-  cli.parse()
-}
-
-main().catch((error) => {
-  console.error("CLI Error:", error)
-  process.exit(1)
+  },
 })
+
+const batchCommand = defineCommand({
+  meta: {
+    name: "batch",
+    description: "Create multiple embeddings from batch file",
+  },
+  args: {
+    file: {
+      type: "positional",
+      description: "Batch file path",
+      required: true,
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Model name for embeddings",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.batch({
+        file: args.file,
+        model: args.model,
+      })
+    )
+  },
+})
+
+const searchCommand = defineCommand({
+  meta: {
+    name: "search",
+    description: "Search for similar embeddings",
+  },
+  args: {
+    query: {
+      type: "positional",
+      description: "Search query text",
+      required: true,
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Model name to search in",
+    },
+    limit: {
+      type: "string",
+      alias: "l",
+      description: "Maximum number of results",
+      default: "10",
+    },
+    threshold: {
+      type: "string",
+      alias: "t",
+      description: "Similarity threshold",
+      default: "0.0",
+    },
+    metric: {
+      type: "string",
+      description: "Distance metric (cosine, euclidean, dot_product)",
+      default: "cosine",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.search({
+        query: args.query,
+        model: args.model,
+        limit: Number.parseInt(args.limit, 10),
+        threshold: Number.parseFloat(args.threshold),
+        metric: args.metric as "cosine" | "euclidean" | "dot_product",
+      })
+    )
+  },
+})
+
+const listCommand = defineCommand({
+  meta: {
+    name: "list",
+    description: "List all embeddings",
+  },
+  args: {
+    uri: {
+      type: "string",
+      alias: "u",
+      description: "Filter by URI pattern",
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Filter by model name",
+    },
+    page: {
+      type: "string",
+      alias: "p",
+      description: "Page number",
+      default: "1",
+    },
+    limit: {
+      type: "string",
+      alias: "l",
+      description: "Items per page",
+      default: "10",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.list({
+        uri: args.uri,
+        model: args.model,
+        page: Number.parseInt(args.page, 10),
+        limit: Number.parseInt(args.limit, 10),
+      })
+    )
+  },
+})
+
+const getCommand = defineCommand({
+  meta: {
+    name: "get",
+    description: "Get embedding by URI",
+  },
+  args: {
+    uri: {
+      type: "positional",
+      description: "URI of the embedding",
+      required: true,
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(commands.get({ uri: args.uri }))
+  },
+})
+
+const deleteCommand = defineCommand({
+  meta: {
+    name: "delete",
+    description: "Delete embedding by ID",
+  },
+  args: {
+    id: {
+      type: "positional",
+      description: "ID of the embedding to delete",
+      required: true,
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.delete({ id: Number.parseInt(args.id, 10) })
+    )
+  },
+})
+
+const modelsCommand = defineCommand({
+  meta: {
+    name: "models",
+    description: "List available models",
+  },
+  async run() {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(commands.models())
+  },
+})
+
+const uploadCommand = defineCommand({
+  meta: {
+    name: "upload",
+    description: "Upload files and create embeddings",
+  },
+  args: {
+    files: {
+      type: "positional",
+      description: "Files to upload",
+      required: true,
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Model name for embeddings",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    const files = Array.isArray(args.files) ? args.files as string[] : [args.files as string]
+    await runCLICommand(
+      commands.upload({
+        files,
+        model: args.model,
+      })
+    )
+  },
+})
+
+const migrateCommand = defineCommand({
+  meta: {
+    name: "migrate",
+    description: "Migrate embeddings between models",
+  },
+  args: {
+    fromModel: {
+      type: "positional",
+      description: "Source model name",
+      required: true,
+    },
+    toModel: {
+      type: "positional",
+      description: "Target model name",
+      required: true,
+    },
+    "dry-run": {
+      type: "boolean",
+      description: "Perform a dry run without actual migration",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.migrate({
+        fromModel: args.fromModel,
+        toModel: args.toModel,
+        dryRun: args["dry-run"],
+      })
+    )
+  },
+})
+
+const providersCommand = defineCommand({
+  meta: {
+    name: "providers",
+    description: "Provider management",
+  },
+  args: {
+    action: {
+      type: "positional",
+      description: "Action to perform (list, current, models, ollama-status)",
+      required: true,
+    },
+    provider: {
+      type: "string",
+      alias: "p",
+      description: "Filter by provider name",
+    },
+  },
+  async run({ args }) {
+    const validActions = ["list", "current", "models", "ollama-status"]
+    if (!validActions.includes(args.action)) {
+      console.error(`Invalid action: ${args.action}. Valid actions: ${validActions.join(", ")}`)
+      process.exit(1)
+    }
+
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.providers({
+        action: args.action as "list" | "current" | "models" | "ollama-status",
+        provider: args.provider,
+      })
+    )
+  },
+})
+
+// Main command
+const main = defineCommand({
+  meta: {
+    name: "ees",
+    version: "1.0.0",
+    description: "EES (Embeddings Service) - Command-line interface for embedding operations",
+  },
+  subCommands: {
+    create: createCommand,
+    batch: batchCommand,
+    search: searchCommand,
+    list: listCommand,
+    get: getCommand,
+    delete: deleteCommand,
+    models: modelsCommand,
+    upload: uploadCommand,
+    migrate: migrateCommand,
+    providers: providersCommand,
+  },
+})
+
+// Run the CLI
+runMain(main)
