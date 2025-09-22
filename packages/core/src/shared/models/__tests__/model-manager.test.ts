@@ -353,7 +353,7 @@ describe("ModelManager", () => {
   })
 
   describe("migrateEmbeddings", () => {
-    it.skip("should successfully migrate compatible embeddings", async () => {
+    it("should successfully migrate compatible embeddings", async () => {
       // Mock model compatibility check
       vi.mocked(mockProviderService.getModelInfo)
         .mockReturnValueOnce(
@@ -378,41 +378,38 @@ describe("ModelManager", () => {
         )
 
       // Mock database operations - create the full query chain that resolves to a promise
-      const mockQuery = () => Promise.resolve([
+      const mockEmbeddings = [
         {
           id: 1,
           uri: "test1",
           text: "test text 1",
-          model_name: "source-model",
+          modelName: "source-model",
           embedding: new Uint8Array(),
-          created_at: "2023-01-01",
-          updated_at: "2023-01-01",
+          createdAt: "2023-01-01",
+          updatedAt: "2023-01-01",
         },
         {
           id: 2,
           uri: "test2",
           text: "test text 2",
-          model_name: "source-model",
+          modelName: "source-model",
           embedding: new Uint8Array(),
-          created_at: "2023-01-01",
-          updated_at: "2023-01-01",
+          createdAt: "2023-01-01",
+          updatedAt: "2023-01-01",
         },
-      ])
+      ]
 
-      // Set up database chain mock
-      mockDatabaseService.db.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue(mockQuery)
-        })
-      })
+      // Set up database chain mock - each method returns an object with the next method
+      const mockWhere = vi.fn().mockResolvedValue(mockEmbeddings)
+      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere })
+      const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
+      mockDatabaseService.db.select = mockSelect
 
       // Mock database update chain
-      const mockUpdateQuery = () => Promise.resolve({})
-      mockDatabaseService.db.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue(mockUpdateQuery)
-        })
-      })
+      const mockUpdateWhere = vi.fn().mockResolvedValue({})
+      const mockUpdateSet = vi.fn().mockReturnValue({ where: mockUpdateWhere })
+      const mockUpdate = vi.fn().mockReturnValue({ set: mockUpdateSet })
+      mockDatabaseService.db.update = mockUpdate
 
       // Mock new embedding generation
       vi.mocked(mockProviderService.generateEmbedding).mockReturnValue(
@@ -484,18 +481,17 @@ describe("ModelManager", () => {
   })
 
   describe("getModelUsageStats", () => {
-    it.skip("should return usage statistics for all models", async () => {
-      const mockStatsQuery = () => Promise.resolve([
+    it("should return usage statistics for all models", async () => {
+      const mockStats = [
         { model_name: "nomic-embed-text", count: 150 },
         { model_name: "text-embedding-3-small", count: 75 },
-      ])
+      ]
 
       // Set up database chain mock for stats
-      mockDatabaseService.db.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          groupBy: vi.fn().mockReturnValue(mockStatsQuery)
-        })
-      })
+      const mockGroupBy = vi.fn().mockResolvedValue(mockStats)
+      const mockFrom = vi.fn().mockReturnValue({ groupBy: mockGroupBy })
+      const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
+      mockDatabaseService.db.select = mockSelect
 
       const program = Effect.gen(function* () {
         const modelManager = yield* ModelManager
