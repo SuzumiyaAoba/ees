@@ -10,6 +10,31 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: ees_test
+          POSTGRES_USER: ees_test
+          POSTGRES_PASSWORD: ees_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -34,10 +59,51 @@ jobs:
     - name: Build application
       run: npm run build
 
-    - name: Run tests
+    - name: Setup Docker services for E2E tests
+      run: |
+        echo "Starting Ollama service..."
+        docker-compose -f docker-compose.test.yml up -d ollama
+
+        echo "Waiting for Ollama to be ready..."
+        timeout 180 bash -c 'until curl -f http://localhost:11434/api/version; do sleep 3; done'
+        echo "Ollama is ready!"
+
+        echo "Pulling embedding model..."
+        docker exec $(docker-compose -f docker-compose.test.yml ps -q ollama) \
+          ollama pull nomic-embed-text
+        echo "Model pulled successfully!"
+
+        echo "Verifying model availability..."
+        curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text" || {
+          echo "Model not available, attempting alternative pull method..."
+          curl -X POST http://localhost:11434/api/pull \
+            -H "Content-Type: application/json" \
+            -d '{"name": "nomic-embed-text"}' \
+            --max-time 180
+        }
+        echo "Model verification complete!"
+
+    - name: Run unit tests
       run: |
         export NODE_ENV=test
-        npm test
+        export EES_DATABASE_URL=":memory:"
+        npm run test:unit
+
+    - name: Run E2E tests
+      run: |
+        export NODE_ENV=test
+        export EES_DATABASE_URL=":memory:"
+        export EES_PROVIDER=ollama
+        export EES_OLLAMA_BASE_URL=http://localhost:11434
+        export EES_OLLAMA_DEFAULT_MODEL=nomic-embed-text
+        export CI=true
+        npm run test:e2e
+      timeout-minutes: 20
+
+    - name: Cleanup Docker services
+      if: always()
+      run: |
+        docker-compose -f docker-compose.test.yml down -v
 
   # Temporarily disabled due to npmDepsHash mismatch
   # nix-build:

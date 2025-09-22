@@ -131,7 +131,7 @@ export function setupMockProviders(): void {
 /**
  * Wait for service dependencies to be available
  */
-export async function waitForServices(timeout: number = 10000): Promise<boolean> {
+export async function waitForServices(timeout: number = 30000): Promise<boolean> {
   const startTime = Date.now()
 
   while (Date.now() - startTime < timeout) {
@@ -139,14 +139,39 @@ export async function waitForServices(timeout: number = 10000): Promise<boolean>
       // Test basic health check
       const response = await app.request("/")
       if (response.status === 200) {
-        return true
+        // Also check if we can create an embedding to verify full service readiness
+        try {
+          const testResponse = await app.request("/embeddings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              uri: "service-readiness-test",
+              text: "Test document to verify service readiness."
+            }),
+          })
+
+          if (testResponse.status === 200) {
+            // Clean up the test embedding
+            const embedding = await testResponse.json()
+            if (embedding.id) {
+              await app.request(`/embeddings/${embedding.id}`, {
+                method: "DELETE"
+              })
+            }
+            return true
+          }
+        } catch (embeddingError) {
+          // Service partially ready, continue waiting
+        }
       }
     } catch (error) {
       // Service not ready yet
     }
 
-    // Wait 100ms before retry
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Wait 500ms before retry (longer interval for external services)
+    await new Promise(resolve => setTimeout(resolve, 500))
   }
 
   return false

@@ -32,7 +32,23 @@ describe("Comprehensive E2E Test Suite", () => {
 
     console.log("✅ Test environment initialized successfully")
     console.log(`📊 Test started at: ${new Date().toISOString()}`)
-  })
+
+    // Check for CI environment and external service availability
+    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
+    if (isCI) {
+      console.log("🔧 CI environment detected - checking service readiness...")
+
+      // Import waitForServices from e2e-setup
+      const { waitForServices } = await import("../e2e-setup")
+
+      const servicesReady = await waitForServices(60000) // 60 second timeout for CI
+      if (!servicesReady) {
+        console.warn("⚠️ External services not fully ready - some tests may be skipped")
+      } else {
+        console.log("✅ All external services are ready")
+      }
+    }
+  }, 90000) // 90 second timeout for CI setup
 
   afterAll(async () => {
     const suiteDuration = Date.now() - suiteStartTime
