@@ -4,15 +4,15 @@ import app from "@/app"
 describe("API Endpoints", () => {
   beforeAll(async () => {
     // Set test environment
-    process.env.NODE_ENV = "test"
+    process.env["NODE_ENV"] = "test"
     // Use in-memory database for testing
-    process.env.EES_DATABASE_URL = ":memory:"
+    process.env["EES_DATABASE_URL"] = ":memory:"
   })
 
   afterAll(async () => {
     // Clean up
-    delete process.env.NODE_ENV
-    delete process.env.EES_DATABASE_URL
+    delete process.env["NODE_ENV"]
+    delete process.env["EES_DATABASE_URL"]
   })
 
   describe("POST /embeddings", () => {

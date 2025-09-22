@@ -19,11 +19,11 @@ export const testState = {
 export async function setupE2ETests(): Promise<void> {
   beforeAll(async () => {
     // Set test environment variables
-    process.env.NODE_ENV = "test"
-    process.env.EES_DATABASE_URL = ":memory:"
+    process.env["NODE_ENV"] = "test"
+    process.env["EES_DATABASE_URL"] = ":memory:"
 
     // Disable console output during tests (optional)
-    if (process.env.TEST_SILENCE !== "false") {
+    if (process.env["TEST_SILENCE"] !== "false") {
       const originalConsoleLog = console.log
       const originalConsoleError = console.error
       console.log = () => {}
@@ -67,8 +67,8 @@ export async function setupE2ETests(): Promise<void> {
     console.log(`✅ E2E Tests completed in ${testDuration}ms`)
 
     // Clean up environment
-    delete process.env.NODE_ENV
-    delete process.env.EES_DATABASE_URL
+    delete process.env["NODE_ENV"]
+    delete process.env["EES_DATABASE_URL"]
   })
 }
 
@@ -108,15 +108,15 @@ export function getTestApp() {
  */
 export function setupMockProviders(): void {
   // Mock Ollama provider responses
-  process.env.EES_PROVIDER = "ollama"
-  process.env.EES_OLLAMA_BASE_URL = "http://localhost:11434"
-  process.env.EES_OLLAMA_DEFAULT_MODEL = "nomic-embed-text"
+  process.env["EES_PROVIDER"] = "ollama"
+  process.env["EES_OLLAMA_BASE_URL"] = "http://localhost:11434"
+  process.env["EES_OLLAMA_DEFAULT_MODEL"] = "nomic-embed-text"
 
   // Disable other providers for testing
-  delete process.env.EES_OPENAI_API_KEY
-  delete process.env.EES_GOOGLE_API_KEY
-  delete process.env.EES_COHERE_API_KEY
-  delete process.env.EES_MISTRAL_API_KEY
+  delete process.env["EES_OPENAI_API_KEY"]
+  delete process.env["EES_GOOGLE_API_KEY"]
+  delete process.env["EES_COHERE_API_KEY"]
+  delete process.env["EES_MISTRAL_API_KEY"]
 }
 
 /**
@@ -164,7 +164,7 @@ export async function createTestEmbedding(
   })
 
   if (response.status === 200) {
-    const embedding = await response.json()
+    const embedding = await response.json() as any
     registerEmbeddingForCleanup(embedding.id)
     return embedding
   }
@@ -194,11 +194,11 @@ export function validateTestEnvironment(): void {
     throw new Error("E2E test environment not properly initialized")
   }
 
-  if (process.env.NODE_ENV !== "test") {
+  if (process.env["NODE_ENV"] !== "test") {
     throw new Error("Tests must run in NODE_ENV=test")
   }
 
-  if (process.env.EES_DATABASE_URL !== ":memory:") {
+  if (process.env["EES_DATABASE_URL"] !== ":memory:") {
     console.warn("Warning: Not using in-memory database for tests")
   }
 }
