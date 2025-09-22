@@ -15,10 +15,10 @@ import { ModelManagerLive } from "../models"
  * Independent of presentation layer (web, CLI, etc.)
  */
 export const CoreApplicationLayer = Layer.mergeAll(
-  EmbeddingApplicationServiceLive,
-  ModelManagerLive
+  ModelManagerLive,
+  EmbeddingApplicationServiceLive
 ).pipe(
-  Layer.provide(EmbeddingServiceLive)
+  Layer.provide(EmbeddingServiceLive)  // EmbeddingService provides dependencies for Application Service
 )
 
 /**

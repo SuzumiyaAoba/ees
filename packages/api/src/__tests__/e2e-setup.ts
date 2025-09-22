@@ -4,8 +4,16 @@
  */
 
 import { beforeAll, afterAll, beforeEach, afterEach } from "vitest"
-import app from "@/app"
 import { parseJsonResponse, isEmbeddingResponse, type EmbeddingResponse } from "./types/test-types"
+
+// Set test environment BEFORE importing the app to ensure proper layer initialization
+process.env["NODE_ENV"] = "test"
+process.env["EES_DATABASE_URL"] = ":memory:"
+process.env["EES_PROVIDER"] = "ollama"
+process.env["EES_OLLAMA_BASE_URL"] = process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434"
+process.env["EES_OLLAMA_DEFAULT_MODEL"] = process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text"
+
+import app from "@/app"
 
 interface GlobalWithConsole {
   __originalConsole?: {
@@ -26,10 +34,6 @@ export const testState = {
  */
 export async function setupE2ETests(): Promise<void> {
   beforeAll(async () => {
-    // Set test environment variables
-    process.env["NODE_ENV"] = "test"
-    process.env["EES_DATABASE_URL"] = ":memory:"
-
     // Disable console output during tests (optional)
     if (process.env["TEST_SILENCE"] !== "false") {
       const originalConsoleLog = console.log
@@ -112,21 +116,6 @@ export function getTestApp() {
   return app
 }
 
-/**
- * Mock provider configuration for testing
- */
-export function setupMockProviders(): void {
-  // Mock Ollama provider responses
-  process.env["EES_PROVIDER"] = "ollama"
-  process.env["EES_OLLAMA_BASE_URL"] = "http://localhost:11434"
-  process.env["EES_OLLAMA_DEFAULT_MODEL"] = "nomic-embed-text"
-
-  // Disable other providers for testing
-  delete process.env["EES_OPENAI_API_KEY"]
-  delete process.env["EES_GOOGLE_API_KEY"]
-  delete process.env["EES_COHERE_API_KEY"]
-  delete process.env["EES_MISTRAL_API_KEY"]
-}
 
 /**
  * Wait for service dependencies to be available

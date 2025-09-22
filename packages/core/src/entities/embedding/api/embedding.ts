@@ -653,19 +653,16 @@ const make = Effect.gen(function* () {
   return service satisfies typeof EmbeddingService.Service
 })
 
-export const EmbeddingServiceLive = Layer.effect(
-  EmbeddingService,
-  make
-).pipe(
-  Layer.provide(DatabaseServiceLive),
-  Layer.provideMerge(
-    Layer.suspend(() => {
-      const defaultProvider = getDefaultProvider()
-      const factoryConfig = {
-        defaultProvider,
-        availableProviders: [defaultProvider],
-      }
-      return createEmbeddingProviderService(factoryConfig)
-    })
+export const EmbeddingServiceLive = Layer.suspend(() => {
+  // Ensure environment is properly read at layer creation time
+  const defaultProvider = getDefaultProvider()
+  const factoryConfig = {
+    defaultProvider,
+    availableProviders: [defaultProvider],
+  }
+
+  return Layer.effect(EmbeddingService, make).pipe(
+    Layer.provide(DatabaseServiceLive),
+    Layer.provideMerge(createEmbeddingProviderService(factoryConfig))
   )
-)
+})
