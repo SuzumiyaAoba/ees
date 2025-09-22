@@ -16,7 +16,12 @@
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit"
   },
-  "keywords": ["ees", "embedding", "cli", "command-line"],
+  "keywords": [
+    "ees",
+    "embedding",
+    "cli",
+    "command-line"
+  ],
   "author": "SuzumiyaAoba",
   "license": "MIT",
   "devDependencies": {
@@ -27,7 +32,7 @@
   },
   "dependencies": {
     "@ees/core": "file:../core",
-    "cac": "^6.7.14",
+    "citty": "^0.1.6",
     "effect": "^3.17.13"
   }
 }
