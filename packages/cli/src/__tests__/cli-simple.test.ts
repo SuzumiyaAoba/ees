@@ -226,12 +226,12 @@ describe("CLI Application Service Layer", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.getEmbeddingByUri("test-doc")
+          return yield* appService.getEmbeddingByUri("test-doc", "nomic-embed-text")
         }).pipe(Effect.provide(mockLayer)) as Effect.Effect<Embedding | null, never, never>
       )
 
       expect(result).toEqual(mockEmbedding)
-      expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith("test-doc")
+      expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith("test-doc", "nomic-embed-text")
     })
   })
 

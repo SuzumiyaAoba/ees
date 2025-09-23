@@ -21,6 +21,7 @@ export {
   CreateEmbeddingRequestSchema,
   BatchCreateEmbeddingRequestSchema,
   UriParamSchema,
+  UriModelParamSchema,
   IdParamSchema,
   EmbeddingQuerySchema,
   CreateEmbeddingResponseSchema,

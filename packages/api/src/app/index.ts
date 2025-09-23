@@ -129,12 +129,13 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
  * Retrieves a specific embedding using its unique URI identifier
  */
 app.openapi(getEmbeddingByUriRoute, async (c) => {
-  const { uri } = c.req.valid("param")
+  const { uri, model_name } = c.req.valid("param")
   const decodedUri = decodeURIComponent(uri)
+  const decodedModelName = decodeURIComponent(model_name)
 
   const program = Effect.gen(function* () {
     const appService = yield* EmbeddingApplicationService
-    const embedding = yield* appService.getEmbeddingByUri(decodedUri)
+    const embedding = yield* appService.getEmbeddingByUri(decodedUri, decodedModelName)
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
     }
