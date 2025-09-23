@@ -112,30 +112,68 @@ jobs:
       run: |
         echo "Checking Ollama service availability..."
 
-        # Check if Ollama service is running
-        if ! curl -f http://localhost:11434/api/version >/dev/null 2>&1; then
-          echo "Ollama service is not available, attempting to start..."
-          # Try to start Ollama if not running
-          docker compose -f docker-compose.test.yml up -d ollama
+        # Always ensure Ollama service is running properly
+        echo "Starting Ollama service..."
+        docker compose -f docker-compose.test.yml up -d ollama
 
-          # Wait for it to become available
-          for i in {1..30}; do
-            if curl -f http://localhost:11434/api/version >/dev/null 2>&1; then
-              echo "Ollama service started successfully!"
-              break
-            fi
-            echo "Waiting for Ollama to start... ($i/30)"
-            sleep 2
-          done
-
-          # Try to pull the model
+        # Wait for service to be fully ready
+        echo "Waiting for Ollama to be ready..."
+        for i in {1..60}; do
           if curl -f http://localhost:11434/api/version >/dev/null 2>&1; then
-            echo "Pulling embedding model..."
-            OLLAMA_CONTAINER=$(docker compose -f docker-compose.test.yml ps -q ollama)
-            if [ ! -z "$OLLAMA_CONTAINER" ]; then
-              docker exec $OLLAMA_CONTAINER ollama pull nomic-embed-text || echo "Model pull failed, continuing..."
-            fi
+            echo "Ollama is responding to version requests"
+            break
           fi
+          echo "Waiting for Ollama... ($i/60)"
+          sleep 3
+        done
+
+        # Verify Ollama is actually ready
+        if ! curl -f http://localhost:11434/api/version >/dev/null 2>&1; then
+          echo "Ollama failed to start, checking logs..."
+          docker compose -f docker-compose.test.yml logs ollama
+          echo "Container status:"
+          docker compose -f docker-compose.test.yml ps
+          exit 1
+        fi
+
+        # Pull the embedding model
+        echo "Pulling embedding model..."
+        OLLAMA_CONTAINER=$(docker compose -f docker-compose.test.yml ps -q ollama)
+        if [ -z "$OLLAMA_CONTAINER" ]; then
+          echo "Error: Ollama container not found"
+          docker compose -f docker-compose.test.yml ps
+          exit 1
+        fi
+
+        echo "Executing model pull in container..."
+        docker exec $OLLAMA_CONTAINER ollama pull nomic-embed-text
+        echo "Model pull completed!"
+
+        # Verify model is available
+        echo "Verifying model availability..."
+        if ! curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text"; then
+          echo "Model not found in available models, attempting API pull..."
+          curl -X POST http://localhost:11434/api/pull \
+            -H "Content-Type: application/json" \
+            -d '{"name": "nomic-embed-text"}' \
+            --max-time 300 || echo "API pull failed"
+        fi
+
+        # Final verification
+        echo "Final verification - listing available models:"
+        curl -s http://localhost:11434/api/tags | head -20
+
+        # Test Ollama connectivity with embedding generation
+        echo "Testing Ollama embedding functionality..."
+        TEST_RESPONSE=$(curl -s -X POST http://localhost:11434/api/embed \
+          -H "Content-Type: application/json" \
+          -d '{"model": "nomic-embed-text", "input": ["test"]}' || echo "FAILED")
+
+        if [[ "$TEST_RESPONSE" == "FAILED" ]] || [[ "$TEST_RESPONSE" == *"error"* ]]; then
+          echo "Ollama embedding test failed: $TEST_RESPONSE"
+          exit 1
+        else
+          echo "Ollama embedding test successful"
         fi
 
         # Final check and run tests
