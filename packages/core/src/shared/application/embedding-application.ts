@@ -74,10 +74,11 @@ export interface EmbeddingApplicationService {
   >
 
   /**
-   * Get embedding by URI
+   * Get embedding by URI and model name
    */
   readonly getEmbeddingByUri: (
-    uri: string
+    uri: string,
+    modelName: string
   ) => Effect.Effect<Embedding | null, DatabaseQueryError>
 
   /**
@@ -120,7 +121,7 @@ const make = Effect.gen(function* () {
   const searchEmbeddings = (request: SearchEmbeddingRequest) =>
     embeddingService.searchEmbeddings(request)
 
-  const getEmbeddingByUri = (uri: string) => embeddingService.getEmbedding(uri)
+  const getEmbeddingByUri = (uri: string, modelName: string) => embeddingService.getEmbedding(uri, modelName)
 
   const listEmbeddings = (filters?: {
     uri?: string

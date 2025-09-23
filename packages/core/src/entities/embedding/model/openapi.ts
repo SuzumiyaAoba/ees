@@ -65,6 +65,19 @@ export const UriParamSchema = z.object({
   }),
 })
 
+export const UriModelParamSchema = z.object({
+  uri: z.string().openapi({
+    param: { name: "uri", in: "path" },
+    description: "URI-encoded resource identifier",
+    example: "file%3A%2F%2Fdocument.txt",
+  }),
+  model_name: z.string().openapi({
+    param: { name: "model_name", in: "path" },
+    description: "Model name used to generate the embedding",
+    example: "nomic-embed-text",
+  }),
+})
+
 export const IdParamSchema = z.object({
   id: z
     .string()

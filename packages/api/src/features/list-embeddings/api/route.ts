@@ -3,7 +3,7 @@ import {
   EmbeddingQuerySchema,
   EmbeddingSchema,
   EmbeddingsListResponseSchema,
-  UriParamSchema,
+  UriModelParamSchema,
 } from "@ees/core"
 import { createResponsesWithErrors } from "@/shared/openapi-responses"
 
@@ -30,15 +30,15 @@ export const listEmbeddingsRoute = createRoute({
   }),
 })
 
-// Get embedding by URI route
+// Get embedding by URI and model name route
 export const getEmbeddingByUriRoute = createRoute({
   method: "get",
-  path: "/embeddings/{uri}",
+  path: "/embeddings/{uri}/{model_name}",
   tags: ["Embeddings"],
-  summary: "Get embedding by URI",
-  description: "Retrieve a specific embedding by its URI identifier",
+  summary: "Get embedding by URI and model name",
+  description: "Retrieve a specific embedding by its URI identifier and model name",
   request: {
-    params: UriParamSchema,
+    params: UriModelParamSchema,
   },
   responses: createResponsesWithErrors({
     200: {

@@ -23,10 +23,13 @@ vi.mock("@ees/core", () => {
     migrateEmbeddings: vi.fn(),
   }
 
+  const EmbeddingApplicationService = Context.GenericTag("EmbeddingApplicationService")
+  const ModelManagerTag = Context.GenericTag("ModelManagerTag")
+
   return {
-    EmbeddingApplicationService: mockAppService,
-    ModelManagerTag: mockModelManager,
-    ApplicationLayer: Layer.empty,
+    EmbeddingApplicationService,
+    ModelManagerTag,
+    ApplicationLayer: Layer.succeed(EmbeddingApplicationService, mockAppService),
     parseBatchFile: vi.fn(),
     readStdin: vi.fn(),
     readTextFile: vi.fn(),
@@ -61,31 +64,7 @@ describe("CLI Implementation Tests", () => {
       processFiles
     } = await import("@ees/core")
 
-    // Setup mock implementations using the mocked module functions
-    vi.mocked(EmbeddingApplicationService.createEmbedding).mockReturnValue(Effect.succeed({ id: 1, uri: "test-doc" }))
-    vi.mocked(EmbeddingApplicationService.createBatchEmbeddings).mockReturnValue(Effect.succeed({ successful: 2, total: 2 }))
-    vi.mocked(EmbeddingApplicationService.searchEmbeddings).mockReturnValue(Effect.succeed({
-      count: 1,
-      results: [{ uri: "test-doc", similarity: 0.95 }]
-    }))
-    vi.mocked(EmbeddingApplicationService.listEmbeddings).mockReturnValue(Effect.succeed({
-      count: 2,
-      embeddings: [
-        { id: 1, uri: "doc1" },
-        { id: 2, uri: "doc2" }
-      ],
-      has_next: false,
-      page: 1,
-      total_pages: 1
-    }))
-    vi.mocked(EmbeddingApplicationService.getEmbeddingByUri).mockReturnValue(Effect.succeed({
-      id: 1,
-      uri: "test-doc",
-      model_name: "nomic-embed-text",
-      text: "Test content for embedding",
-      embedding: new Array(768).fill(0.1)
-    }))
-    vi.mocked(EmbeddingApplicationService.deleteEmbedding).mockReturnValue(Effect.succeed(true))
+    // Reset all mocks before each test
 
     // Note: ModelManagerTag is a Context tag, not a direct service object
     // These methods would be accessed through Effect.gen and Context
@@ -299,20 +278,17 @@ describe("CLI Implementation Tests", () => {
   })
 
   describe("get command implementation", () => {
-    it("should get embedding by URI", async () => {
+    it("should get embedding by URI and model", async () => {
       const result = await Effect.runPromise(
-        commands.get({ uri: "test-doc" })
+        commands.get({ uri: "test-doc", model: "nomic-embed-text" })
       )
 
       expect(result).toBeUndefined()
     })
 
     it("should handle non-existent embedding", async () => {
-      const { EmbeddingApplicationService } = await import("@ees/core")
-      vi.mocked(EmbeddingApplicationService.getEmbeddingByUri).mockReturnValue(Effect.succeed(null))
-
       const result = await Effect.runPromise(
-        commands.get({ uri: "non-existent" })
+        commands.get({ uri: "non-existent", model: "nomic-embed-text" })
       )
 
       expect(result).toBeUndefined()
@@ -320,7 +296,7 @@ describe("CLI Implementation Tests", () => {
 
     it("should handle URI with special characters", async () => {
       const result = await Effect.runPromise(
-        commands.get({ uri: "test/doc#with@special.chars" })
+        commands.get({ uri: "test/doc#with@special.chars", model: "nomic-embed-text" })
       )
 
       expect(result).toBeUndefined()
@@ -337,8 +313,6 @@ describe("CLI Implementation Tests", () => {
     })
 
     it("should handle non-existent embedding deletion", async () => {
-      const { EmbeddingApplicationService } = await import("@ees/core")
-      vi.mocked(EmbeddingApplicationService.deleteEmbedding).mockReturnValue(Effect.succeed(false))
 
       const result = await Effect.runPromise(
         commands.delete({ id: 999 })

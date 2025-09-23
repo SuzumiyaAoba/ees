@@ -165,8 +165,9 @@ describe("CLI Commands Comprehensive Tests", () => {
     })
 
     it("should handle get command options", () => {
-      const getOptions = { uri: "test-uri" }
+      const getOptions = { uri: "test-uri", model: "nomic-embed-text" }
       expect(getOptions.uri).toBe("test-uri")
+      expect(getOptions.model).toBe("nomic-embed-text")
     })
 
     it("should handle delete command options", () => {

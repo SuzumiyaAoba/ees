@@ -306,7 +306,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
 
   describe("Resource Not Found Errors", () => {
     it("should return 404 for non-existent embedding URI", async () => {
-      const response = await app.request("/embeddings/this-uri-does-not-exist")
+      const defaultModel = "nomic-embed-text"
+      const response = await app.request(`/embeddings/${encodeURIComponent("this-uri-does-not-exist")}/${encodeURIComponent(defaultModel)}`)
 
       expect(response.status).toBe(404)
 

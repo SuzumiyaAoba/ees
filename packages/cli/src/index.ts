@@ -59,9 +59,9 @@ export interface CLICommands {
   }): Effect.Effect<void, Error, never>
 
   /**
-   * Get embedding by URI
+   * Get embedding by URI and model name
    */
-  get(options: { uri: string }): Effect.Effect<void, Error, never>
+  get(options: { uri: string; model: string }): Effect.Effect<void, Error, never>
 
   /**
    * Delete embedding by ID
@@ -218,9 +218,9 @@ const makeCLICommands = Effect.gen(function* () {
     limit?: number
   }) => Effect.Effect<void, Error, never>
 
-  const get = ((options: { uri: string }) =>
+  const get = ((options: { uri: string; model: string }) =>
     Effect.gen(function* () {
-      const embedding = yield* appService.getEmbeddingByUri(options.uri)
+      const embedding = yield* appService.getEmbeddingByUri(options.uri, options.model)
 
       if (!embedding) {
         log(`No embedding found for URI: ${options.uri}`)
@@ -232,7 +232,7 @@ const makeCLICommands = Effect.gen(function* () {
       log(`- Model: ${embedding.model_name}`)
       log(`- Text: ${embedding.text.substring(0, 100)}...`)
       log(`- Vector dimensions: ${embedding.embedding.length}`)
-    })) as unknown as (options: { uri: string }) => Effect.Effect<void, Error, never>
+    })) as unknown as (options: { uri: string; model: string }) => Effect.Effect<void, Error, never>
 
   const deleteEmbedding = ((options: { id: number }) =>
     Effect.gen(function* () {

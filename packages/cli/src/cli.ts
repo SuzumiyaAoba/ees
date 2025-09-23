@@ -172,7 +172,7 @@ const listCommand = defineCommand({
 const getCommand = defineCommand({
   meta: {
     name: "get",
-    description: "Get embedding by URI",
+    description: "Get embedding by URI and model name",
   },
   args: {
     uri: {
@@ -180,10 +180,16 @@ const getCommand = defineCommand({
       description: "URI of the embedding",
       required: true,
     },
+    "model-name": {
+      type: "string",
+      alias: "m",
+      description: "Model name of the embedding",
+      required: true,
+    },
   },
   async run({ args }) {
     const commands = await Effect.runPromise(createCLICommands())
-    await runCLICommand(commands.get({ uri: args.uri }))
+    await runCLICommand(commands.get({ uri: args.uri, model: args["model-name"] }))
   },
 })
 

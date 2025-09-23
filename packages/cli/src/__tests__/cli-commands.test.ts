@@ -232,9 +232,10 @@ describe("CLI Commands", () => {
   })
 
   describe("get command", () => {
-    it("should accept URI parameter", async () => {
+    it("should accept URI and model parameters", async () => {
       const result = commands.get({
         uri: "test-doc",
+        model: "nomic-embed-text",
       })
 
       expect(result).toBeDefined()
@@ -244,6 +245,7 @@ describe("CLI Commands", () => {
     it("should handle encoded URI", async () => {
       const result = commands.get({
         uri: "test doc with spaces",
+        model: "nomic-embed-text",
       })
 
       expect(result).toBeDefined()

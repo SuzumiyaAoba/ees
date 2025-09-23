@@ -74,12 +74,14 @@ export interface EmbeddingService {
   >
 
   /**
-   * Retrieve a specific embedding by its URI
+   * Retrieve a specific embedding by its URI and model name
    * @param uri - Unique identifier for the embedding
+   * @param modelName - Model name used to generate the embedding
    * @returns Effect containing the embedding data or null if not found
    */
   readonly getEmbedding: (
-    uri: string
+    uri: string,
+    modelName: string
   ) => Effect.Effect<Embedding | null, DatabaseQueryError>
 
   /**
@@ -305,11 +307,13 @@ const make = Effect.gen(function* () {
       }
     })
 
-  const getEmbedding = (uri: string) =>
+  const getEmbedding = (uri: string, modelName: string) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: () =>
-          db.select().from(embeddings).where(eq(embeddings.uri, uri)).limit(1),
+          db.select().from(embeddings).where(
+            and(eq(embeddings.uri, uri), eq(embeddings.modelName, modelName))
+          ).limit(1),
         catch: (error) =>
           new DatabaseQueryError({
             message: "Failed to get embedding from database",
