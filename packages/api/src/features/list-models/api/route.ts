@@ -4,6 +4,7 @@
  */
 
 import { createRoute, z } from "@hono/zod-openapi"
+import { createResponsesWithErrors } from "@/shared/openapi-responses"
 
 /**
  * Model information schema
@@ -68,15 +69,6 @@ const ListModelsResponseSchema = z.object({
   })
 })
 
-/**
- * Error response schema
- */
-const ErrorResponseSchema = z.object({
-  error: z.string().openapi({
-    description: "Error message describing what went wrong",
-    example: "Failed to retrieve models from providers"
-  })
-})
 
 /**
  * List available models route
@@ -88,7 +80,7 @@ export const listModelsRoute = createRoute({
   summary: "List available models",
   description: "Retrieve all available embedding models from configured providers including Ollama and cloud providers",
   tags: ["Models"],
-  responses: {
+  responses: createResponsesWithErrors({
     200: {
       content: {
         "application/json": {
@@ -97,15 +89,7 @@ export const listModelsRoute = createRoute({
       },
       description: "Successfully retrieved available models",
     },
-    500: {
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-      description: "Internal server error - failed to retrieve models",
-    },
-  },
+  }),
 })
 
 export type ListModelsResponse = z.infer<typeof ListModelsResponseSchema>
