@@ -1,13 +1,13 @@
 import { Effect, Exit } from "effect"
 import type { Context } from "hono"
-import { AppLayer } from "@/providers/main"
+import { AppLayer } from "@/app/providers/main"
 
 /**
  * Type-safe Effect runner for Hono handlers
  * Properly handles Effect error channels and converts them to HTTP responses
  */
-export async function runEffectProgram<A, E>(
-  program: Effect.Effect<A, E, any>,
+export async function runEffectProgram<A, E, R>(
+  program: Effect.Effect<A, E, R>,
   context: Context,
   operation: string
 ): Promise<Response> {

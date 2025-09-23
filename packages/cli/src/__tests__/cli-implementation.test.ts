@@ -61,7 +61,7 @@ describe("CLI Implementation Tests", () => {
       processFiles
     } = await import("@ees/core")
 
-    // Setup mock implementations
+    // Setup mock implementations using the mocked module functions
     vi.mocked(EmbeddingApplicationService.createEmbedding).mockReturnValue(Effect.succeed({ id: 1, uri: "test-doc" }))
     vi.mocked(EmbeddingApplicationService.createBatchEmbeddings).mockReturnValue(Effect.succeed({ successful: 2, total: 2 }))
     vi.mocked(EmbeddingApplicationService.searchEmbeddings).mockReturnValue(Effect.succeed({
