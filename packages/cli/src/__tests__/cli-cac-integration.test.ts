@@ -193,7 +193,8 @@ describe("CLI CAC Integration Tests", () => {
   describe("Get Command", () => {
     it("should define get command with correct structure", () => {
       const cli = cac("ees")
-      const command = cli.command("get <uri>", "Get embedding by URI")
+      const command = cli.command("get <uri>", "Get embedding by URI and model name")
+        .option("-m, --model-name <model>", "Model name of the embedding")
 
       expect(command).toBeDefined()
       expect(command.name).toBe("get")

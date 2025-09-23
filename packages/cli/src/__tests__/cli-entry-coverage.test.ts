@@ -105,7 +105,8 @@ describe("CLI Entry Point Coverage Tests", () => {
 
     it("should define get command correctly", () => {
       const cli = cac("ees")
-      const command = cli.command("get <uri>", "Get embedding by URI")
+      const command = cli.command("get <uri>", "Get embedding by URI and model name")
+        .option("-m, --model-name <model>", "Model name of the embedding")
 
       expect(command.name).toBe("get")
       expect(command.args).toEqual([{ value: "uri", required: true, variadic: false }])
