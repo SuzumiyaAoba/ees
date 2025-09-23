@@ -85,22 +85,22 @@ app.openapi(createEmbeddingRoute, async (c) => {
  * Processes multiple texts in a single request for efficient bulk embedding generation
  */
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
-  try {
-    const request = c.req.valid("json")
+  const request = c.req.valid("json")
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.createBatchEmbeddings(request)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.createBatchEmbeddings(request)
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    console.error("Effect error in batchCreateEmbedding:", exit.cause)
+    return c.json({ error: "Internal server error", details: String(exit.cause) }, 500)
   }
 })
 

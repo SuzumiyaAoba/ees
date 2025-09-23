@@ -141,18 +141,30 @@ export async function parseJsonResponse<T>(
   response: Response,
   guard: (obj: unknown) => obj is T
 ): Promise<T> {
-  const data: unknown = await response.json()
-  if (guard(data)) {
-    return data
+  const responseBody = await response.text()
+
+  try {
+    const data: unknown = JSON.parse(responseBody)
+    if (guard(data)) {
+      return data
+    }
+    throw new Error(`Response does not match expected type: ${JSON.stringify(data)}`)
+  } catch (error) {
+    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : 'Unknown error'}. Response body: ${responseBody.substring(0, 200)}...`)
   }
-  throw new Error(`Response does not match expected type: ${JSON.stringify(data)}`)
 }
 
 // Helper for unknown JSON responses where we need to check properties
 export async function parseUnknownJsonResponse(response: Response): Promise<Record<string, unknown>> {
-  const data: unknown = await response.json()
-  if (typeof data === 'object' && data !== null) {
-    return data as Record<string, unknown>
+  const responseBody = await response.text()
+
+  try {
+    const data: unknown = JSON.parse(responseBody)
+    if (typeof data === 'object' && data !== null) {
+      return data as Record<string, unknown>
+    }
+    throw new Error(`Response is not an object: ${typeof data}`)
+  } catch (error) {
+    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : 'Unknown error'}. Response body: ${responseBody.substring(0, 200)}...`)
   }
-  throw new Error(`Response is not an object: ${typeof data}`)
 }

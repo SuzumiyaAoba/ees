@@ -157,13 +157,19 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       ]
 
       for (const testCase of unsupportedMethods) {
-        const response = await app.request(testCase.endpoint, {
+        const requestOptions: RequestInit = {
           method: testCase.method,
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ uri: "test", text: "test" }),
-        })
+        }
+
+        // Only add body for methods that support it (not GET or HEAD)
+        if (!["GET", "HEAD"].includes(testCase.method)) {
+          requestOptions.body = JSON.stringify({ uri: "test", text: "test" })
+        }
+
+        const response = await app.request(testCase.endpoint, requestOptions)
 
         expect([404, 405]).toContain(response.status) // Method Not Allowed or Not Found
       }
