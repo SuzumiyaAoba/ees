@@ -533,7 +533,7 @@ describe("Performance and Load Testing E2E Tests", () => {
   describe("Stress Testing", () => {
     it("should handle rapid sequential requests", async () => {
       const sequentialCount = 20
-      const requests = []
+      const requests: Promise<Response>[] = []
 
       await measurePerformance(
         `Rapid Sequential Requests (${sequentialCount} requests)`,

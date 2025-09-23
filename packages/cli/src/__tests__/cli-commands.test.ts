@@ -15,8 +15,8 @@ describe("CLI Commands", () => {
     await mkdir(testDir, { recursive: true })
 
     // Set test environment
-    process.env.NODE_ENV = "test"
-    process.env.EES_DATABASE_URL = ":memory:"
+    process.env["NODE_ENV"] = "test"
+    process.env["EES_DATABASE_URL"] = ":memory:"
 
     // Initialize CLI commands
     try {
@@ -43,8 +43,8 @@ describe("CLI Commands", () => {
     }
 
     // Clean up environment
-    delete process.env.NODE_ENV
-    delete process.env.EES_DATABASE_URL
+    delete process.env["NODE_ENV"]
+    delete process.env["EES_DATABASE_URL"]
   })
 
   describe("create command", () => {

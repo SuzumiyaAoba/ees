@@ -108,9 +108,9 @@ describe("Search Functionality E2E Tests", () => {
       // Validate search result structure
       expect(searchResults).toHaveProperty("results")
       expect(searchResults).toHaveProperty("query", searchData.query)
-      expect(Array.isArray(searchResults.results)).toBe(true)
+      expect(Array.isArray(searchResults["results"])).toBe(true)
 
-      const results = searchResults.results as Array<Record<string, unknown>>
+      const results = searchResults["results"] as Array<Record<string, unknown>>
 
       // Should return results
       expect(results.length).toBeGreaterThan(0)
@@ -121,9 +121,9 @@ describe("Search Functionality E2E Tests", () => {
         expect(result).toHaveProperty("uri")
         expect(result).toHaveProperty("text")
         expect(result).toHaveProperty("score")
-        expect(typeof result.score).toBe("number")
-        expect(result.score).toBeGreaterThan(0)
-        expect(result.score).toBeLessThanOrEqual(1)
+        expect(typeof result["score"]).toBe("number")
+        expect(result["score"]).toBeGreaterThan(0)
+        expect(result["score"]).toBeLessThanOrEqual(1)
       })
 
       // Technology-related document should be in top results
@@ -153,7 +153,7 @@ describe("Search Functionality E2E Tests", () => {
       }
 
       const searchResults = await parseUnknownJsonResponse(response)
-      const results = searchResults.results as Array<{score: number, uri: string}>
+      const results = searchResults["results"] as Array<{score: number, uri: string}>
 
       // All results should meet the threshold
       results.forEach(result => {
@@ -187,7 +187,7 @@ describe("Search Functionality E2E Tests", () => {
       }
 
       const searchResults = await parseUnknownJsonResponse(response)
-      const results = searchResults.results as Array<Record<string, unknown>>
+      const results = searchResults["results"] as Array<Record<string, unknown>>
 
       // Should return at most the specified limit
       expect(results.length).toBeLessThanOrEqual(searchData.limit)
@@ -221,7 +221,7 @@ describe("Search Functionality E2E Tests", () => {
         expect(searchResults).toHaveProperty("results")
         expect(searchResults).toHaveProperty("metric", metric)
 
-        const results = searchResults.results as Array<{uri: string}>
+        const results = searchResults["results"] as Array<{uri: string}>
 
         // Science document should be in top results for physics query
         if (results.length > 0) {
@@ -255,7 +255,7 @@ describe("Search Functionality E2E Tests", () => {
       const searchResults = await parseUnknownJsonResponse(response)
       expect(searchResults).toHaveProperty("model_name", searchData.model_name)
 
-      const results = searchResults.results as Array<{uri: string}>
+      const results = searchResults["results"] as Array<{uri: string}>
 
       // Travel document should be in results
       if (results.length > 0) {
@@ -285,7 +285,7 @@ describe("Search Functionality E2E Tests", () => {
       }
 
       const searchResults = await parseUnknownJsonResponse(response)
-      const results = searchResults.results as Array<Record<string, unknown>>
+      const results = searchResults["results"] as Array<Record<string, unknown>>
 
       // Should return few or no results
       expect(results.length).toBeLessThanOrEqual(2)
@@ -322,7 +322,7 @@ describe("Search Functionality E2E Tests", () => {
       expect(searchResults).toHaveProperty("metric", searchData.metric)
       expect(searchResults).toHaveProperty("model_name", searchData.model_name)
 
-      const results = searchResults.results as Array<{score: number}>
+      const results = searchResults["results"] as Array<{score: number}>
 
       expect(results.length).toBeLessThanOrEqual(searchData.limit)
       results.forEach(result => {
@@ -379,7 +379,7 @@ describe("Search Functionality E2E Tests", () => {
       }
 
       const searchResults = await parseUnknownJsonResponse(searchResponse)
-      const results = searchResults.results as Array<{uri: string}>
+      const results = searchResults["results"] as Array<{uri: string}>
 
       // Japanese document should be in results
       if (results.length > 0) {
@@ -423,17 +423,17 @@ describe("Search Functionality E2E Tests", () => {
       }
 
       // Results should be consistent across searches
-      const firstResults = responses[0].results as Array<{id: number, score: number}>
+      const firstResults = responses[0]?.["results"] as Array<{id: number, score: number}>
       responses.slice(1).forEach(response => {
-        const results = response.results as Array<{id: number, score: number}>
+        const results = response["results"] as Array<{id: number, score: number}>
 
         // Should have same number of results
         expect(results.length).toBe(firstResults.length)
 
         // Should have same IDs in same order (deterministic)
         results.forEach((result, index) => {
-          expect(result.id).toBe(firstResults[index].id)
-          expect(Math.abs(result.score - firstResults[index].score)).toBeLessThan(0.001) // Allow for small floating point differences
+          expect(result.id).toBe(firstResults[index]?.id)
+          expect(Math.abs(result.score - (firstResults[index]?.score ?? 0))).toBeLessThan(0.001) // Allow for small floating point differences
         })
       })
     })

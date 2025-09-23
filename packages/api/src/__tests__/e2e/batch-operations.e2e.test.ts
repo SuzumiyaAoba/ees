@@ -85,8 +85,8 @@ describe("Batch Operations E2E Tests", () => {
 
         const embedding = result["embedding"] as Record<string, unknown>
         expect(embedding).toHaveProperty("id")
-        expect(embedding).toHaveProperty("uri", batchData.texts[index].uri)
-        expect(embedding).toHaveProperty("text", batchData.texts[index].text)
+        expect(embedding).toHaveProperty("uri", batchData.texts[index]?.uri)
+        expect(embedding).toHaveProperty("text", batchData.texts[index]?.text)
         expect(embedding).toHaveProperty("model_name")
         expect(embedding).toHaveProperty("embedding")
         expect(embedding).toHaveProperty("created_at")
@@ -542,13 +542,13 @@ And a final paragraph.`
       // Should complete within reasonable time (adjust based on performance requirements)
       expect(processingTime).toBeLessThan(30000) // 30 seconds max
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results } = batchResult
 
       // Register successful embeddings for cleanup
       results.forEach(result => {
         if (result.success && result.embedding) {
-          registerEmbeddingForCleanup(result.embedding.id as number)
+          registerEmbeddingForCleanup(result.embedding.id)
         }
       })
 
