@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterEach } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "../e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "../types/test-types"
+import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse, isEmbeddingListResponse } from "../types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -260,7 +260,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
 
       expect(listResponse.headers.get("content-type")).toContain("application/json")
 
-      const listData = await parseUnknownJsonResponse(listResponse)
+      const listData = await parseJsonResponse(listResponse, isEmbeddingListResponse)
 
       // Validate pagination structure
       expect(listData).toHaveProperty("embeddings")
@@ -268,7 +268,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
       expect(Array.isArray(listData.embeddings)).toBe(true)
 
       // Check if our created embeddings are in the list
-      const embeddingIds = (listData.embeddings as Array<{id: number}>).map(e => e.id)
+      const embeddingIds = listData.embeddings.map(e => e.id)
       embeddings.forEach(embedding => {
         expect(embeddingIds).toContain(embedding.id)
       })
@@ -284,13 +284,13 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const data = await parseUnknownJsonResponse(response)
+      const data = await parseJsonResponse(response, isEmbeddingListResponse)
       expect(data).toHaveProperty("embeddings")
       expect(data).toHaveProperty("pagination")
 
-      const pagination = data.pagination as Record<string, unknown>
-      expect(pagination).toHaveProperty("page", 1)
-      expect(pagination).toHaveProperty("limit", 2)
+      const { pagination } = data
+      expect(pagination.page).toBe(1)
+      expect(pagination.limit).toBe(2)
     })
   })
 
