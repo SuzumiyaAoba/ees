@@ -15,6 +15,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "types": ["@total-typescript/ts-reset", "node", "vitest/globals"],
-    "checkJs": false
+    "checkJs": false,
+    "exactOptionalPropertyTypes": false
   }
 }

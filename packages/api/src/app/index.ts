@@ -102,7 +102,7 @@ app.route("/", providerApp)
  * Create embedding endpoint
  * Generates a new embedding for the provided text using the configured provider
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(createEmbeddingRoute, async (c) => {
   const { uri, text, model_name } = c.req.valid("json")
 
@@ -116,7 +116,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -131,7 +131,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
  * Batch create embeddings endpoint
  * Processes multiple texts in a single request for efficient bulk embedding generation
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -141,7 +141,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -156,7 +156,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
  * Search embeddings endpoint
  * Finds similar embeddings using vector similarity search with configurable metrics
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(searchEmbeddingsRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -166,7 +166,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -181,7 +181,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
  * Get embedding by URI endpoint
  * Retrieves a specific embedding using its unique URI identifier
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(getEmbeddingByUriRoute, async (c) => {
   const { uri } = c.req.valid("param")
   const decodedUri = decodeURIComponent(uri)
@@ -192,7 +192,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -216,7 +216,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
  * List embeddings endpoint
  * Returns paginated list of embeddings with optional filtering by URI and model
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(listEmbeddingsRoute, async (c) => {
   const { uri, model_name, page, limit } = c.req.valid("query")
 
@@ -246,7 +246,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -261,7 +261,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
  * Delete embedding endpoint
  * Removes an embedding from the database by its ID
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(deleteEmbeddingRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
   const id = Number(idStr)
@@ -276,7 +276,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
@@ -300,7 +300,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
  * List available models endpoint
  * Returns all models available through configured providers including environment variables and Ollama response
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
+// @ts-expect-error - OpenAPI Hono handler return type includes error status codes not in route schema
 app.openapi(listModelsRoute, async (c) => {
   const program = Effect.gen(function* () {
     const modelManager = yield* ModelManagerTag
@@ -317,7 +317,7 @@ app.openapi(listModelsRoute, async (c) => {
   })
 
   const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
+    // @ts-expect-error - Effect error channels are properly handled but TypeScript can't infer never type
     program.pipe(Effect.provide(AppLayer))
   )
 
