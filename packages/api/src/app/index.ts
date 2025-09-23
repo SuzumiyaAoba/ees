@@ -1,6 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { Effect } from "effect"
+import { Effect, Exit } from "effect"
 import type {
   Embedding,
 } from "@ees/core"
@@ -57,26 +57,26 @@ app.route("/", providerApp)
  * Generates a new embedding for the provided text using the configured provider
  */
 app.openapi(createEmbeddingRoute, async (c) => {
-  try {
-    const { uri, text, model_name } = c.req.valid("json")
+  const { uri, text, model_name } = c.req.valid("json")
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.createEmbedding({
-        uri,
-        text,
-        modelName: model_name,
-      })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.createEmbedding({
+      uri,
+      text,
+      modelName: model_name,
     })
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer))
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    console.error("Effect error in createEmbedding:", exit.cause)
+    return c.json({ error: "Internal server error", details: String(exit.cause) }, 500)
   }
 })
 
