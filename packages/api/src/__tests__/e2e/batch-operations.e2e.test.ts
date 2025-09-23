@@ -21,7 +21,7 @@ describe("Batch Operations E2E Tests", () => {
   describe("POST /embeddings/batch", () => {
     it("should create multiple embeddings in a single batch", async () => {
       const batchData = {
-        items: [
+        texts: [
           {
             uri: "batch-doc-1",
             text: "First document in batch operation testing."
@@ -59,15 +59,15 @@ describe("Batch Operations E2E Tests", () => {
       const summary = batchResult["summary"] as Record<string, unknown>
 
       // Should have results for all items
-      expect(results.length).toBe(batchData.items.length)
+      expect(results.length).toBe(batchData.texts.length)
 
       // Validate summary
-      expect(summary).toHaveProperty("total", batchData.items.length)
+      expect(summary).toHaveProperty("total", batchData.texts.length)
       expect(summary).toHaveProperty("successful")
       expect(summary).toHaveProperty("failed")
       expect(typeof summary["successful"]).toBe("number")
       expect(typeof summary["failed"]).toBe("number")
-      expect(summary["successful"]).toBe(batchData.items.length)
+      expect(summary["successful"]).toBe(batchData.texts.length)
       expect(summary["failed"]).toBe(0)
 
       // Validate each result
@@ -77,8 +77,8 @@ describe("Batch Operations E2E Tests", () => {
 
         const embedding = result["embedding"] as Record<string, unknown>
         expect(embedding).toHaveProperty("id")
-        expect(embedding).toHaveProperty("uri", batchData.items[index].uri)
-        expect(embedding).toHaveProperty("text", batchData.items[index].text)
+        expect(embedding).toHaveProperty("uri", batchData.texts[index].uri)
+        expect(embedding).toHaveProperty("text", batchData.texts[index].text)
         expect(embedding).toHaveProperty("model_name")
         expect(embedding).toHaveProperty("embedding")
         expect(embedding).toHaveProperty("created_at")
@@ -90,7 +90,7 @@ describe("Batch Operations E2E Tests", () => {
 
     it("should handle batch with different model names", async () => {
       const batchData = {
-        items: [
+        texts: [
           {
             uri: "batch-model-1",
             text: "Document with default model.",
@@ -121,10 +121,10 @@ describe("Batch Operations E2E Tests", () => {
       // Both should succeed
       results.forEach((result, index) => {
         expect(result.success).toBe(true)
-        expect(result.embedding.uri).toBe(batchData.items[index].uri)
+        expect(result.embedding.uri).toBe(batchData.texts[index].uri)
 
-        if (batchData.items[index].model_name) {
-          expect(result.embedding.model_name).toBe(batchData.items[index].model_name)
+        if (batchData.texts[index].model_name) {
+          expect(result.embedding.model_name).toBe(batchData.texts[index].model_name)
         }
 
         registerEmbeddingForCleanup(result.embedding.id as number)
@@ -174,7 +174,7 @@ describe("Batch Operations E2E Tests", () => {
 
     it("should handle batch with mixed content types", async () => {
       const batchData = {
-        items: [
+        texts: [
           {
             uri: "mixed-short",
             text: "Short text."
@@ -217,7 +217,7 @@ And a final paragraph.`
       results.forEach((result, index) => {
         expect(result.success).toBe(true)
         expect(result.embedding).toBeDefined()
-        expect(result.embedding!.text).toBe(batchData.items[index].text)
+        expect(result.embedding!.text).toBe(batchData.texts[index].text)
 
         registerEmbeddingForCleanup(result.embedding!.id as number)
       })
@@ -225,7 +225,7 @@ And a final paragraph.`
 
     it("should handle partial batch failures gracefully", async () => {
       const batchData = {
-        items: [
+        texts: [
           {
             uri: "valid-doc-1",
             text: "Valid document that should succeed."
@@ -283,7 +283,7 @@ And a final paragraph.`
 
     it("should maintain batch processing order", async () => {
       const batchData = {
-        items: [
+        texts: [
           { uri: "order-test-1", text: "First document" },
           { uri: "order-test-2", text: "Second document" },
           { uri: "order-test-3", text: "Third document" },
@@ -308,8 +308,8 @@ And a final paragraph.`
       // Results should be in the same order as input
       results.forEach((result, index) => {
         if (result.success) {
-          expect(result.embedding.uri).toBe(batchData.items[index].uri)
-          expect(result.embedding.text).toBe(batchData.items[index].text)
+          expect(result.embedding.uri).toBe(batchData.texts[index].uri)
+          expect(result.embedding.text).toBe(batchData.texts[index].text)
 
           registerEmbeddingForCleanup(result.embedding.id as number)
         }
@@ -318,7 +318,7 @@ And a final paragraph.`
 
     it("should handle batch with duplicate URIs", async () => {
       const batchData = {
-        items: [
+        texts: [
           {
             uri: "duplicate-uri-test",
             text: "First document with duplicate URI."
@@ -405,7 +405,7 @@ And a final paragraph.`
   describe("Batch Validation", () => {
     it("should reject empty batch", async () => {
       const batchData = {
-        items: []
+        texts: []
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -503,7 +503,7 @@ And a final paragraph.`
       })
 
       // Log performance for monitoring
-      console.log(`Batch processing time for ${batchSize} items: ${processingTime}ms`)
+      console.log(`Batch processing time for ${batchSize} texts: ${processingTime}ms`)
     })
   })
 })

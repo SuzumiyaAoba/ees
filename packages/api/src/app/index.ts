@@ -70,7 +70,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
@@ -94,7 +94,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
@@ -118,7 +118,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
@@ -145,7 +145,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     let embedding: Embedding | null
     try {
       embedding = await Effect.runPromise(
-        program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+        program.pipe(Effect.provide(AppLayer))
       )
     } catch (error) {
       console.error("Failed to retrieve embedding:", error)
@@ -197,7 +197,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
@@ -226,7 +226,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     })
 
     const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     if (!deleted) {
@@ -261,7 +261,7 @@ app.openapi(listModelsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
+      program.pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
