@@ -189,8 +189,9 @@ describe("Embedding Lifecycle E2E Tests", () => {
       const createdEmbedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
       registerEmbeddingForCleanup(createdEmbedding.id)
 
-      // Now retrieve it by URI
-      const getResponse = await app.request(`/embeddings/${createData.uri}`)
+      // Now retrieve it by URI and model name (use default model)
+      const defaultModel = "nomic-embed-text"
+      const getResponse = await app.request(`/embeddings/${encodeURIComponent(createData.uri)}/${encodeURIComponent(defaultModel)}`)
 
       expect([200, 404, 500]).toContain(getResponse.status)
 
@@ -211,7 +212,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
     })
 
     it("should return 404 for non-existent URI", async () => {
-      const response = await app.request("/embeddings/non-existent-uri")
+      const defaultModel = "nomic-embed-text"
+      const response = await app.request(`/embeddings/${encodeURIComponent("non-existent-uri")}/${encodeURIComponent(defaultModel)}`)
 
       expect(response.status).toBe(404)
 
@@ -335,7 +337,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       expect(deleteData).toHaveProperty("message")
 
       // Verify it's deleted by trying to retrieve it
-      const getResponse = await app.request(`/embeddings/${createData.uri}`)
+      const defaultModel = "nomic-embed-text"
+      const getResponse = await app.request(`/embeddings/${encodeURIComponent(createData.uri)}/${encodeURIComponent(defaultModel)}`)
       expect(getResponse.status).toBe(404)
     })
 
