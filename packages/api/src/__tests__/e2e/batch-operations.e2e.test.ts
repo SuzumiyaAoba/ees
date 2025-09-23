@@ -186,13 +186,7 @@ describe("Batch Operations E2E Tests", () => {
       // Register successful embeddings for cleanup
       results.forEach(result => {
         if (result.success && result.embedding) {
-<<<<<<< HEAD
-          registerEmbeddingForCleanup(result.embedding["id"] as number)
-||||||| b75dd30
-          registerEmbeddingForCleanup(result.embedding.id as number)
-=======
           registerEmbeddingForCleanup(result.embedding.id)
->>>>>>> origin/main
         }
       })
     })
@@ -405,13 +399,7 @@ And a final paragraph.`
           expect(result.embedding.text).toBe(batchData.texts[index]?.text)
 >>>>>>> origin/main
 
-<<<<<<< HEAD
-          registerEmbeddingForCleanup(result.embedding["id"] as number)
-||||||| b75dd30
-          registerEmbeddingForCleanup(result.embedding.id as number)
-=======
           registerEmbeddingForCleanup(result.embedding.id)
->>>>>>> origin/main
         }
       })
     })
@@ -483,13 +471,7 @@ And a final paragraph.`
       // Register successful embeddings for cleanup
       results.forEach(result => {
         if (result.success && result.embedding) {
-<<<<<<< HEAD
-          registerEmbeddingForCleanup(result.embedding["id"] as number)
-||||||| b75dd30
-          registerEmbeddingForCleanup(result.embedding.id as number)
-=======
           registerEmbeddingForCleanup(result.embedding.id)
->>>>>>> origin/main
         }
       })
     })
