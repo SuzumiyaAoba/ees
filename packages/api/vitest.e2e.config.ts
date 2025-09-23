@@ -16,18 +16,9 @@ export default defineConfig({
     environment: 'node',
     passWithNoTests: true,
     testTimeout: 30000, // 30 second timeout for E2E tests
-    hookTimeout: 30000, // 30 second timeout for setup/teardown
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/**',
-        'dist/**',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/coverage/**'
-      ]
-    },
+    hookTimeout: 60000, // 60 second timeout for setup/teardown
+    include: ['**/*.e2e.test.ts'], // Only E2E tests
+    exclude: ['**/node_modules/**', '**/dist/**'],
     pool: 'forks', // Use forked processes for better isolation
     poolOptions: {
       forks: {

@@ -9,6 +9,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
+    },
+    "./shared/database/connection": {
+      "types": "./dist/shared/database/connection.d.ts",
+      "import": "./dist/shared/database/connection.js",
+      "require": "./dist/shared/database/connection.js"
+    },
+    "./entities/embedding/api/embedding": {
+      "types": "./dist/entities/embedding/api/embedding.d.ts",
+      "import": "./dist/entities/embedding/api/embedding.js",
+      "require": "./dist/entities/embedding/api/embedding.js"
+    },
+    "./shared/models": {
+      "types": "./dist/shared/models/index.d.ts",
+      "import": "./dist/shared/models/index.js",
+      "require": "./dist/shared/models/index.js"
+    },
+    "./shared/application/embedding-application": {
+      "types": "./dist/shared/application/embedding-application.d.ts",
+      "import": "./dist/shared/application/embedding-application.js",
+      "require": "./dist/shared/application/embedding-application.js"
     }
   },
   "scripts": {

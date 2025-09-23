@@ -54,6 +54,36 @@ export interface ValidationErrorResponse {
   }
 }
 
+// Batch operation response types
+export interface BatchResult {
+  results: Array<{
+    success: boolean
+    embedding?: EmbeddingResponse
+    error?: string
+  }>
+  summary: {
+    total: number
+    successful: number
+    failed: number
+  }
+}
+
+// Search result response types
+export interface SearchResults {
+  results: Array<{
+    id: number
+    uri: string
+    text: string
+    score: number
+    model_name: string
+    embedding: number[]
+    created_at: string
+  }>
+  query: string
+  metric?: string
+  model_name?: string
+}
+
 // Generic API response validation
 export function isEmbeddingResponse(obj: unknown): obj is EmbeddingResponse {
   return (
@@ -111,18 +141,30 @@ export async function parseJsonResponse<T>(
   response: Response,
   guard: (obj: unknown) => obj is T
 ): Promise<T> {
-  const data: unknown = await response.json()
-  if (guard(data)) {
-    return data
+  const responseBody = await response.text()
+
+  try {
+    const data: unknown = JSON.parse(responseBody)
+    if (guard(data)) {
+      return data
+    }
+    throw new Error(`Response does not match expected type: ${JSON.stringify(data)}`)
+  } catch (error) {
+    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : 'Unknown error'}. Response body: ${responseBody.substring(0, 200)}...`)
   }
-  throw new Error(`Response does not match expected type: ${JSON.stringify(data)}`)
 }
 
 // Helper for unknown JSON responses where we need to check properties
 export async function parseUnknownJsonResponse(response: Response): Promise<Record<string, unknown>> {
-  const data: unknown = await response.json()
-  if (typeof data === 'object' && data !== null) {
-    return data as Record<string, unknown>
+  const responseBody = await response.text()
+
+  try {
+    const data: unknown = JSON.parse(responseBody)
+    if (typeof data === 'object' && data !== null) {
+      return data as Record<string, unknown>
+    }
+    throw new Error(`Response is not an object: ${typeof data}`)
+  } catch (error) {
+    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : 'Unknown error'}. Response body: ${responseBody.substring(0, 200)}...`)
   }
-  throw new Error(`Response is not an object: ${typeof data}`)
 }

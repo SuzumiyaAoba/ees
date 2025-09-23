@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # SQLite is used in memory, but we can also provide a PostgreSQL option
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ees_test
+      POSTGRES_USER: ees_test
+      POSTGRES_PASSWORD: ees_test_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ees_test -d ees_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Ollama service for embeddings
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/version || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  # Service to pull the required model
+  ollama-setup:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    command: >
+      sh -c "
+        echo 'Waiting for Ollama to be ready...' &&
+        sleep 10 &&
+        echo 'Pulling nomic-embed-text model...' &&
+        ollama pull nomic-embed-text &&
+        echo 'Model pulled successfully!'
+      "
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_test_data:
+  ollama_data:

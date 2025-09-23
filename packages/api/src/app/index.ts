@@ -1,6 +1,7 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { Effect } from "effect"
+import { Effect, Exit } from "effect"
+import type { Context } from "hono"
 import type {
   Embedding,
 } from "@ees/core"
@@ -21,6 +22,29 @@ import { rootRoute } from "./config/routes"
 import { AppLayer } from "./providers/main"
 
 /**
+ * Helper function to map Effect errors to appropriate HTTP status codes
+ */
+function handleEffectError(c: Context, cause: unknown, operation: string) {
+  console.error(`Effect error in ${operation}:`, cause)
+
+  const causeString = String(cause)
+  if (causeString.includes("ValidationError") || causeString.includes("required") || causeString.includes("invalid")) {
+    return c.json({ error: "Validation error", details: causeString }, 400)
+  }
+  if (causeString.includes("NotFound") || causeString.includes("not found")) {
+    return c.json({ error: "Resource not found", details: causeString }, 404)
+  }
+  if (causeString.includes("Unauthorized") || causeString.includes("authentication")) {
+    return c.json({ error: "Unauthorized", details: causeString }, 401)
+  }
+  if (causeString.includes("RateLimit") || causeString.includes("rate limit")) {
+    return c.json({ error: "Rate limit exceeded", details: causeString }, 429)
+  }
+
+  return c.json({ error: "Internal server error", details: causeString }, 500)
+}
+
+/**
  * EES (Embeddings API Service) - Main application
  *
  * A Hono-based REST API for managing text embeddings using multiple providers.
@@ -29,6 +53,31 @@ import { AppLayer } from "./providers/main"
 
 console.log("Initializing Hono app...")
 const app = new OpenAPIHono()
+
+console.log("Setting up error handling...")
+
+// Global error handling middleware
+app.onError((err, c) => {
+  console.error("Global error handler:", err)
+
+  // Handle validation errors (usually from Zod/OpenAPI validation)
+  if (err.message.includes("validation") || err.message.includes("required") || err.message.includes("invalid")) {
+    return c.json({ error: "Validation error", details: err.message }, 400)
+  }
+
+  // Handle JSON parsing errors
+  if (err.message.includes("JSON") || err.message.includes("parse") || err.name === "SyntaxError") {
+    return c.json({ error: "Malformed JSON in request body", details: err.message }, 400)
+  }
+
+  // Handle not found errors
+  if (err.message.includes("not found") || err.message.includes("Not Found")) {
+    return c.json({ error: "Resource not found", details: err.message }, 404)
+  }
+
+  // Default to 500 for unhandled errors
+  return c.json({ error: "Internal server error", details: err.message }, 500)
+})
 
 console.log("Setting up routes...")
 
@@ -57,26 +106,25 @@ app.route("/", providerApp)
  * Generates a new embedding for the provided text using the configured provider
  */
 app.openapi(createEmbeddingRoute, async (c) => {
-  try {
-    const { uri, text, model_name } = c.req.valid("json")
+  const { uri, text, model_name } = c.req.valid("json")
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.createEmbedding({
-        uri,
-        text,
-        modelName: model_name,
-      })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.createEmbedding({
+      uri,
+      text,
+      modelName: model_name,
     })
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    return handleEffectError(c, exit.cause, "createEmbedding")
   }
 })
 
@@ -85,22 +133,21 @@ app.openapi(createEmbeddingRoute, async (c) => {
  * Processes multiple texts in a single request for efficient bulk embedding generation
  */
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
-  try {
-    const request = c.req.valid("json")
+  const request = c.req.valid("json")
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.createBatchEmbeddings(request)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.createBatchEmbeddings(request)
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    return handleEffectError(c, exit.cause, "batchCreateEmbedding")
   }
 })
 
@@ -109,22 +156,21 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
  * Finds similar embeddings using vector similarity search with configurable metrics
  */
 app.openapi(searchEmbeddingsRoute, async (c) => {
-  try {
-    const request = c.req.valid("json")
+  const request = c.req.valid("json")
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.searchEmbeddings(request)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.searchEmbeddings(request)
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    return handleEffectError(c, exit.cause, "searchEmbeddings")
   }
 })
 
@@ -133,33 +179,31 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
  * Retrieves a specific embedding using its unique URI identifier
  */
 app.openapi(getEmbeddingByUriRoute, async (c) => {
-  try {
-    const { uri } = c.req.valid("param")
-    const decodedUri = decodeURIComponent(uri)
+  const { uri } = c.req.valid("param")
+  const decodedUri = decodeURIComponent(uri)
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.getEmbeddingByUri(decodedUri)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.getEmbeddingByUri(decodedUri)
+  })
 
-    let embedding: Embedding | null
-    try {
-      embedding = await Effect.runPromise(
-        program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-      )
-    } catch (error) {
-      console.error("Failed to retrieve embedding:", error)
-      embedding = null
-    }
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
+  if (Exit.isSuccess(exit)) {
+    const embedding = exit.value
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
     }
-
     return c.json(embedding, 200)
-  } catch (error) {
-    console.error("Failed to retrieve embedding:", error)
-    return c.json({ error: "Failed to retrieve embedding" }, 500)
+  } else {
+    // For getByUri, treat most errors as "not found"
+    const causeString = String(exit.cause)
+    if (causeString.includes("NotFound") || causeString.includes("not found")) {
+      return c.json({ error: "Embedding not found" }, 404)
+    }
+    return handleEffectError(c, exit.cause, "getEmbeddingByUri")
   }
 })
 
@@ -168,42 +212,41 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
  * Returns paginated list of embeddings with optional filtering by URI and model
  */
 app.openapi(listEmbeddingsRoute, async (c) => {
-  try {
-    const { uri, model_name, page, limit } = c.req.valid("query")
+  const { uri, model_name, page, limit } = c.req.valid("query")
 
-    // Build filters object, always include page and limit for pagination
-    const filters: {
-      uri?: string
-      modelName?: string
-      page: number
-      limit: number
-    } = {
-      page: page || 1,
-      limit: limit || 10,
-    }
+  // Build filters object, always include page and limit for pagination
+  const filters: {
+    uri?: string
+    modelName?: string
+    page: number
+    limit: number
+  } = {
+    page: page || 1,
+    limit: limit || 10,
+  }
 
-    // Only add optional filters if they were explicitly provided
-    const queryParams = c.req.query()
-    if (queryParams["uri"] && uri) {
-      filters.uri = uri
-    }
-    if (queryParams["model_name"] && model_name) {
-      filters.modelName = model_name
-    }
+  // Only add optional filters if they were explicitly provided
+  const queryParams = c.req.query()
+  if (queryParams["uri"] && uri) {
+    filters.uri = uri
+  }
+  if (queryParams["model_name"] && model_name) {
+    filters.modelName = model_name
+  }
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.listEmbeddings(filters)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.listEmbeddings(filters)
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    return handleEffectError(c, exit.cause, "listEmbeddings")
   }
 })
 
@@ -212,31 +255,35 @@ app.openapi(listEmbeddingsRoute, async (c) => {
  * Removes an embedding from the database by its ID
  */
 app.openapi(deleteEmbeddingRoute, async (c) => {
-  try {
-    const { id: idStr } = c.req.valid("param")
-    const id = Number(idStr)
+  const { id: idStr } = c.req.valid("param")
+  const id = Number(idStr)
 
-    if (Number.isNaN(id)) {
-      return c.json({ error: "Invalid ID parameter" }, 400)
-    }
+  if (Number.isNaN(id)) {
+    return c.json({ error: "Invalid ID parameter" }, 400)
+  }
 
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.deleteEmbedding(id)
-    })
+  const program = Effect.gen(function* () {
+    const appService = yield* EmbeddingApplicationService
+    return yield* appService.deleteEmbedding(id)
+  })
 
-    const deleted = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
+  if (Exit.isSuccess(exit)) {
+    const deleted = exit.value
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)
     }
-
     return c.json({ message: "Embedding deleted successfully" }, 200)
-  } catch (error) {
-    console.error("Unexpected error:", error)
-    return c.json({ error: "Internal server error" }, 500)
+  } else {
+    // For delete, treat most errors as "not found"
+    const causeString = String(exit.cause)
+    if (causeString.includes("NotFound") || causeString.includes("not found")) {
+      return c.json({ error: "Embedding not found" }, 404)
+    }
+    return handleEffectError(c, exit.cause, "deleteEmbedding")
   }
 })
 
@@ -245,29 +292,28 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
  * Returns all models available through configured providers including environment variables and Ollama response
  */
 app.openapi(listModelsRoute, async (c) => {
-  try {
-    const program = Effect.gen(function* () {
-      const modelManager = yield* ModelManagerTag
-      const models = yield* modelManager.listAvailableModels()
+  const program = Effect.gen(function* () {
+    const modelManager = yield* ModelManagerTag
+    const models = yield* modelManager.listAvailableModels()
 
-      // Extract unique providers from models
-      const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
+    // Extract unique providers from models
+    const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
 
-      return {
-        models,
-        count: models.length,
-        providers
-      }
-    })
+    return {
+      models,
+      count: models.length,
+      providers
+    }
+  })
 
-    const result = await Effect.runPromise(
-      program.pipe(Effect.provide(AppLayer)) as Effect.Effect<never, never, never>
-    )
+  const exit = await Effect.runPromiseExit(
+    program.pipe(Effect.provide(AppLayer))
+  )
 
-    return c.json(result, 200)
-  } catch (error) {
-    console.error("Failed to retrieve models:", error)
-    return c.json({ error: "Failed to retrieve models from providers" }, 500)
+  if (Exit.isSuccess(exit)) {
+    return c.json(exit.value, 200)
+  } else {
+    return handleEffectError(c, exit.cause, "listModels")
   }
 })
 
