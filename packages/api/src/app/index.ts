@@ -1,7 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { Effect, Exit } from "effect"
-import type { Context } from "hono"
+import { Effect } from "effect"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -16,30 +15,8 @@ import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
-import { AppLayer } from "./providers/main"
+import { runEffectProgram } from "@/shared/effect-runner"
 
-/**
- * Helper function to map Effect errors to appropriate HTTP status codes
- */
-function handleEffectError(c: Context, cause: unknown, operation: string) {
-  console.error(`Effect error in ${operation}:`, cause)
-
-  const causeString = String(cause)
-  if (causeString.includes("ValidationError") || causeString.includes("required") || causeString.includes("invalid")) {
-    return c.json({ error: "Validation error", details: causeString }, 400)
-  }
-  if (causeString.includes("NotFound") || causeString.includes("not found")) {
-    return c.json({ error: "Resource not found", details: causeString }, 404)
-  }
-  if (causeString.includes("Unauthorized") || causeString.includes("authentication")) {
-    return c.json({ error: "Unauthorized", details: causeString }, 401)
-  }
-  if (causeString.includes("RateLimit") || causeString.includes("rate limit")) {
-    return c.json({ error: "Rate limit exceeded", details: causeString }, 429)
-  }
-
-  return c.json({ error: "Internal server error", details: causeString }, 500)
-}
 
 /**
  * EES (Embeddings API Service) - Main application
@@ -102,7 +79,6 @@ app.route("/", providerApp)
  * Create embedding endpoint
  * Generates a new embedding for the provided text using the configured provider
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(createEmbeddingRoute, async (c) => {
   const { uri, text, model_name } = c.req.valid("json")
 
@@ -115,23 +91,13 @@ app.openapi(createEmbeddingRoute, async (c) => {
     })
   })
 
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    return c.json(exit.value, 200)
-  } else {
-    return handleEffectError(c, exit.cause, "createEmbedding")
-  }
+  return runEffectProgram(program, c, "createEmbedding")
 })
 
 /**
  * Batch create embeddings endpoint
  * Processes multiple texts in a single request for efficient bulk embedding generation
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -140,23 +106,13 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     return yield* appService.createBatchEmbeddings(request)
   })
 
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    return c.json(exit.value, 200)
-  } else {
-    return handleEffectError(c, exit.cause, "batchCreateEmbedding")
-  }
+  return runEffectProgram(program, c, "batchCreateEmbedding")
 })
 
 /**
  * Search embeddings endpoint
  * Finds similar embeddings using vector similarity search with configurable metrics
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(searchEmbeddingsRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -165,58 +121,33 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     return yield* appService.searchEmbeddings(request)
   })
 
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    return c.json(exit.value, 200)
-  } else {
-    return handleEffectError(c, exit.cause, "searchEmbeddings")
-  }
+  return runEffectProgram(program, c, "searchEmbeddings")
 })
 
 /**
  * Get embedding by URI endpoint
  * Retrieves a specific embedding using its unique URI identifier
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(getEmbeddingByUriRoute, async (c) => {
   const { uri } = c.req.valid("param")
   const decodedUri = decodeURIComponent(uri)
 
   const program = Effect.gen(function* () {
     const appService = yield* EmbeddingApplicationService
-    return yield* appService.getEmbeddingByUri(decodedUri)
-  })
-
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    const embedding = exit.value
+    const embedding = yield* appService.getEmbeddingByUri(decodedUri)
     if (!embedding) {
       return c.json({ error: "Embedding not found" }, 404)
     }
-    return c.json(embedding, 200)
-  } else {
-    // For getByUri, treat most errors as "not found"
-    const causeString = String(exit.cause)
-    if (causeString.includes("NotFound") || causeString.includes("not found")) {
-      return c.json({ error: "Embedding not found" }, 404)
-    }
-    return handleEffectError(c, exit.cause, "getEmbeddingByUri")
-  }
+    return embedding
+  })
+
+  return runEffectProgram(program, c, "getEmbeddingByUri")
 })
 
 /**
  * List embeddings endpoint
  * Returns paginated list of embeddings with optional filtering by URI and model
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(listEmbeddingsRoute, async (c) => {
   const { uri, model_name, page, limit } = c.req.valid("query")
 
@@ -245,23 +176,13 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     return yield* appService.listEmbeddings(filters)
   })
 
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    return c.json(exit.value, 200)
-  } else {
-    return handleEffectError(c, exit.cause, "listEmbeddings")
-  }
+  return runEffectProgram(program, c, "listEmbeddings")
 })
 
 /**
  * Delete embedding endpoint
  * Removes an embedding from the database by its ID
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(deleteEmbeddingRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
   const id = Number(idStr)
@@ -272,35 +193,20 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
 
   const program = Effect.gen(function* () {
     const appService = yield* EmbeddingApplicationService
-    return yield* appService.deleteEmbedding(id)
-  })
-
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    const deleted = exit.value
+    const deleted = yield* appService.deleteEmbedding(id)
     if (!deleted) {
       return c.json({ error: "Embedding not found" }, 404)
     }
-    return c.json({ message: "Embedding deleted successfully" }, 200)
-  } else {
-    // For delete, treat most errors as "not found"
-    const causeString = String(exit.cause)
-    if (causeString.includes("NotFound") || causeString.includes("not found")) {
-      return c.json({ error: "Embedding not found" }, 404)
-    }
-    return handleEffectError(c, exit.cause, "deleteEmbedding")
-  }
+    return { message: "Embedding deleted successfully" }
+  })
+
+  return runEffectProgram(program, c, "deleteEmbedding")
 })
 
 /**
  * List available models endpoint
  * Returns all models available through configured providers including environment variables and Ollama response
  */
-// @ts-expect-error - OpenAPI Hono handler type compatibility issue with error handling
 app.openapi(listModelsRoute, async (c) => {
   const program = Effect.gen(function* () {
     const modelManager = yield* ModelManagerTag
@@ -316,16 +222,7 @@ app.openapi(listModelsRoute, async (c) => {
     }
   })
 
-  const exit = await Effect.runPromiseExit(
-    // @ts-expect-error - Effect type system interaction with exactOptionalPropertyTypes
-    program.pipe(Effect.provide(AppLayer))
-  )
-
-  if (Exit.isSuccess(exit)) {
-    return c.json(exit.value, 200)
-  } else {
-    return handleEffectError(c, exit.cause, "listModels")
-  }
+  return runEffectProgram(program, c, "listModels")
 })
 
 /**

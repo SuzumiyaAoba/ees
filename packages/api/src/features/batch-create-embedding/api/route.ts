@@ -2,8 +2,8 @@ import { createRoute } from "@hono/zod-openapi"
 import {
   BatchCreateEmbeddingRequestSchema,
   BatchCreateEmbeddingResponseSchema,
-  ErrorResponseSchema,
 } from "@ees/core"
+import { createResponsesWithErrors } from "@/shared/openapi-responses"
 
 // Batch create embedding route
 export const batchCreateEmbeddingRoute = createRoute({
@@ -22,7 +22,7 @@ export const batchCreateEmbeddingRoute = createRoute({
       },
     },
   },
-  responses: {
+  responses: createResponsesWithErrors({
     200: {
       description: "Batch embedding creation completed",
       content: {
@@ -31,13 +31,5 @@ export const batchCreateEmbeddingRoute = createRoute({
         },
       },
     },
-    500: {
-      description: "Internal server error",
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
+  }),
 })

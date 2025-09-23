@@ -1,9 +1,9 @@
 import { createRoute } from "@hono/zod-openapi"
 import {
-  ErrorResponseSchema,
   SearchEmbeddingRequestSchema,
   SearchEmbeddingResponseSchema,
 } from "@ees/core"
+import { createResponsesWithErrors } from "@/shared/openapi-responses"
 
 // Search embeddings route
 export const searchEmbeddingsRoute = createRoute({
@@ -21,7 +21,7 @@ export const searchEmbeddingsRoute = createRoute({
       },
     },
   },
-  responses: {
+  responses: createResponsesWithErrors({
     200: {
       description: "Search results",
       content: {
@@ -30,13 +30,5 @@ export const searchEmbeddingsRoute = createRoute({
         },
       },
     },
-    500: {
-      description: "Internal server error",
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
+  }),
 })

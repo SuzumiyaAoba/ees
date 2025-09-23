@@ -3,10 +3,9 @@ import {
   EmbeddingQuerySchema,
   EmbeddingSchema,
   EmbeddingsListResponseSchema,
-  ErrorResponseSchema,
-  NotFoundResponseSchema,
   UriParamSchema,
 } from "@ees/core"
+import { createResponsesWithErrors } from "@/shared/openapi-responses"
 
 // List embeddings route
 export const listEmbeddingsRoute = createRoute({
@@ -19,7 +18,7 @@ export const listEmbeddingsRoute = createRoute({
   request: {
     query: EmbeddingQuerySchema,
   },
-  responses: {
+  responses: createResponsesWithErrors({
     200: {
       description: "List of embeddings",
       content: {
@@ -28,15 +27,7 @@ export const listEmbeddingsRoute = createRoute({
         },
       },
     },
-    500: {
-      description: "Internal server error",
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
+  }),
 })
 
 // Get embedding by URI route
@@ -49,7 +40,7 @@ export const getEmbeddingByUriRoute = createRoute({
   request: {
     params: UriParamSchema,
   },
-  responses: {
+  responses: createResponsesWithErrors({
     200: {
       description: "Embedding details",
       content: {
@@ -58,21 +49,5 @@ export const getEmbeddingByUriRoute = createRoute({
         },
       },
     },
-    404: {
-      description: "Embedding not found",
-      content: {
-        "application/json": {
-          schema: NotFoundResponseSchema,
-        },
-      },
-    },
-    500: {
-      description: "Internal server error",
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-    },
-  },
+  }),
 })
