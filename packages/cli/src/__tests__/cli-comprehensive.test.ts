@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { Effect } from "effect"
-import { createCLICommands, runCLICommand } from "../index"
+import { createCLICommands, runCLICommand } from "@/index"
 
 // Mock all external dependencies
 vi.mock("@ees/core", () => ({

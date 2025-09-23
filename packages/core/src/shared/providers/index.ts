@@ -13,7 +13,7 @@ export {
   getOpenAIConfig,
   getProviderConfigSummary,
   validateProviderConfig,
-} from "../config/providers"
+} from "@/shared/config/providers"
 // Provider implementations
 export {
   AzureProviderService,

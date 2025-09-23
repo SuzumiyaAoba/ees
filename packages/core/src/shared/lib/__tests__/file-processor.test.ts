@@ -16,7 +16,7 @@ import {
   type FileProcessorConfig,
   processFile,
   processFiles,
-} from "../file-processor"
+} from "@/shared/lib/file-processor"
 
 describe("File Processor", () => {
   let testDir: string

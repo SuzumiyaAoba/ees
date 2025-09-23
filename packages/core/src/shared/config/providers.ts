@@ -3,7 +3,7 @@
  * Handles environment-based configuration for embedding providers
  */
 
-import { getEnv, getEnvWithDefault } from "../lib/env"
+import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
 import type {
   AzureConfig,
   CohereConfig,
@@ -12,7 +12,7 @@ import type {
   OllamaConfig,
   OpenAIConfig,
   ProviderConfig,
-} from "../providers/types"
+} from "@/shared/providers/types"
 
 /**
  * Environment variable keys for provider configuration

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Button } from './ui/Button'
-import { Card } from './ui/Card'
-import { Input } from './ui/Input'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
 import { apiClient } from '@/services/api'
 import type { ModelInfo, MigrationResponse, CompatibilityResponse } from '@/types/api'
 

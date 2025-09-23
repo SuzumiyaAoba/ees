@@ -39,7 +39,7 @@ vi.mock("@ees/core", () => {
   }
 })
 
-import { createCLICommands, runCLICommand } from "../index"
+import { createCLICommands, runCLICommand } from "@/index"
 
 describe("CLI Implementation Tests", () => {
   let testDir: string

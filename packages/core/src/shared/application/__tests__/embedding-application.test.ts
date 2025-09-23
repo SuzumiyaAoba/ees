@@ -4,7 +4,7 @@
 
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { EmbeddingService } from "../../../entities/embedding/api/embedding.js"
+import { EmbeddingService } from "@/entities/embedding/api/embedding.js"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -13,12 +13,12 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "../../../entities/embedding/model/embedding"
-import { DatabaseService } from "../../database/connection"
+} from "@/entities/embedding/model/embedding"
+import { DatabaseService } from "@/shared/database/connection"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
-} from "../embedding-application"
+} from "@/shared/application/embedding-application"
 
 describe("EmbeddingApplicationService", () => {
   let mockEmbeddingService: {

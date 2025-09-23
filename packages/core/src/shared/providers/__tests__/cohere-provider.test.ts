@@ -4,8 +4,8 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { Effect } from "effect"
-import { createCohereProvider, CohereProviderService } from "../cohere-provider"
-import type { CohereConfig } from "../types"
+import { createCohereProvider, CohereProviderService } from "@/shared/providers/cohere-provider"
+import type { CohereConfig } from "@/shared/providers/types"
 
 // Mock the external dependencies
 vi.mock("@ai-sdk/cohere", () => ({

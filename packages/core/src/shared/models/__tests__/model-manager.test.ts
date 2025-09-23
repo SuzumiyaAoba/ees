@@ -10,9 +10,9 @@ import {
   type EmbeddingResponse,
   ProviderConnectionError,
   ProviderModelError,
-} from "../../providers"
-import { DatabaseService } from "../../database"
-import { DatabaseQueryError } from "../../errors/database"
+} from "@/shared/providers"
+import { DatabaseService } from "@/shared/database"
+import { DatabaseQueryError } from "@/shared/errors/database"
 import {
   ModelManagerTag as ModelManager,
   ModelManagerLive,
@@ -22,7 +22,7 @@ import {
   ModelNotFoundError,
   ModelIncompatibleError,
   MigrationError,
-} from "../"
+} from "@/shared/models"
 
 describe("ModelManager", () => {
   let mockProviderService: typeof EmbeddingProviderService.Service

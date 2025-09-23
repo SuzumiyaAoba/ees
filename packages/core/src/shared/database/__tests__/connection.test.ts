@@ -7,8 +7,8 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { DatabaseService, DatabaseServiceLive } from "../connection"
-import { DatabaseConnectionError } from "../../errors/database"
+import { DatabaseService, DatabaseServiceLive } from "@/shared/database/connection"
+import { DatabaseConnectionError } from "@/shared/errors/database"
 
 // Mock node:fs functions for error testing
 vi.mock("node:fs", async () => {
