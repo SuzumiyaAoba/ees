@@ -68,6 +68,39 @@ export interface BatchResult {
   }
 }
 
+// Type guard for batch results
+export function isBatchResult(obj: unknown): obj is BatchResult {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'results' in obj &&
+    'summary' in obj &&
+    Array.isArray((obj as BatchResult).results)
+  )
+}
+
+// List embeddings response type
+export interface EmbeddingListResponse {
+  embeddings: EmbeddingResponse[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+// Type guard for embedding list response
+export function isEmbeddingListResponse(obj: unknown): obj is EmbeddingListResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'embeddings' in obj &&
+    'pagination' in obj &&
+    Array.isArray((obj as EmbeddingListResponse).embeddings)
+  )
+}
+
 // Search result response types
 export interface SearchResults {
   results: Array<{

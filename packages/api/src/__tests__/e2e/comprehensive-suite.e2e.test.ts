@@ -34,7 +34,7 @@ describe("Comprehensive E2E Test Suite", () => {
     console.log(`📊 Test started at: ${new Date().toISOString()}`)
 
     // Check for CI environment and external service availability
-    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true'
+    const isCI = process.env['CI'] === 'true' || process.env['GITHUB_ACTIONS'] === 'true'
     if (isCI) {
       console.log("🔧 CI environment detected - checking service readiness...")
 

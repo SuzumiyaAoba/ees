@@ -143,7 +143,7 @@ export async function waitForServices(timeout: number = 30000): Promise<boolean>
 
           if (testResponse.status === 200) {
             // Clean up the test embedding
-            const embedding = await testResponse.json()
+            const embedding = await testResponse.json() as { id?: number }
             if (embedding.id) {
               await app.request(`/embeddings/${embedding.id}`, {
                 method: "DELETE"

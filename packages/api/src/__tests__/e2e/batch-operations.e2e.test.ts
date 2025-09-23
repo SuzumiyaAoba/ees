@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "../e2e-setup"
-import { parseUnknownJsonResponse } from "../types/test-types"
+import { parseJsonResponse, parseUnknownJsonResponse, isBatchResult, BatchResult } from "../types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -126,21 +126,23 @@ describe("Batch Operations E2E Tests", () => {
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding: Record<string, unknown>}>
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const results = batchResult.results
 
       expect(results.length).toBe(2)
 
       // Both should succeed
       results.forEach((result, index) => {
         expect(result.success).toBe(true)
-        expect(result.embedding.uri).toBe(batchData.texts[index].uri)
+        if (result.embedding) {
+          expect(result.embedding.uri).toBe(batchData.texts[index]?.uri)
 
-        if (batchData.texts[index].model_name) {
-          expect(result.embedding.model_name).toBe(batchData.texts[index].model_name)
+          if (batchData.texts[index]?.model_name) {
+            expect(result.embedding.model_name).toBe(batchData.texts[index]?.model_name)
+          }
+
+          registerEmbeddingForCleanup(result.embedding.id)
         }
-
-        registerEmbeddingForCleanup(result.embedding.id as number)
       })
     })
 
@@ -172,9 +174,8 @@ describe("Batch Operations E2E Tests", () => {
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
-      const summary = batchResult.summary as {total: number, successful: number, failed: number}
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results, summary } = batchResult
 
       expect(results.length).toBe(batchSize)
       expect(summary.total).toBe(batchSize)
@@ -185,7 +186,7 @@ describe("Batch Operations E2E Tests", () => {
       // Register successful embeddings for cleanup
       results.forEach(result => {
         if (result.success && result.embedding) {
-          registerEmbeddingForCleanup(result.embedding.id as number)
+          registerEmbeddingForCleanup(result.embedding.id)
         }
       })
     })
@@ -233,16 +234,17 @@ And a final paragraph.`
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results } = batchResult
 
       // All should succeed
       results.forEach((result, index) => {
         expect(result.success).toBe(true)
         expect(result.embedding).toBeDefined()
-        expect(result.embedding!.text).toBe(batchData.texts[index].text)
-
-        registerEmbeddingForCleanup(result.embedding!.id as number)
+        if (result.embedding) {
+          expect(result.embedding.text).toBe(batchData.texts[index]?.text)
+          registerEmbeddingForCleanup(result.embedding.id)
+        }
       })
     })
 
@@ -283,28 +285,29 @@ And a final paragraph.`
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>, error?: string}>
-      const summary = batchResult.summary as {total: number, successful: number, failed: number}
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results, summary } = batchResult
 
       expect(results.length).toBe(4)
       expect(summary.total).toBe(4)
       expect(summary.successful + summary.failed).toBe(4)
 
       // Check specific results
-      expect(results[0].success).toBe(true) // valid-doc-1
-      expect(results[1].success).toBe(false) // empty URI
-      expect(results[2].success).toBe(true) // valid-doc-2
-      expect(results[3].success).toBe(false) // empty text
+      expect(results[0]?.success).toBe(true) // valid-doc-1
+      expect(results[1]?.success).toBe(false) // empty URI
+      expect(results[2]?.success).toBe(true) // valid-doc-2
+      expect(results[3]?.success).toBe(false) // empty text
 
       // Failed items should have error messages
-      results.forEach((result, index) => {
+      results.forEach((result) => {
         if (!result.success) {
           expect(result).toHaveProperty("error")
           expect(typeof result.error).toBe("string")
         } else {
           expect(result.embedding).toBeDefined()
-          registerEmbeddingForCleanup(result.embedding!.id as number)
+          if (result.embedding) {
+            registerEmbeddingForCleanup(result.embedding.id)
+          }
         }
       })
     })
@@ -335,16 +338,16 @@ And a final paragraph.`
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding: Record<string, unknown>}>
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results } = batchResult
 
       // Results should be in the same order as input
       results.forEach((result, index) => {
-        if (result.success) {
-          expect(result.embedding.uri).toBe(batchData.texts[index].uri)
-          expect(result.embedding.text).toBe(batchData.texts[index].text)
+        if (result.success && result.embedding) {
+          expect(result.embedding.uri).toBe(batchData.texts[index]?.uri)
+          expect(result.embedding.text).toBe(batchData.texts[index]?.text)
 
-          registerEmbeddingForCleanup(result.embedding.id as number)
+          registerEmbeddingForCleanup(result.embedding.id)
         }
       })
     })
@@ -382,21 +385,25 @@ And a final paragraph.`
         return
       }
 
-      const batchResult = await parseUnknownJsonResponse(response)
-      const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>, error?: string}>
+      const batchResult = await parseJsonResponse(response, isBatchResult)
+      const { results } = batchResult
 
       // The behavior depends on implementation - either all succeed or duplicates fail
       expect(results.length).toBe(3)
 
       // At least the unique URI should succeed
       const uniqueResult = results[1]
-      expect(uniqueResult.success).toBe(true)
-      expect(uniqueResult.embedding!.uri).toBe("unique-uri-test")
+      if (uniqueResult) {
+        expect(uniqueResult.success).toBe(true)
+        if (uniqueResult.embedding) {
+          expect(uniqueResult.embedding.uri).toBe("unique-uri-test")
+        }
+      }
 
       // Register successful embeddings for cleanup
       results.forEach(result => {
         if (result.success && result.embedding) {
-          registerEmbeddingForCleanup(result.embedding.id as number)
+          registerEmbeddingForCleanup(result.embedding.id)
         }
       })
     })
@@ -427,13 +434,13 @@ And a final paragraph.`
       expect([200, 202, 400, 408, 413, 500]).toContain(response.status)
 
       if (response.status === 200) {
-        const batchResult = await parseUnknownJsonResponse(response)
-        const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
+        const batchResult = await parseJsonResponse(response, isBatchResult)
+        const { results } = batchResult
 
         // Register successful embeddings for cleanup
         results.forEach(result => {
           if (result.success && result.embedding) {
-            registerEmbeddingForCleanup(result.embedding.id as number)
+            registerEmbeddingForCleanup(result.embedding.id)
           }
         })
       }
