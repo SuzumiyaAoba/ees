@@ -6,7 +6,12 @@ import { mkdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect } from "effect"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+// Mock pdf-parse to avoid loading test files during import
+vi.mock("pdf-parse", () => ({
+  default: vi.fn()
+}))
 import {
   SUPPORTED_FILE_TYPES,
   UnsupportedFileTypeError,
@@ -444,10 +449,67 @@ describe("File Processor", () => {
       })
     })
 
-    describe("error handling", () => {
-      it("should handle PDF files with not implemented error", async () => {
-        const file = createMockFile("document.pdf", "fake pdf content", "application/pdf")
+    describe("PDF processing", () => {
+      const createMockPDFFile = (name: string): File => {
+        const pdfContent = "fake pdf content"
+        return new File([pdfContent], name, { type: "application/pdf" })
+      }
 
+      beforeEach(async () => {
+        // Reset the pdf-parse mock before each test
+        vi.mocked(await import("pdf-parse")).default.mockReset()
+      })
+
+      it("should process valid PDF files successfully", async () => {
+        const mockPdfParse = vi.mocked(await import("pdf-parse")).default
+        mockPdfParse.mockResolvedValue({
+          text: "Hello World from PDF",
+          numpages: 1,
+          numrender: 1,
+          info: {},
+          metadata: null,
+          version: "1.4"
+        })
+
+        const file = createMockPDFFile("document.pdf")
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("document.pdf")
+        expect(result.contentType).toBe("application/pdf")
+        expect(result.content).toBe("Hello World from PDF")
+        expect(result.size).toBe(file.size)
+        expect(mockPdfParse).toHaveBeenCalledTimes(1)
+      })
+
+      it("should handle PDF files with no text content", async () => {
+        const mockPdfParse = vi.mocked(await import("pdf-parse")).default
+        mockPdfParse.mockResolvedValue({
+          text: "",
+          numpages: 1,
+          numrender: 1,
+          info: {},
+          metadata: null,
+          version: "1.4"
+        })
+
+        const file = createMockPDFFile("empty.pdf")
+        const result = await Effect.runPromiseExit(processFile(file))
+
+        expect(result._tag).toBe("Failure")
+        if (result._tag === "Failure") {
+          expect(result.cause._tag).toBe("Fail")
+          if (result.cause._tag === "Fail") {
+            expect(result.cause.error).toBeInstanceOf(FileProcessingError)
+            expect(result.cause.error.message).toContain("Failed to process file empty.pdf")
+          }
+        }
+      })
+
+      it("should handle corrupted PDF files", async () => {
+        const mockPdfParse = vi.mocked(await import("pdf-parse")).default
+        mockPdfParse.mockRejectedValue(new Error("Invalid PDF structure"))
+
+        const file = createMockPDFFile("corrupted.pdf")
         const result = await Effect.runPromiseExit(processFile(file))
 
         expect(result._tag).toBe("Failure")
@@ -456,6 +518,44 @@ describe("File Processor", () => {
           if (result.cause._tag === "Fail") {
             expect(result.cause.error).toBeInstanceOf(FileProcessingError)
             expect(result.cause.error.message).toContain("Failed to process file")
+          }
+        }
+      })
+
+      it("should clean up extracted PDF text", async () => {
+        const mockPdfParse = vi.mocked(await import("pdf-parse")).default
+        mockPdfParse.mockResolvedValue({
+          text: "Text    with     multiple    spaces\n\n\n\nAnd multiple newlines   ",
+          numpages: 1,
+          numrender: 1,
+          info: {},
+          metadata: null,
+          version: "1.4"
+        })
+
+        const file = createMockPDFFile("messy.pdf")
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.content).not.toContain("    ") // No multiple spaces
+        expect(result.content).not.toMatch(/\n{3,}/) // No triple newlines
+        // Check that the text was properly cleaned up
+        expect(result.content.trim()).toBe("Text with multiple spaces And multiple newlines")
+      })
+    })
+
+    describe("error handling", () => {
+      it("should handle unsupported document types", async () => {
+        // Test other document types that are not yet implemented
+        const file = createMockFile("document.docx", "fake docx content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+        const result = await Effect.runPromiseExit(processFile(file))
+
+        expect(result._tag).toBe("Failure")
+        if (result._tag === "Failure") {
+          expect(result.cause._tag).toBe("Fail")
+          if (result.cause._tag === "Fail") {
+            expect(result.cause.error).toBeInstanceOf(UnsupportedFileTypeError)
+            expect(result.cause.error.message).toContain("Unsupported file type")
           }
         }
       })

@@ -4,6 +4,7 @@
  */
 
 import { Effect } from "effect"
+import pdfParse from "pdf-parse"
 
 /**
  * Supported file types for text extraction
@@ -118,6 +119,31 @@ const isSupportedFileType = (filename: string, mimeType: string): boolean => {
 }
 
 /**
+ * Extract text from PDF file using pdf-parse library
+ */
+const extractTextFromPDF = async (file: File): Promise<string> => {
+  try {
+    const buffer = await file.arrayBuffer()
+    const data = await pdfParse(Buffer.from(buffer))
+
+    // Clean up the extracted text
+    const cleanText = data.text
+      .replace(/\s+/g, ' ') // Replace multiple whitespaces with single space
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+      .trim()
+
+    if (!cleanText || cleanText.length === 0) {
+      throw new Error('No text content found in PDF file')
+    }
+
+    return cleanText
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to extract text from PDF: ${errorMessage}`)
+  }
+}
+
+/**
  * Extract text content from file based on its type
  */
 const extractTextContent = async (
@@ -126,8 +152,7 @@ const extractTextContent = async (
 ): Promise<string> => {
   const extension = getFileExtension(file.name)
 
-  // For now, we'll handle text-based files directly
-  // Future: Add PDF processing, document parsing, etc.
+  // Process different file types based on their extensions and content
 
   if (SUPPORTED_FILE_TYPES.TEXT.includes(extension) ||
       SUPPORTED_FILE_TYPES.CODE.includes(extension) ||
@@ -135,9 +160,13 @@ const extractTextContent = async (
     return await file.text()
   }
 
-  // Future: Add PDF processing
-  if (extension === '.pdf') {
-    throw new Error('PDF processing not yet implemented')
+  // Document processing (PDF, etc.)
+  if (SUPPORTED_FILE_TYPES.DOCUMENT.includes(extension)) {
+    if (extension === '.pdf') {
+      return await extractTextFromPDF(file)
+    }
+    // Future: Add support for other document types (docx, odt, etc.)
+    throw new Error(`Document type ${extension} is not yet supported`)
   }
 
   // Fallback: try to read as text
