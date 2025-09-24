@@ -171,6 +171,76 @@ export interface EmbeddingService {
 export const EmbeddingService =
   Context.GenericTag<EmbeddingService>("EmbeddingService")
 
+/**
+ * SQL query constants for improved security and maintainability
+ */
+const EMBEDDING_QUERIES = {
+  INSERT_OR_UPDATE: `
+    INSERT INTO embeddings (uri, text, model_name, embedding)
+    VALUES (?, ?, ?, vector(?))
+    ON CONFLICT(uri) DO UPDATE SET
+      text = excluded.text,
+      model_name = excluded.model_name,
+      embedding = excluded.embedding,
+      updated_at = CURRENT_TIMESTAMP
+    RETURNING id
+  `,
+  VECTOR_SEARCH_COSINE: `
+    SELECT
+      e.id,
+      e.uri,
+      e.text,
+      e.model_name,
+      (1.0 - vector_distance_cos(e.embedding, vector(?))) as similarity,
+      e.created_at,
+      e.updated_at
+    FROM vector_top_k('idx_embeddings_vector', vector(?), ?) as v
+    INNER JOIN embeddings as e ON v.id = e.rowid
+    WHERE e.model_name = ?
+  `,
+  VECTOR_SEARCH_FALLBACK: `
+    SELECT
+      id,
+      uri,
+      text,
+      model_name,
+      vector_distance_cos(embedding, vector(?)) as distance,
+      created_at,
+      updated_at
+    FROM embeddings
+    WHERE model_name = ?
+    ORDER BY distance ASC
+    LIMIT ?
+  `
+} as const
+
+/**
+ * Input validation for embedding operations
+ */
+const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, DatabaseQueryError> => {
+  if (!uri.trim()) {
+    return Effect.fail(new DatabaseQueryError({
+      message: "URI cannot be empty",
+      cause: new Error("Invalid URI parameter"),
+    }))
+  }
+
+  if (!text.trim()) {
+    return Effect.fail(new DatabaseQueryError({
+      message: "Text content cannot be empty",
+      cause: new Error("Invalid text parameter"),
+    }))
+  }
+
+  if (uri.length > 2048) { // Reasonable URI length limit
+    return Effect.fail(new DatabaseQueryError({
+      message: "URI exceeds maximum length of 2048 characters",
+      cause: new Error("URI too long"),
+    }))
+  }
+
+  return Effect.void
+}
 
 // Note: _calculateSimilarity function was removed as it's unused
 // Individual similarity functions are kept for potential future use
@@ -179,8 +249,22 @@ const make = Effect.gen(function* () {
   const { db, client } = yield* DatabaseService
   const providerService = yield* EmbeddingProviderService
 
-  const createEmbedding = (uri: string, text: string, modelName?: string) =>
+  /**
+   * Helper function to create a single embedding with input validation
+   * Eliminates code duplication between regular and batch operations
+   */
+  const createSingleEmbedding = (
+    uri: string,
+    text: string,
+    modelName?: string
+  ): Effect.Effect<
+    { id: number; uri: string; model_name: string },
+    ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError | DatabaseQueryError
+  > =>
     Effect.gen(function* () {
+      // Validate input parameters
+      yield* validateEmbeddingInput(uri, text)
+
       // Generate embedding using the current provider
       const embeddingRequest: EmbeddingRequest = {
         text,
@@ -192,20 +276,11 @@ const make = Effect.gen(function* () {
       // Convert embedding array to libSQL F32_BLOB format using vector() function
       const embeddingVector = JSON.stringify(embeddingResponse.embedding)
 
-      // Insert or update embedding in database using raw SQL with vector() function
+      // Insert or update embedding in database using parameterized query
       const result = yield* Effect.tryPromise({
         try: async () => {
           const insertResult = await client.execute({
-            sql: `
-              INSERT INTO embeddings (uri, text, model_name, embedding)
-              VALUES (?, ?, ?, vector(?))
-              ON CONFLICT(uri) DO UPDATE SET
-                text = excluded.text,
-                model_name = excluded.model_name,
-                embedding = excluded.embedding,
-                updated_at = CURRENT_TIMESTAMP
-              RETURNING id
-            `,
+            sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
             args: [uri, text, embeddingResponse.model, embeddingVector]
           })
           return insertResult.rows
@@ -221,6 +296,15 @@ const make = Effect.gen(function* () {
         id: Number(result[0]?.["id"] ?? 0),
         uri,
         model_name: embeddingResponse.model,
+      }
+    })
+
+  const createEmbedding = (uri: string, text: string, modelName?: string) =>
+    Effect.gen(function* () {
+      const result = yield* createSingleEmbedding(uri, text, modelName)
+
+      return {
+        ...result,
         message: "Embedding created successfully",
       }
     })
@@ -232,53 +316,14 @@ const make = Effect.gen(function* () {
       let successful = 0
       let failed = 0
 
-      // Process each text individually
+      // Process each text individually using the shared helper
       for (const { uri, text } of texts) {
-        // Try to create embedding, catch all errors at this level
-        const result = yield* Effect.gen(function* () {
-          // Generate embedding using the current provider
-          const embeddingRequest: EmbeddingRequest = {
-            text,
-            modelName: model_name,
-          }
-          const embeddingResponse =
-            yield* providerService.generateEmbedding(embeddingRequest)
-
-          // Convert embedding array to libSQL F32_BLOB format using vector() function
-          const embeddingVector = JSON.stringify(embeddingResponse.embedding)
-
-          // Insert or update embedding in database using raw SQL with vector() function
-          const insertResult = yield* Effect.tryPromise({
-            try: async () => {
-              const result = await client.execute({
-                sql: `
-                  INSERT INTO embeddings (uri, text, model_name, embedding)
-                  VALUES (?, ?, ?, vector(?))
-                  ON CONFLICT(uri) DO UPDATE SET
-                    text = excluded.text,
-                    model_name = excluded.model_name,
-                    embedding = excluded.embedding,
-                    updated_at = CURRENT_TIMESTAMP
-                  RETURNING id
-                `,
-                args: [uri, text, embeddingResponse.model, embeddingVector]
-              })
-              return result.rows
-            },
-            catch: (error) =>
-              new DatabaseQueryError({
-                message: `Failed to save embedding for URI ${uri}`,
-                cause: error,
-              }),
-          })
-
-          return {
-            id: Number(insertResult[0]?.["id"] ?? 0),
-            uri,
-            model_name: embeddingResponse.model,
+        // Try to create embedding using the helper, catch all errors at this level
+        const result = yield* createSingleEmbedding(uri, text, model_name).pipe(
+          Effect.map((embeddingResult) => ({
+            ...embeddingResult,
             status: "success" as const,
-          }
-        }).pipe(
+          })),
           Effect.catchAll((error) =>
             Effect.succeed({
               id: 0,
@@ -498,42 +543,17 @@ const make = Effect.gen(function* () {
       // Use libSQL native vector search for efficient similarity search
       const queryVector = JSON.stringify(queryEmbedding)
 
-      // Build the search query using libSQL vector functions
+      // Build the search query using libSQL vector functions with predefined constants
       let vectorSearchQuery: string
 
       if (metric === "cosine") {
         // Use cosine distance with vector_top_k for efficient search
-        vectorSearchQuery = `
-          SELECT
-            e.id,
-            e.uri,
-            e.text,
-            e.model_name,
-            (1.0 - vector_distance_cos(e.embedding, vector(?))) as similarity,
-            e.created_at,
-            e.updated_at
-          FROM vector_top_k('idx_embeddings_vector', vector(?), ?) as v
-          INNER JOIN embeddings as e ON v.id = e.rowid
-          WHERE e.model_name = ?
-          ${threshold ? `AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ?` : ""}
-          ORDER BY similarity DESC
-        `
+        vectorSearchQuery = threshold
+          ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE + ` AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ? ORDER BY similarity DESC`
+          : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE + ` ORDER BY similarity DESC`
       } else {
         // Fallback to regular similarity search for other metrics
-        vectorSearchQuery = `
-          SELECT
-            id,
-            uri,
-            text,
-            model_name,
-            vector_distance_cos(embedding, vector(?)) as distance,
-            created_at,
-            updated_at
-          FROM embeddings
-          WHERE model_name = ?
-          ORDER BY distance ASC
-          LIMIT ?
-        `
+        vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_FALLBACK
       }
 
       type VectorSearchRowRaw = {
@@ -617,6 +637,65 @@ const make = Effect.gen(function* () {
       return yield* providerService.listModels()
     })
 
+  /**
+   * Helper function to switch to a different provider with proper error handling
+   * Improves maintainability and reduces code duplication
+   */
+  const switchToProvider = (providerType: string, currentProvider: string) =>
+    Effect.gen(function* () {
+      // Import available providers function dynamically
+      const providersModule = yield* Effect.promise(
+        () => import("@/shared/config/providers")
+      ).pipe(
+        Effect.mapError((error: unknown) =>
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Failed to load provider configurations: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            errorCode: "PROVIDER_CONFIG_LOAD_FAILED",
+            cause: error instanceof Error ? error : new Error(String(error)),
+          })
+        )
+      )
+
+      const availableProviders = providersModule.getAvailableProviders()
+
+      // Find the requested provider configuration
+      const targetProviderConfig = availableProviders.find(
+        (provider: { type: string }) => provider.type === providerType
+      )
+
+      if (!targetProviderConfig) {
+        return yield* Effect.fail(
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Provider '${providerType}' is not available or not configured. Available providers: ${availableProviders.map((p: { type: string }) => p.type).join(', ')}`,
+            errorCode: "PROVIDER_NOT_AVAILABLE",
+            cause: new Error(
+              `Provider '${providerType}' not found in available providers`
+            ),
+          })
+        )
+      }
+
+      // Switch to the requested provider
+      yield* providerService.switchProvider(targetProviderConfig).pipe(
+        Effect.mapError((error) =>
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Failed to switch to provider '${providerType}': ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            errorCode: "PROVIDER_SWITCH_FAILED",
+            cause: error instanceof Error ? error : new Error(String(error)),
+          })
+        )
+      )
+
+      return Effect.void
+    })
+
   const createEmbeddingWithProvider = (
     providerType: string,
     uri: string,
@@ -635,55 +714,7 @@ const make = Effect.gen(function* () {
       // Get current provider and switch if necessary
       const currentProvider = yield* getCurrentProvider()
       if (currentProvider !== providerType) {
-        // Import available providers function dynamically
-        const providersModule = yield* Effect.promise(
-          () => import("@/shared/config/providers")
-        ).pipe(
-          Effect.mapError((error: unknown) =>
-            new ProviderConnectionError({
-              provider: currentProvider,
-              message: `Failed to load provider configurations: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-              errorCode: "PROVIDER_CONFIG_LOAD_FAILED",
-              cause: error instanceof Error ? error : new Error(String(error)),
-            })
-          )
-        )
-
-        const availableProviders = providersModule.getAvailableProviders()
-
-        // Find the requested provider configuration
-        const targetProviderConfig = availableProviders.find(
-          (provider: { type: string }) => provider.type === providerType
-        )
-
-        if (!targetProviderConfig) {
-          return yield* Effect.fail(
-            new ProviderConnectionError({
-              provider: currentProvider,
-              message: `Provider '${providerType}' is not available or not configured. Available providers: ${availableProviders.map((p: { type: string }) => p.type).join(', ')}`,
-              errorCode: "PROVIDER_NOT_AVAILABLE",
-              cause: new Error(
-                `Provider '${providerType}' not found in available providers`
-              ),
-            })
-          )
-        }
-
-        // Switch to the requested provider
-        yield* providerService.switchProvider(targetProviderConfig).pipe(
-          Effect.mapError((error) =>
-            new ProviderConnectionError({
-              provider: currentProvider,
-              message: `Failed to switch to provider '${providerType}': ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-              errorCode: "PROVIDER_SWITCH_FAILED",
-              cause: error instanceof Error ? error : new Error(String(error)),
-            })
-          )
-        )
+        yield* switchToProvider(providerType, currentProvider)
       }
 
       // Use the regular createEmbedding method
