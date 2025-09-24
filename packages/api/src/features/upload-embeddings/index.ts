@@ -92,7 +92,6 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
             id: embedding.id,
             uri: embedding.uri,
             status: "success",
-            created_at: embedding.created_at,
           })
           successful++
         } catch (error) {

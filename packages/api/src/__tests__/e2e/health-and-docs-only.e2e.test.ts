@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from "vitest"
 import app from "@/app"
-import { parseJsonResponse, isOpenAPISpec } from "../types/test-types"
+import { parseJsonResponse, isOpenAPISpec } from "@/__tests__/types/test-types"
 
 describe("Health Check and Documentation E2E Tests", () => {
   describe("GET / (Health Check)", () => {

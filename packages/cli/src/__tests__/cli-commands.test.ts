@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { Effect } from "effect"
-import { createCLICommands } from "../index"
+import { createCLICommands } from "@/index"
 
 describe("CLI Commands", () => {
   let testDir: string

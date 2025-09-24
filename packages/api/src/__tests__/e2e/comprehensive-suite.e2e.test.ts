@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
-import { setupE2ETests, testState } from "../e2e-setup"
+import { setupE2ETests, testState } from "@/__tests__/e2e-setup"
 
 // Import all test suites
 import "./health-and-docs-only.e2e.test"

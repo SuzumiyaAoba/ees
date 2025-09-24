@@ -6,8 +6,8 @@ import { AppLayer } from "@/app/providers/main"
  * Type-safe Effect runner for Hono handlers
  * Properly handles Effect error channels and converts them to HTTP responses
  */
-export async function runEffectProgram<A, E, R>(
-  program: Effect.Effect<A, E, R>,
+export async function runEffectProgram<A, E>(
+  program: Effect.Effect<A, E, never>,
   context: Context,
   operation: string
 ): Promise<Response> {

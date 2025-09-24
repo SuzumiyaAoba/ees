@@ -1,14 +1,20 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
+  plugins: [tsconfigPaths()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
       '@/core': resolve(__dirname, '../core/src'),
       '@/core/shared/database/connection': resolve(__dirname, '../core/src/shared/database/connection'),
       '@/core/shared/models': resolve(__dirname, '../core/src/shared/models'),
+      // Core package internal aliases for when API imports from core that uses @/ internally
+      '@/entities/embedding/api/embedding': resolve(__dirname, '../core/src/entities/embedding/api/embedding'),
+      '@/entities': resolve(__dirname, '../core/src/entities'),
+      '@/shared': resolve(__dirname, '../core/src/shared')
     }
   },
   test: {

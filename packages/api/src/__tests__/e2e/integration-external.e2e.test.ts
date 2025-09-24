@@ -6,8 +6,8 @@
 
 import { describe, it, expect, beforeAll } from "vitest"
 import app from "@/app"
-import { setupE2ETests, registerEmbeddingForCleanup, testState } from "../e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "../types/test-types"
+import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
+import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
