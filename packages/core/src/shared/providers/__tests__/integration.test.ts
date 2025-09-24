@@ -10,8 +10,8 @@ import {
   createMultiProviderConfig,
   createOllamaConfig,
   EmbeddingProviderService,
-} from "@/shared/providers/factory"
-import { createOllamaProvider } from "@/shared/providers/ollama-provider"
+} from "../factory"
+import { createOllamaProvider } from "../ollama-provider"
 
 describe("Provider System Integration", () => {
   let originalEnv: NodeJS.ProcessEnv

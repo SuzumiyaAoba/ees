@@ -5,19 +5,19 @@
 
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { DatabaseService } from "@/shared/database/connection"
+import { DatabaseService } from "../../../shared/database/connection"
 import {
   EmbeddingProviderService,
   type EmbeddingResponse,
   ProviderConnectionError,
   ProviderModelError,
-} from "@/shared/providers"
-import { DatabaseQueryError } from "@/shared/errors/database"
-import { EmbeddingService, EmbeddingServiceLive } from "@/entities/embedding/api/embedding"
+} from "../../../shared/providers"
+import { DatabaseQueryError } from "../../../shared/errors/database"
+import { EmbeddingService, EmbeddingServiceLive } from "../api/embedding"
 import type {
   BatchCreateEmbeddingRequest,
   SearchEmbeddingRequest,
-} from "@/entities/embedding/model/embedding"
+} from "../model/embedding"
 
 // Mock implementations
 interface MockEmbeddingProviderService {

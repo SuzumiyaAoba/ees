@@ -12,7 +12,7 @@ import {
   getOpenAIConfig,
   getProviderConfigSummary,
   validateProviderConfig,
-} from "@/shared/config/providers"
+} from "../providers"
 
 describe("Provider Configuration", () => {
   let originalEnv: NodeJS.ProcessEnv

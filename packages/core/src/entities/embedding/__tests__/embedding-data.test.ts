@@ -4,7 +4,7 @@ import {
   EmbeddingDataParseError,
   parseStoredEmbeddingData,
   validateEmbeddingVector,
-} from "@/entities/embedding/lib/embedding-data"
+} from "../lib/embedding-data"
 
 describe("EmbeddingDataParser", () => {
   describe("parseStoredEmbeddingData", () => {

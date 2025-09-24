@@ -6,7 +6,7 @@
  */
 
 import { Context, Effect, Layer } from "effect"
-import { EmbeddingService } from "@/entities/embedding/api/embedding"
+import { EmbeddingService } from "../../entities/embedding/api/embedding"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -15,14 +15,14 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "@/entities/embedding/model/embedding"
-import type { DatabaseQueryError } from "@/shared/errors/database"
+} from "../../entities/embedding/model/embedding"
+import type { DatabaseQueryError } from "../errors/database"
 import type {
   ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "@/shared/providers/types"
+} from "../providers/types"
 
 /**
  * Application-level embedding operations interface

@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import {
   EmbeddingVectorSchema,
   StoredEmbeddingDataSchema,
-} from "@/entities/embedding/model/openapi"
+} from "../model/openapi"
 
 export class EmbeddingDataParseError extends Error {
   constructor(message: string, cause?: unknown) {

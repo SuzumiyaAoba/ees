@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import * as Console from "@/shared/lib/console"
+import * as Console from "../console"
 
 describe("Console Utilities", () => {
   let logSpy: ReturnType<typeof vi.spyOn<Console, "log">>

@@ -3,8 +3,8 @@ import { resolve } from "node:path"
 import { createClient } from "@libsql/client"
 import { drizzle } from "drizzle-orm/libsql"
 import { Context, Effect, Layer } from "effect"
-import { DatabaseConnectionError } from "@/shared/errors/database"
-import { getEnvWithDefault, isTestEnv } from "@/shared/lib/env"
+import { DatabaseConnectionError } from "../errors/database"
+import { getEnvWithDefault, isTestEnv } from "../lib/env"
 import * as schema from "./schema"
 
 export interface DatabaseService {

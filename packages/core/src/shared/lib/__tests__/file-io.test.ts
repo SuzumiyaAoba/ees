@@ -7,7 +7,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { type BatchEntry, parseBatchFile, readTextFile } from "@/shared/lib/file-io"
+import { type BatchEntry, parseBatchFile, readTextFile } from "../file-io"
 
 describe("File I/O Utilities", () => {
   let testDir: string

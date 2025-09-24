@@ -1,11 +1,11 @@
 import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { SearchEmbeddingRequest, SearchEmbeddingResult } from "@/entities/embedding/model/embedding"
-import type { EmbeddingService } from "@/entities/embedding/api/embedding"
-import type { ProviderService } from "@/shared/providers/provider-service"
-import type { DatabaseService } from "@/shared/database/database-service"
-import { DatabaseQueryError } from "@/shared/errors/database"
-import { ProviderModelError } from "@/shared/providers/types"
+import type { SearchEmbeddingRequest, SearchEmbeddingResult } from "../model/embedding"
+import type { EmbeddingService } from "../api/embedding"
+import type { ProviderService } from "../../../shared/providers/provider-service"
+import type { DatabaseService } from "../../../shared/database/database-service"
+import { DatabaseQueryError } from "../../../shared/errors/database"
+import { ProviderModelError } from "../../../shared/providers/types"
 
 // Mock interfaces for testing
 interface MockDatabaseClient {

@@ -4,8 +4,8 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { Effect, Layer } from "effect"
-import { createAzureProvider, AzureProviderService } from "@/shared/providers/azure-provider"
-import type { AzureConfig } from "@/shared/providers/types"
+import { createAzureProvider, AzureProviderService } from "../azure-provider"
+import type { AzureConfig } from "../types"
 
 // Mock the external dependencies
 vi.mock("@ai-sdk/azure", () => ({

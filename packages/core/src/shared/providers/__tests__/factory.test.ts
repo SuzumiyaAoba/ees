@@ -9,7 +9,7 @@ import {
   createOllamaConfig,
   createOpenAIConfig,
   createProviderLayer,
-} from "@/shared/providers/factory"
+} from "../factory"
 
 describe("Provider Factory", () => {
   describe("createOllamaConfig", () => {

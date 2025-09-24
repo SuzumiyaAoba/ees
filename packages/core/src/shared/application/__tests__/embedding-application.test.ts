@@ -4,7 +4,7 @@
 
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { EmbeddingService } from "@/entities/embedding/api/embedding.js"
+import { EmbeddingService } from "../../../entities/embedding/api/embedding.js"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -13,12 +13,12 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "@/entities/embedding/model/embedding"
-import { DatabaseService } from "@/shared/database/connection"
+} from "../../../entities/embedding/model/embedding"
+import { DatabaseService } from "../../database/connection"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
-} from "@/shared/application/embedding-application"
+} from "../embedding-application"
 
 describe("EmbeddingApplicationService", () => {
   let mockEmbeddingService: {
@@ -277,11 +277,11 @@ describe("EmbeddingApplicationService", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.getEmbeddingByUri("test-doc")
+          return yield* appService.getEmbeddingByUri("test-doc", "nomic-embed-text")
         }).pipe(Effect.provide(createTestLayer()))
       )
 
-      expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith("test-doc")
+      expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith("test-doc", "nomic-embed-text")
       expect(result).toEqual(mockEmbedding)
     })
 
@@ -291,12 +291,12 @@ describe("EmbeddingApplicationService", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.getEmbeddingByUri("nonexistent")
+          return yield* appService.getEmbeddingByUri("nonexistent", "nomic-embed-text")
         }).pipe(Effect.provide(createTestLayer()))
       )
 
       expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith(
-        "nonexistent"
+        "nonexistent", "nomic-embed-text"
       )
       expect(result).toBeNull()
     })
