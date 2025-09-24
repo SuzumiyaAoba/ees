@@ -622,19 +622,67 @@ const make = Effect.gen(function* () {
     uri: string,
     text: string,
     modelName?: string
-  ) =>
+  ): Effect.Effect<
+    CreateEmbeddingResponse,
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError,
+    never
+  > =>
     Effect.gen(function* () {
-      // For now, use the default provider since switching isn't implemented
-      // This could be enhanced to support dynamic provider selection
+      // Get current provider and switch if necessary
       const currentProvider = yield* getCurrentProvider()
       if (currentProvider !== providerType) {
-        return yield* Effect.fail(
-          new ProviderConnectionError({
-            provider: currentProvider,
-            message: `Provider switching from ${currentProvider} to ${providerType} not yet supported`,
-            errorCode: "PROVIDER_SWITCH_NOT_SUPPORTED",
-            cause: new Error(`Provider switching not implemented`),
-          })
+        // Import available providers function dynamically
+        const providersModule = yield* Effect.promise(
+          () => import("@/shared/config/providers")
+        ).pipe(
+          Effect.mapError((error: unknown) =>
+            new ProviderConnectionError({
+              provider: currentProvider,
+              message: `Failed to load provider configurations: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+              errorCode: "PROVIDER_CONFIG_LOAD_FAILED",
+              cause: error instanceof Error ? error : new Error(String(error)),
+            })
+          )
+        )
+
+        const availableProviders = providersModule.getAvailableProviders()
+
+        // Find the requested provider configuration
+        const targetProviderConfig = availableProviders.find(
+          (provider: { type: string }) => provider.type === providerType
+        )
+
+        if (!targetProviderConfig) {
+          return yield* Effect.fail(
+            new ProviderConnectionError({
+              provider: currentProvider,
+              message: `Provider '${providerType}' is not available or not configured. Available providers: ${availableProviders.map((p: { type: string }) => p.type).join(', ')}`,
+              errorCode: "PROVIDER_NOT_AVAILABLE",
+              cause: new Error(
+                `Provider '${providerType}' not found in available providers`
+              ),
+            })
+          )
+        }
+
+        // Switch to the requested provider
+        yield* providerService.switchProvider(targetProviderConfig).pipe(
+          Effect.mapError((error) =>
+            new ProviderConnectionError({
+              provider: currentProvider,
+              message: `Failed to switch to provider '${providerType}': ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+              errorCode: "PROVIDER_SWITCH_FAILED",
+              cause: error instanceof Error ? error : new Error(String(error)),
+            })
+          )
         )
       }
 
