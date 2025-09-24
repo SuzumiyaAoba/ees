@@ -622,10 +622,16 @@ const make = Effect.gen(function* () {
     uri: string,
     text: string,
     modelName?: string
-  ) =>
+  ): Effect.Effect<
+    CreateEmbeddingResponse,
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError,
+    never
+  > =>
     Effect.gen(function* () {
-      const providerService = yield* EmbeddingProviderService
-
       // Get current provider and switch if necessary
       const currentProvider = yield* getCurrentProvider()
       if (currentProvider !== providerType) {
