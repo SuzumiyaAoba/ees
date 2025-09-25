@@ -274,7 +274,7 @@ describe("PaginationService", () => {
 - **Framework**: Hono (lightweight web framework)
 - **Runtime**: Node.js with TypeScript
 - **Database**: libSQL with Drizzle ORM for type safety
-- **AI/ML**: Multi-provider embedding system via Vercel AI SDK (Ollama, OpenAI, Google AI, Cohere, Mistral)
+- **AI/ML**: Multi-provider embedding system via Vercel AI SDK (Ollama, OpenAI, Google AI, Cohere, Mistral, Azure OpenAI)
 - **Default Provider**: Ollama with `nomic-embed-text` model
 - **Functional Programming**: Effect library for composable, type-safe operations
 - **Validation**: Zod schemas for runtime type checking
@@ -288,7 +288,7 @@ describe("PaginationService", () => {
 **Packages:**
 - `packages/core` - Shared business logic, types, database layer, and providers
 - `packages/api` - REST API server using Hono framework
-- `packages/cli` - Command-line interface using CAC
+- `packages/cli` - Command-line interface using Citty
 - `packages/web` - Web frontend (React/Vite)
 
 **Key Directories:**
@@ -308,6 +308,7 @@ The system supports multiple embedding providers through a unified interface:
 - **Google AI** - `embedding-001`, `text-embedding-004`
 - **Cohere** - `embed-english-v3.0`, `embed-multilingual-v3.0`
 - **Mistral** - `mistral-embed`
+- **Azure OpenAI** - Compatible with OpenAI models via Azure endpoints
 
 **Provider Implementation:**
 - Each provider in `packages/core/src/shared/providers/` implements a common `EmbeddingProvider` interface
@@ -351,7 +352,7 @@ The codebase is designed with a clear separation of concerns to support multiple
 - React frontend with TypeScript
 
 **CLI Interface**:
-- Command-line interface using the same application services
+- Command-line interface using Citty framework with the same application services
 - CLI output helpers with proper linting compliance
 
 **Shared Core Logic**:
@@ -372,32 +373,32 @@ The CLI interface provides full functionality for embedding operations:
 **Create embedding from text:**
 ```bash
 # Direct text input
-ees create --uri "doc1" --text "Sample text content"
+ees create "doc1" --text "Sample text content"
 
 # From file
-ees create --uri "doc2" --file "./examples/cli/sample.txt"
+ees create "doc2" --file "./sample.txt"
 
 # From stdin (interactive)
-ees create --uri "doc3"
+ees create "doc3"
 # (then type or paste text and press Ctrl+D)
 ```
 
 **Batch operations:**
 ```bash
 # JSON array format
-ees batch --file "./examples/cli/batch.json"
+ees batch ./batch.json
 
 # Newline-delimited JSON format
-ees batch --file "./examples/cli/batch-ndjson.jsonl"
+ees batch ./batch.jsonl
 ```
 
 **Search operations:**
 ```bash
 # Basic search
-ees search --query "sample text"
+ees search "sample text"
 
 # Advanced search with parameters
-ees search --query "sample text" --limit 10 --threshold 0.7 --metric cosine
+ees search "sample text" --limit 10 --threshold 0.7 --metric cosine
 ```
 
 **List and management:**
@@ -409,10 +410,25 @@ ees list
 ees list --uri "doc*" --model "nomic-embed-text" --limit 20
 
 # Get specific embedding
-ees get --uri "doc1"
+ees get "doc1" --model-name "nomic-embed-text"
 
 # Delete embedding
-ees delete --id 123
+ees delete 123
+
+# Upload files
+ees upload file1.txt file2.pdf --model "nomic-embed-text"
+
+# Model migration
+ees migrate "old-model" "new-model" --dry-run
+
+# Provider management
+ees providers list
+ees providers current
+ees providers models --provider ollama
+ees providers ollama-status
+
+# List available models
+ees models
 ```
 
 ### API Endpoints
@@ -424,6 +440,18 @@ ees delete --id 123
 - `GET /embeddings` - List all embeddings with pagination support
 - `GET /embeddings/{uri}` - Get embedding by URI
 - `DELETE /embeddings/{id}` - Delete embedding by ID
+
+**File Operations**:
+- `POST /upload` - Upload files and create embeddings
+- `POST /migrate` - Migrate embeddings between models
+- `GET /migrate/compatibility` - Check model compatibility
+
+**Providers & Models**:
+- `GET /providers` - List available providers
+- `GET /providers/current` - Get current provider
+- `GET /providers/models` - List models for provider
+- `GET /providers/ollama/status` - Check Ollama service status
+- `GET /models` - List all available models
 
 **Request/Response Types**:
 - Input validation via Zod schemas
