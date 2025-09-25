@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   # SQLite is used in memory, but we can also provide a PostgreSQL option
   postgres:
-    image: postgres:15-alpine
+    image: docker.io/postgres:15-alpine
+    pull_policy: missing
     environment:
       POSTGRES_DB: ees_test
       POSTGRES_USER: ees_test
@@ -20,7 +19,8 @@ services:
 
   # Ollama service for embeddings
   ollama:
-    image: ollama/ollama:latest
+    image: docker.io/ollama/ollama:0.3.14
+    pull_policy: missing
     ports:
       - "11434:11434"
     volumes:
@@ -32,13 +32,14 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/version || exit 1"]
       interval: 10s
       timeout: 10s
-      retries: 12
-      start_period: 45s
+      retries: 15
+      start_period: 60s
     restart: unless-stopped
 
   # Service to pull the required model
   ollama-setup:
-    image: ollama/ollama:latest
+    image: docker.io/ollama/ollama:0.3.14
+    pull_policy: missing
     depends_on:
       ollama:
         condition: service_healthy
@@ -49,15 +50,24 @@ services:
     command: >
       sh -c "
         echo 'Waiting for Ollama to be ready...' &&
-        sleep 10 &&
+        sleep 15 &&
         echo 'Pulling nomic-embed-text model...' &&
-        ollama pull nomic-embed-text &&
-        echo 'Model pulled successfully!'
+        for attempt in 1 2 3; do
+          echo 'Pull attempt $$attempt of 3' &&
+          if ollama pull nomic-embed-text; then
+            echo 'Model pulled successfully!' &&
+            break
+          else
+            echo 'Pull attempt $$attempt failed, retrying in 10 seconds...' &&
+            sleep 10
+          fi
+        done
       "
 
   # Redis for caching (optional)
   redis:
-    image: redis:7-alpine
+    image: docker.io/redis:7-alpine
+    pull_policy: missing
     ports:
       - "6379:6379"
     healthcheck:

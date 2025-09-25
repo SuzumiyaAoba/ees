@@ -78,6 +78,15 @@ const DEFAULT_CONFIG: FileProcessorConfig = {
 }
 
 /**
+ * PDF processing safety limits to prevent memory exhaustion and infinite processing
+ */
+const PDF_LIMITS = {
+  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB max PDF file size
+  MAX_TEXT_LENGTH: 10 * 1024 * 1024, // 10MB max extracted text
+  PROCESSING_TIMEOUT: 30000, // 30 seconds timeout
+} as const
+
+/**
  * Get file extension from filename
  */
 const getFileExtension = (filename: string): string => {
@@ -119,15 +128,51 @@ const isSupportedFileType = (filename: string, mimeType: string): boolean => {
 }
 
 /**
- * Extract text from PDF file using pdf-parse library
+ * Extract text from PDF file using pdf-parse library with safety limits
+ * Includes file size validation, text length limits, and timeout protection
  */
-const extractTextFromPDF = async (file: File): Promise<string> => {
+const extractTextFromPDF = async (file: File, config?: FileProcessorConfig): Promise<string> => {
+  const maxFileSize = config?.maxFileSize || PDF_LIMITS.MAX_FILE_SIZE
+
+  // Check file size before processing
+  if (file.size > maxFileSize) {
+    throw new Error(`PDF file too large: ${file.size} bytes (max: ${maxFileSize} bytes)`)
+  }
+
   try {
-    const buffer = await file.arrayBuffer()
-    const data = await pdfParse(Buffer.from(buffer))
+    // Wrap PDF processing with timeout protection
+    const processingPromise = (async () => {
+      const buffer = await file.arrayBuffer()
+
+      // Additional buffer size validation
+      if (buffer.byteLength !== file.size) {
+        throw new Error('File buffer size mismatch - file may be corrupted')
+      }
+
+      const data = await pdfParse(Buffer.from(buffer))
+      return data.text
+    })()
+
+    // Race between PDF processing and timeout
+    const textContent = await Promise.race([
+      processingPromise,
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error(`PDF processing timeout after ${PDF_LIMITS.PROCESSING_TIMEOUT}ms`)),
+          PDF_LIMITS.PROCESSING_TIMEOUT
+        )
+      })
+    ])
+
+    // Validate extracted text length
+    if (textContent.length > PDF_LIMITS.MAX_TEXT_LENGTH) {
+      throw new Error(
+        `Extracted text too large: ${textContent.length} characters (max: ${PDF_LIMITS.MAX_TEXT_LENGTH} characters)`
+      )
+    }
 
     // Clean up the extracted text
-    const cleanText = data.text
+    const cleanText = textContent
       .replace(/\s+/g, ' ') // Replace multiple whitespaces with single space
       .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
       .trim()
@@ -163,7 +208,7 @@ const extractTextContent = async (
   // Document processing (PDF, etc.)
   if (SUPPORTED_FILE_TYPES.DOCUMENT.includes(extension)) {
     if (extension === '.pdf') {
-      return await extractTextFromPDF(file)
+      return await extractTextFromPDF(file, _config)
     }
     // Future: Add support for other document types (docx, odt, etc.)
     throw new Error(`Document type ${extension} is not yet supported`)
