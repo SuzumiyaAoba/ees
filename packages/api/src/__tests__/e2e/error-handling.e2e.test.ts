@@ -41,7 +41,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       expect(errorData).toHaveProperty("error")
 
       // Accept either string or object error format (depends on validation framework)
-      expect(typeof errorData.error === "string" || typeof errorData.error === "object").toBe(true)
+      expect(typeof errorData['error'] === "string" || typeof errorData['error'] === "object").toBe(true)
     })
 
     it("should reject embedding creation with missing text", async () => {
@@ -372,7 +372,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
     })
 
     it("should handle request with many fields", async () => {
-      const requestWithManyFields = {
+      const requestWithManyFields: Record<string, string> = {
         uri: "test-many-fields",
         text: "Valid text content",
         model_name: "nomic-embed-text",
