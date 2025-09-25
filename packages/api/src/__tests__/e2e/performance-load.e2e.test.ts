@@ -496,6 +496,10 @@ describe("Performance and Load Testing E2E Tests", () => {
           for (let i = 0; i < responses.length; i++) {
             const response = responses[i]
 
+            if (!response) {
+              throw new Error(`Response ${i} is undefined`)
+            }
+
             // Different endpoints may have different acceptable status codes
             if (i % 4 === 3) { // Health check
               expect(response.status).toBe(200)

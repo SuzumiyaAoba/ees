@@ -91,7 +91,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
     })
   })
 
-  return runEffectProgram(program, c, "createEmbedding")
+  return runEffectProgram(program, c, "createEmbedding") as any
 })
 
 /**
@@ -106,7 +106,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     return yield* appService.createBatchEmbeddings(request)
   })
 
-  return runEffectProgram(program, c, "batchCreateEmbedding")
+  return runEffectProgram(program, c, "batchCreateEmbedding") as any
 })
 
 /**
@@ -121,7 +121,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     return yield* appService.searchEmbeddings(request)
   })
 
-  return runEffectProgram(program, c, "searchEmbeddings")
+  return runEffectProgram(program, c, "searchEmbeddings") as any
 })
 
 /**
@@ -142,7 +142,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
     return embedding
   })
 
-  return runEffectProgram(program, c, "getEmbeddingByUri")
+  return runEffectProgram(program, c, "getEmbeddingByUri") as any
 })
 
 /**
@@ -177,7 +177,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     return yield* appService.listEmbeddings(filters)
   })
 
-  return runEffectProgram(program, c, "listEmbeddings")
+  return runEffectProgram(program, c, "listEmbeddings") as any
 })
 
 /**
@@ -201,7 +201,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
     return { message: "Embedding deleted successfully" }
   })
 
-  return runEffectProgram(program, c, "deleteEmbedding")
+  return runEffectProgram(program, c, "deleteEmbedding") as any
 })
 
 /**
@@ -223,7 +223,7 @@ app.openapi(listModelsRoute, async (c) => {
     }
   })
 
-  return runEffectProgram(program, c, "listModels")
+  return runEffectProgram(program, c, "listModels") as any
 })
 
 /**
