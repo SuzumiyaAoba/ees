@@ -4,7 +4,7 @@
  */
 
 import { Effect } from "effect"
-import pdfParse from "pdf-parse"
+import * as pdfParse from "pdf-parse"
 
 /**
  * Supported file types for text extraction
@@ -149,7 +149,7 @@ const extractTextFromPDF = async (file: File, config?: FileProcessorConfig): Pro
         throw new Error('File buffer size mismatch - file may be corrupted')
       }
 
-      const data = await pdfParse(Buffer.from(buffer))
+      const data = await pdfParse.default(Buffer.from(buffer))
       return data.text
     })()
 

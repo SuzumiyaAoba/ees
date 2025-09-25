@@ -103,8 +103,6 @@ describe("Performance and Load Testing E2E Tests", () => {
             console.log("Skipping performance test - service unavailable")
             return null
           }
-
-          return embedding
         }
       )
     })
@@ -182,8 +180,6 @@ describe("Performance and Load Testing E2E Tests", () => {
             console.log("Skipping list performance test - service unavailable")
             return { embeddings: [] }
           }
-
-          return listData
         }
       )
     })
@@ -230,7 +226,7 @@ describe("Performance and Load Testing E2E Tests", () => {
   describe("Batch Operation Performance", () => {
     it("should process batch embeddings within performance threshold", async () => {
       const batchSize = 20
-      const items = []
+      const items: Array<{uri: string, text: string}> = []
 
       for (let i = 0; i < batchSize; i++) {
         items.push({
@@ -261,10 +257,10 @@ describe("Performance and Load Testing E2E Tests", () => {
           const batchResult = await parseUnknownJsonResponse(response)
 
           // Register successful embeddings for cleanup
-          const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
+          const results = batchResult['results'] as Array<{success: boolean, embedding?: Record<string, unknown>}>
           results.forEach(result => {
             if (result.success && result.embedding) {
-              registerEmbeddingForCleanup(result.embedding.id as number)
+              registerEmbeddingForCleanup(result.embedding['id'] as number)
             }
           })
 
@@ -278,7 +274,7 @@ describe("Performance and Load Testing E2E Tests", () => {
       const batchSizes = [5, 10, 20]
 
       for (const batchSize of batchSizes) {
-        const items = []
+        const items: Array<{uri: string, text: string}> = []
         for (let i = 0; i < batchSize; i++) {
           items.push({
             uri: `progressive-batch-${batchSize}-${i}`,
@@ -308,10 +304,10 @@ describe("Performance and Load Testing E2E Tests", () => {
             const batchResult = await parseUnknownJsonResponse(response)
 
             // Register for cleanup
-            const results = batchResult.results as Array<{success: boolean, embedding?: Record<string, unknown>}>
+            const results = batchResult['results'] as Array<{success: boolean, embedding?: Record<string, unknown>}>
             results.forEach(result => {
               if (result.success && result.embedding) {
-                registerEmbeddingForCleanup(result.embedding.id as number)
+                registerEmbeddingForCleanup(result.embedding['id'] as number)
               }
             })
 
@@ -493,12 +489,16 @@ describe("Performance and Load Testing E2E Tests", () => {
             }
           }
 
-          const responses = await Promise.all(promises)
+          const responses = await Promise.all(promises) as Response[]
 
           // Check response success rates
           let successCount = 0
           for (let i = 0; i < responses.length; i++) {
             const response = responses[i]
+
+            if (!response) {
+              throw new Error(`Response ${i} is undefined`)
+            }
 
             // Different endpoints may have different acceptable status codes
             if (i % 4 === 3) { // Health check
@@ -550,7 +550,7 @@ describe("Performance and Load Testing E2E Tests", () => {
                 uri: `rapid-seq-${i}-${Date.now()}`,
                 text: `Rapid sequential test document ${i}.`
               }),
-            })
+            }) as Promise<Response>
             requests.push(request)
 
             // Small delay between requests to simulate rapid but not simultaneous requests

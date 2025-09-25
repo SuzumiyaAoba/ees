@@ -38,23 +38,23 @@ describe("External Service Integration E2E Tests", () => {
 
       // Validate models response structure
       expect(modelsData).toHaveProperty("models")
-      expect(Array.isArray(modelsData.models)).toBe(true)
+      expect(Array.isArray(modelsData['models'])).toBe(true)
 
-      const models = modelsData.models as Array<Record<string, unknown>>
+      const models = modelsData['models'] as Array<Record<string, unknown>>
 
       if (models.length > 0) {
         // Check model structure
         models.forEach(model => {
           expect(model).toHaveProperty("name")
           expect(model).toHaveProperty("provider")
-          expect(typeof model.name).toBe("string")
-          expect(typeof model.provider).toBe("string")
+          expect(typeof model['name']).toBe("string")
+          expect(typeof model['provider']).toBe("string")
         })
 
         // Should include default Ollama model
-        const defaultModel = models.find(m => m.name === "nomic-embed-text")
+        const defaultModel = models.find(m => m['name'] === "nomic-embed-text")
         expect(defaultModel).toBeDefined()
-        expect(defaultModel?.provider).toBe("ollama")
+        expect(defaultModel?.['provider']).toBe("ollama")
       }
     })
 
@@ -69,10 +69,13 @@ describe("External Service Integration E2E Tests", () => {
       }
 
       const modelsData = await parseUnknownJsonResponse(modelsResponse)
-      const models = modelsData.models as Array<{name: string, provider: string}>
+      const models = modelsData['models'] as Array<{name: string, provider: string}>
 
       if (models.length > 0) {
         const modelToTest = models[0]
+        if (!modelToTest?.name) {
+          throw new Error("Model name is required")
+        }
 
         const response = await app.request("/embeddings", {
           method: "POST",
@@ -144,10 +147,10 @@ describe("External Service Integration E2E Tests", () => {
         expect(compatibilityResult).toHaveProperty("compatible")
         expect(compatibilityResult).toHaveProperty("sourceModel", compatibilityData.sourceModel)
         expect(compatibilityResult).toHaveProperty("targetModel", compatibilityData.targetModel)
-        expect(typeof compatibilityResult.compatible).toBe("boolean")
+        expect(typeof compatibilityResult['compatible']).toBe("boolean")
 
         // Same model should be compatible
-        expect(compatibilityResult.compatible).toBe(true)
+        expect(compatibilityResult['compatible']).toBe(true)
       } else {
         // Service not available or not implemented
         expect([404, 500, 501]).toContain(response.status)
@@ -202,8 +205,8 @@ describe("External Service Integration E2E Tests", () => {
 
           expect(migrationResult).toHaveProperty("migrated")
           expect(migrationResult).toHaveProperty("total")
-          expect(typeof migrationResult.migrated).toBe("number")
-          expect(typeof migrationResult.total).toBe("number")
+          expect(typeof migrationResult['migrated']).toBe("number")
+          expect(typeof migrationResult['total']).toBe("number")
         } else {
           // Service not available or not implemented
           expect([400, 404, 500, 501]).toContain(response.status)
@@ -221,19 +224,19 @@ describe("External Service Integration E2E Tests", () => {
         const statusData = await parseUnknownJsonResponse(response)
 
         expect(statusData).toHaveProperty("providers")
-        expect(Array.isArray(statusData.providers)).toBe(true)
+        expect(Array.isArray(statusData['providers'])).toBe(true)
 
-        const providers = statusData.providers as Array<Record<string, unknown>>
+        const providers = statusData['providers'] as Array<Record<string, unknown>>
 
         providers.forEach(provider => {
           expect(provider).toHaveProperty("name")
           expect(provider).toHaveProperty("status")
-          expect(typeof provider.name).toBe("string")
-          expect(typeof provider.status).toBe("string")
+          expect(typeof provider['name']).toBe("string")
+          expect(typeof provider['status']).toBe("string")
         })
 
         // Should include Ollama provider
-        const ollamaProvider = providers.find(p => p.name === "ollama")
+        const ollamaProvider = providers.find(p => p['name'] === "ollama")
         expect(ollamaProvider).toBeDefined()
       } else {
         expect([404, 500, 501]).toContain(response.status)
@@ -247,10 +250,10 @@ describe("External Service Integration E2E Tests", () => {
         const healthData = await parseUnknownJsonResponse(response)
 
         expect(healthData).toHaveProperty("healthy")
-        expect(typeof healthData.healthy).toBe("boolean")
+        expect(typeof healthData['healthy']).toBe("boolean")
 
-        if (healthData.providers) {
-          expect(Array.isArray(healthData.providers)).toBe(true)
+        if (healthData['providers']) {
+          expect(Array.isArray(healthData['providers'])).toBe(true)
         }
       } else {
         expect([404, 500, 501]).toContain(response.status)
@@ -299,8 +302,8 @@ describe("External Service Integration E2E Tests", () => {
           expect(bulkResult).toHaveProperty("results")
 
           // Register any created embeddings for cleanup
-          if (bulkResult.results && Array.isArray(bulkResult.results)) {
-            const results = bulkResult.results as Array<{success: boolean, embedding?: {id: number}}>
+          if (bulkResult['results'] && Array.isArray(bulkResult['results'])) {
+            const results = bulkResult['results'] as Array<{success: boolean, embedding?: {id: number}}>
             results.forEach(result => {
               if (result.success && result.embedding) {
                 registerEmbeddingForCleanup(result.embedding.id)
@@ -333,7 +336,7 @@ describe("External Service Integration E2E Tests", () => {
 
         const errorData = await parseUnknownJsonResponse(response)
         expect(errorData).toHaveProperty("error")
-        expect(typeof errorData.error).toBe("string")
+        expect(typeof errorData['error']).toBe("string")
       }
     })
 
