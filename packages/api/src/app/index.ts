@@ -16,6 +16,7 @@ import { uploadApp } from "@/features/upload-embeddings"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "@/app/providers/main"
+import { handleErrorResponse } from "@/shared/error-handler"
 
 
 
@@ -99,23 +100,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in createEmbedding:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "createEmbedding")
   }
 })
 
@@ -127,36 +112,18 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
   const request = c.req.valid("json")
 
   try {
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.createBatchEmbeddings(request)
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const appService = yield* EmbeddingApplicationService
+        return yield* appService.createBatchEmbeddings(request)
+      }).pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in batchCreateEmbedding:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "batchCreateEmbedding")
   }
 })
 
@@ -168,36 +135,18 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
   const request = c.req.valid("json")
 
   try {
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.searchEmbeddings(request)
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const appService = yield* EmbeddingApplicationService
+        return yield* appService.searchEmbeddings(request)
+      }).pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in searchEmbeddings:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "searchEmbeddings")
   }
 })
 
@@ -211,19 +160,17 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
   const decodedModelName = decodeURIComponent(model_name)
 
   try {
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      const embedding = yield* appService.getEmbeddingByUri(decodedUri, decodedModelName)
-      if (!embedding) {
-        return null
-      }
-      return embedding
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const appService = yield* EmbeddingApplicationService
+        const embedding = yield* appService.getEmbeddingByUri(decodedUri, decodedModelName)
+        if (!embedding) {
+          return null
+        }
+        return embedding
+      }).pipe(Effect.provide(AppLayer))
     )
 
     if (!result) {
@@ -232,23 +179,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in getEmbeddingByUri:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "getEmbeddingByUri")
   }
 })
 
@@ -280,36 +211,18 @@ app.openapi(listEmbeddingsRoute, async (c) => {
   }
 
   try {
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      return yield* appService.listEmbeddings(filters)
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const appService = yield* EmbeddingApplicationService
+        return yield* appService.listEmbeddings(filters)
+      }).pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in listEmbeddings:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "listEmbeddings")
   }
 })
 
@@ -326,19 +239,17 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
   }
 
   try {
-    const program = Effect.gen(function* () {
-      const appService = yield* EmbeddingApplicationService
-      const deleted = yield* appService.deleteEmbedding(id)
-      if (!deleted) {
-        return null
-      }
-      return { message: "Embedding deleted successfully" }
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const appService = yield* EmbeddingApplicationService
+        const deleted = yield* appService.deleteEmbedding(id)
+        if (!deleted) {
+          return null
+        }
+        return { message: "Embedding deleted successfully" }
+      }).pipe(Effect.provide(AppLayer))
     )
 
     if (!result) {
@@ -347,23 +258,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in deleteEmbedding:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "deleteEmbedding")
   }
 })
 
@@ -373,45 +268,27 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
  */
 app.openapi(listModelsRoute, async (c) => {
   try {
-    const program = Effect.gen(function* () {
-      const modelManager = yield* ModelManagerTag
-      const models = yield* modelManager.listAvailableModels()
-
-      // Extract unique providers from models
-      const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
-
-      return {
-        models,
-        count: models.length,
-        providers
-      }
-    })
-
     const result = await Effect.runPromise(
       // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
       // This is a known limitation in Effect-TypeScript integration with generic functions
-      program.pipe(Effect.provide(AppLayer))
+      Effect.gen(function* () {
+        const modelManager = yield* ModelManagerTag
+        const models = yield* modelManager.listAvailableModels()
+
+        // Extract unique providers from models
+        const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
+
+        return {
+          models,
+          count: models.length,
+          providers
+        }
+      }).pipe(Effect.provide(AppLayer))
     )
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error in listModels:", error)
-
-    const errorString = String(error)
-    if (errorString.includes("ValidationError") || errorString.includes("required") || errorString.includes("invalid")) {
-      return c.json({ error: "Validation error", details: errorString }, 400)
-    }
-    if (errorString.includes("NotFound") || errorString.includes("not found")) {
-      return c.json({ error: "Resource not found", details: errorString }, 404)
-    }
-    if (errorString.includes("Unauthorized") || errorString.includes("authentication")) {
-      return c.json({ error: "Unauthorized", details: errorString }, 401)
-    }
-    if (errorString.includes("RateLimit") || errorString.includes("rate limit")) {
-      return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
-    }
-
-    return c.json({ error: "Internal server error", details: errorString }, 500)
+    return handleErrorResponse(c, error, "listModels")
   }
 })
 
