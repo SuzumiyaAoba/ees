@@ -1,6 +1,5 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
-import { Effect } from "effect"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -13,10 +12,10 @@ import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
-import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
 import { rootRoute } from "./config/routes"
 import { AppLayer } from "@/app/providers/main"
 import { handleErrorResponse } from "@/shared/error-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
 
 
 
@@ -84,24 +83,15 @@ app.route("/", providerApp)
 app.openapi(createEmbeddingRoute, async (c) => {
   const { uri, text, model_name } = c.req.valid("json")
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
-        return yield* appService.createEmbedding({
-          uri,
-          text,
-          modelName: model_name,
-        })
-      }).pipe(Effect.provide(AppLayer))
+  return executeEffectHandler(c, "createEmbedding",
+    withEmbeddingService(appService =>
+      appService.createEmbedding({
+        uri,
+        text,
+        modelName: model_name,
+      })
     )
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "createEmbedding")
-  }
+  )
 })
 
 /**
@@ -111,20 +101,11 @@ app.openapi(createEmbeddingRoute, async (c) => {
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
   const request = c.req.valid("json")
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
-        return yield* appService.createBatchEmbeddings(request)
-      }).pipe(Effect.provide(AppLayer))
+  return executeEffectHandler(c, "batchCreateEmbedding",
+    withEmbeddingService(appService =>
+      appService.createBatchEmbeddings(request)
     )
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "batchCreateEmbedding")
-  }
+  )
 })
 
 /**
@@ -134,20 +115,11 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
 app.openapi(searchEmbeddingsRoute, async (c) => {
   const request = c.req.valid("json")
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
-        return yield* appService.searchEmbeddings(request)
-      }).pipe(Effect.provide(AppLayer))
+  return executeEffectHandler(c, "searchEmbeddings",
+    withEmbeddingService(appService =>
+      appService.searchEmbeddings(request)
     )
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "searchEmbeddings")
-  }
+  )
 })
 
 /**
@@ -159,28 +131,12 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
   const decodedUri = decodeURIComponent(uri)
   const decodedModelName = decodeURIComponent(model_name)
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
-        const embedding = yield* appService.getEmbeddingByUri(decodedUri, decodedModelName)
-        if (!embedding) {
-          return null
-        }
-        return embedding
-      }).pipe(Effect.provide(AppLayer))
-    )
-
-    if (!result) {
-      return c.json({ error: "Embedding not found" }, 404)
-    }
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "getEmbeddingByUri")
-  }
+  return executeEffectHandlerWithConditional(c, "getEmbeddingByUri",
+    withEmbeddingService(appService =>
+      appService.getEmbeddingByUri(decodedUri, decodedModelName)
+    ),
+    "Embedding not found"
+  )
 })
 
 /**
@@ -210,20 +166,11 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     filters.modelName = model_name
   }
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
-        return yield* appService.listEmbeddings(filters)
-      }).pipe(Effect.provide(AppLayer))
+  return executeEffectHandler(c, "listEmbeddings",
+    withEmbeddingService(appService =>
+      appService.listEmbeddings(filters)
     )
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "listEmbeddings")
-  }
+  )
 })
 
 /**
@@ -232,34 +179,26 @@ app.openapi(listEmbeddingsRoute, async (c) => {
  */
 app.openapi(deleteEmbeddingRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
-  const id = Number(idStr)
+  const validationResult = validateNumericId(idStr, c)
 
-  if (Number.isNaN(id)) {
-    return c.json({ error: "Invalid ID parameter" }, 400)
+  if (typeof validationResult !== "number") {
+    return validationResult // Return early error response
   }
 
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "deleteEmbedding",
+    withEmbeddingService(appService =>
       Effect.gen(function* () {
-        const appService = yield* EmbeddingApplicationService
         const deleted = yield* appService.deleteEmbedding(id)
         if (!deleted) {
           return null
         }
         return { message: "Embedding deleted successfully" }
-      }).pipe(Effect.provide(AppLayer))
-    )
-
-    if (!result) {
-      return c.json({ error: "Embedding not found" }, 404)
-    }
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "deleteEmbedding")
-  }
+      })
+    ),
+    "Embedding not found"
+  )
 })
 
 /**
@@ -267,12 +206,9 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
  * Returns all models available through configured providers including environment variables and Ollama response
  */
 app.openapi(listModelsRoute, async (c) => {
-  try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
+  return executeEffectHandler(c, "listModels",
+    withModelManager(modelManager =>
       Effect.gen(function* () {
-        const modelManager = yield* ModelManagerTag
         const models = yield* modelManager.listAvailableModels()
 
         // Extract unique providers from models
@@ -283,13 +219,9 @@ app.openapi(listModelsRoute, async (c) => {
           count: models.length,
           providers
         }
-      }).pipe(Effect.provide(AppLayer))
+      })
     )
-
-    return c.json(result, 200)
-  } catch (error) {
-    return handleErrorResponse(c, error, "listModels")
-  }
+  )
 })
 
 /**
