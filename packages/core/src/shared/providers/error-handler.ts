@@ -4,7 +4,6 @@
  */
 
 import {
-  ProviderError,
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
