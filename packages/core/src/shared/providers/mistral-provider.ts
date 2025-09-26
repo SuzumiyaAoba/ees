@@ -11,6 +11,10 @@ import type {
   EmbeddingResponse,
   MistralConfig,
   ModelInfo,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
 import { createMistralErrorHandler } from "./error-handler"
 
@@ -26,7 +30,7 @@ const make = (config: MistralConfig) =>
       ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =

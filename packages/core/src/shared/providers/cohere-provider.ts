@@ -11,6 +11,10 @@ import type {
   EmbeddingRequest,
   EmbeddingResponse,
   ModelInfo,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
 import { createCohereErrorHandler } from "./error-handler"
 
@@ -27,7 +31,7 @@ const make = (config: CohereConfig) =>
       ...(config.baseUrl && { baseURL: config.baseUrl }),
     })
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =

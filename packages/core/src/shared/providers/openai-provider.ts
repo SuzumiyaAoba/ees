@@ -11,6 +11,10 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OpenAIConfig,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
 import { createOpenAIErrorHandler } from "./error-handler"
 
@@ -28,7 +32,7 @@ const make = (config: OpenAIConfig) =>
       ...(config.organization && { organization: config.organization }),
     })
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =

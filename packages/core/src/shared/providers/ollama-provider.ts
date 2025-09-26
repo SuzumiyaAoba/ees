@@ -9,6 +9,10 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OllamaConfig,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
 import { createOllamaErrorHandler } from "./error-handler"
 
@@ -30,7 +34,7 @@ const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
     const baseUrl = config.baseUrl ?? "http://localhost:11434"
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =

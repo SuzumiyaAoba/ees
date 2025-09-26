@@ -18,9 +18,9 @@ import {
  */
 export interface ProviderErrorContext {
   readonly provider: string
-  readonly modelName?: string
+  readonly modelName?: string | undefined
   readonly operation: string
-  readonly fallbackModel?: string
+  readonly fallbackModel?: string | undefined
 }
 
 /**
@@ -103,7 +103,7 @@ export function handleProviderError(
   context: ProviderErrorContext,
   request?: EmbeddingRequest,
   config?: ProviderConfig
-): ProviderError {
+): ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError {
   const statusCode = extractStatusCode(error)
   const baseMessage = extractErrorMessage(error, `Unknown ${context.provider} error`)
   const modelName = getModelNameForError(context, request, config)
@@ -221,7 +221,7 @@ export function createProviderErrorHandler(
     modelName?: string,
     request?: EmbeddingRequest,
     config?: ProviderConfig
-  ): ProviderError => {
+  ): ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError => {
     return handleProviderError(
       error,
       {

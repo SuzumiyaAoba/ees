@@ -11,6 +11,10 @@ import type {
   EmbeddingRequest,
   EmbeddingResponse,
   ModelInfo,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
 import { createAzureOpenAIErrorHandler } from "./error-handler"
 
@@ -28,7 +32,7 @@ const make = (config: AzureConfig) =>
       apiVersion: config.apiVersion ?? "2024-02-01",
     })
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
