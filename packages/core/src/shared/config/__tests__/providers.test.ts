@@ -4,7 +4,6 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
-  ENV_KEYS,
   getAvailableProviders,
   getDefaultProvider,
   getGoogleConfig,
@@ -13,6 +12,7 @@ import {
   getProviderConfigSummary,
   validateProviderConfig,
 } from "../providers"
+import { ENV_KEYS } from "../env-keys"
 
 describe("Provider Configuration", () => {
   let originalEnv: NodeJS.ProcessEnv
