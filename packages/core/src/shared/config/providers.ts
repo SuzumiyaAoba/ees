@@ -1,6 +1,7 @@
 /**
  * Provider configuration management
  * Handles environment-based configuration for embedding providers
+ * Refactored to use generic configuration factory pattern
  */
 
 import { getEnv, getEnvWithDefault } from "../lib/env"
@@ -13,181 +14,58 @@ import type {
   OpenAIConfig,
   ProviderConfig,
 } from "../providers/types"
-
-/**
- * Environment variable keys for provider configuration
- */
-export const ENV_KEYS = {
-  // Default provider
-  DEFAULT_PROVIDER: "EES_DEFAULT_PROVIDER",
-
-  // Ollama configuration
-  OLLAMA_BASE_URL: "EES_OLLAMA_BASE_URL",
-  OLLAMA_DEFAULT_MODEL: "EES_OLLAMA_DEFAULT_MODEL",
-
-  // OpenAI configuration
-  OPENAI_API_KEY: "EES_OPENAI_API_KEY",
-  OPENAI_BASE_URL: "EES_OPENAI_BASE_URL",
-  OPENAI_DEFAULT_MODEL: "EES_OPENAI_DEFAULT_MODEL",
-  OPENAI_ORGANIZATION: "EES_OPENAI_ORGANIZATION",
-
-  // Google AI configuration
-  GOOGLE_API_KEY: "EES_GOOGLE_API_KEY",
-  GOOGLE_BASE_URL: "EES_GOOGLE_BASE_URL",
-  GOOGLE_DEFAULT_MODEL: "EES_GOOGLE_DEFAULT_MODEL",
-
-  // Azure OpenAI configuration
-  AZURE_API_KEY: "EES_AZURE_API_KEY",
-  AZURE_BASE_URL: "EES_AZURE_BASE_URL",
-  AZURE_API_VERSION: "EES_AZURE_API_VERSION",
-  AZURE_DEFAULT_MODEL: "EES_AZURE_DEFAULT_MODEL",
-
-  // Cohere configuration
-  COHERE_API_KEY: "EES_COHERE_API_KEY",
-  COHERE_BASE_URL: "EES_COHERE_BASE_URL",
-  COHERE_DEFAULT_MODEL: "EES_COHERE_DEFAULT_MODEL",
-
-  // Mistral configuration
-  MISTRAL_API_KEY: "EES_MISTRAL_API_KEY",
-  MISTRAL_BASE_URL: "EES_MISTRAL_BASE_URL",
-  MISTRAL_DEFAULT_MODEL: "EES_MISTRAL_DEFAULT_MODEL",
-} as const
+import { createProviderConfig, createSimpleProviderConfig } from "./provider-factory"
+import {
+  AZURE_CONFIG_TEMPLATE,
+  COHERE_CONFIG_TEMPLATE,
+  GOOGLE_CONFIG_TEMPLATE,
+  MISTRAL_CONFIG_TEMPLATE,
+  OLLAMA_CONFIG_TEMPLATE,
+  OPENAI_CONFIG_TEMPLATE,
+} from "./provider-templates"
+import { ENV_KEYS } from "./env-keys"
 
 /**
  * Get Ollama configuration from environment
+ * Ollama doesn't require API key authentication
  */
-export function getOllamaConfig(): OllamaConfig {
-  return {
-    type: "ollama",
-    baseUrl: getEnvWithDefault(
-      ENV_KEYS.OLLAMA_BASE_URL,
-      "http://localhost:11434"
-    ),
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.OLLAMA_DEFAULT_MODEL,
-      "nomic-embed-text"
-    ),
-  }
-}
+export const getOllamaConfig = (): OllamaConfig =>
+  createSimpleProviderConfig(OLLAMA_CONFIG_TEMPLATE)
 
 /**
  * Get OpenAI configuration from environment
  * @returns OpenAI config or null if API key is not provided
  */
-export function getOpenAIConfig(): OpenAIConfig | null {
-  const apiKey = getEnv(ENV_KEYS.OPENAI_API_KEY)
-  if (!apiKey) {
-    return null
-  }
-
-  const baseUrl = getEnv(ENV_KEYS.OPENAI_BASE_URL)
-  const organization = getEnv(ENV_KEYS.OPENAI_ORGANIZATION)
-
-  return {
-    type: "openai" as const,
-    apiKey,
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.OPENAI_DEFAULT_MODEL,
-      "text-embedding-3-small"
-    ),
-    ...(baseUrl && { baseUrl }),
-    ...(organization && { organization }),
-  } as OpenAIConfig
-}
+export const getOpenAIConfig = (): OpenAIConfig | null =>
+  createProviderConfig(OPENAI_CONFIG_TEMPLATE)
 
 /**
  * Get Google AI configuration from environment
  * @returns Google config or null if API key is not provided
  */
-export function getGoogleConfig(): GoogleConfig | null {
-  const apiKey = getEnv(ENV_KEYS.GOOGLE_API_KEY)
-  if (!apiKey) {
-    return null
-  }
-
-  const baseUrl = getEnv(ENV_KEYS.GOOGLE_BASE_URL)
-
-  return {
-    type: "google" as const,
-    apiKey,
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.GOOGLE_DEFAULT_MODEL,
-      "embedding-001"
-    ),
-    ...(baseUrl && { baseUrl }),
-  } as GoogleConfig
-}
+export const getGoogleConfig = (): GoogleConfig | null =>
+  createProviderConfig(GOOGLE_CONFIG_TEMPLATE)
 
 /**
  * Get Azure OpenAI configuration from environment
  * @returns Azure config or null if API key or base URL is not provided
  */
-export function getAzureConfig(): AzureConfig | null {
-  const apiKey = getEnv(ENV_KEYS.AZURE_API_KEY)
-  const baseUrl = getEnv(ENV_KEYS.AZURE_BASE_URL)
-  if (!(apiKey && baseUrl)) {
-    return null
-  }
-
-  const apiVersion = getEnv(ENV_KEYS.AZURE_API_VERSION)
-
-  return {
-    type: "azure" as const,
-    apiKey,
-    baseUrl,
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.AZURE_DEFAULT_MODEL,
-      "text-embedding-ada-002"
-    ),
-    ...(apiVersion && { apiVersion }),
-  } as AzureConfig
-}
+export const getAzureConfig = (): AzureConfig | null =>
+  createProviderConfig(AZURE_CONFIG_TEMPLATE)
 
 /**
  * Get Cohere configuration from environment
  * @returns Cohere config or null if API key is not provided
  */
-export function getCohereConfig(): CohereConfig | null {
-  const apiKey = getEnv(ENV_KEYS.COHERE_API_KEY)
-  if (!apiKey) {
-    return null
-  }
-
-  const baseUrl = getEnv(ENV_KEYS.COHERE_BASE_URL)
-
-  return {
-    type: "cohere" as const,
-    apiKey,
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.COHERE_DEFAULT_MODEL,
-      "embed-english-v3.0"
-    ),
-    ...(baseUrl && { baseUrl }),
-  } as CohereConfig
-}
+export const getCohereConfig = (): CohereConfig | null =>
+  createProviderConfig(COHERE_CONFIG_TEMPLATE)
 
 /**
  * Get Mistral configuration from environment
  * @returns Mistral config or null if API key is not provided
  */
-export function getMistralConfig(): MistralConfig | null {
-  const apiKey = getEnv(ENV_KEYS.MISTRAL_API_KEY)
-  if (!apiKey) {
-    return null
-  }
-
-  const baseUrl = getEnv(ENV_KEYS.MISTRAL_BASE_URL)
-
-  return {
-    type: "mistral" as const,
-    apiKey,
-    defaultModel: getEnvWithDefault(
-      ENV_KEYS.MISTRAL_DEFAULT_MODEL,
-      "mistral-embed"
-    ),
-    ...(baseUrl && { baseUrl }),
-  } as MistralConfig
-}
+export const getMistralConfig = (): MistralConfig | null =>
+  createProviderConfig(MISTRAL_CONFIG_TEMPLATE)
 
 /**
  * Get all available provider configurations from environment

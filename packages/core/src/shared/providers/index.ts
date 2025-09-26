@@ -5,7 +5,6 @@
 
 // Configuration helpers
 export {
-  ENV_KEYS,
   getAvailableProviders,
   getDefaultProvider,
   getGoogleConfig,
@@ -14,6 +13,7 @@ export {
   getProviderConfigSummary,
   validateProviderConfig,
 } from "../config/providers"
+export { ENV_KEYS } from "../config/env-keys"
 // Provider implementations
 export {
   AzureProviderService,
