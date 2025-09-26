@@ -2,10 +2,19 @@ import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import type { EmbeddingRequest, EmbeddingResponse, OllamaConfig } from "../types"
 import { ProviderModelError } from "../types"
-
-// Mock fetch globally
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+import {
+  createMockEmbeddingResponse,
+  setupMockFetch,
+  setupMockFetchError,
+  setupMockFetchJsonError,
+  expectEmbeddingResult,
+  expectProviderError,
+  expectFetchCall,
+  createTestRequest,
+  createTestEnvironment,
+  TEST_EMBEDDINGS,
+  TEST_MODELS,
+} from "./test-helpers"
 
 // Mock the Ollama provider factory function
 const createMockOllamaProvider = (config: OllamaConfig) =>
@@ -113,9 +122,10 @@ const createMockOllamaProvider = (config: OllamaConfig) =>
 
 describe("Ollama Provider", () => {
   let config: OllamaConfig
+  let testEnv: ReturnType<typeof createTestEnvironment>
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    testEnv = createTestEnvironment()
     config = {
       baseUrl: "http://localhost:11434",
       defaultModel: "nomic-embed-text",
@@ -123,39 +133,40 @@ describe("Ollama Provider", () => {
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    testEnv.cleanup()
   })
 
   describe("generateEmbedding", () => {
     it("should generate embedding with default model", async () => {
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3, 0.4, 0.5]],
-        model: "nomic-embed-text",
-        total_duration: 1000000,
-        load_duration: 500000,
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        TEST_EMBEDDINGS.SMALL,
+        "nomic-embed-text",
+        {
+          total_duration: 1000000,
+          load_duration: 500000,
+        }
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Hello world",
-      }
+      const request = createTestRequest("Hello world")
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(result.embedding).toEqual([0.1, 0.2, 0.3, 0.4, 0.5])
-      expect(result.model).toBe("nomic-embed-text")
-      expect(result.provider).toBe("ollama")
-      expect(result.dimensions).toBe(5)
-      expect(result.tokensUsed).toBeUndefined()
+      expectEmbeddingResult(result, {
+        embedding: TEST_EMBEDDINGS.SMALL,
+        model: "nomic-embed-text",
+        provider: "ollama",
+        dimensions: 5,
+        tokensUsed: undefined,
+      })
 
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,37 +179,36 @@ describe("Ollama Provider", () => {
     })
 
     it("should generate embedding with custom model", async () => {
-      const mockResponse = {
-        embeddings: [[0.5, 0.4, 0.3, 0.2, 0.1]],
-        model: "mxbai-embed-large",
-      }
+      const customEmbedding = [0.5, 0.4, 0.3, 0.2, 0.1]
+      const mockResponse = createMockEmbeddingResponse(
+        customEmbedding,
+        TEST_MODELS.OLLAMA.MXBAI
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Custom model test",
-        modelName: "mxbai-embed-large",
-      }
+      const request = createTestRequest("Custom model test", TEST_MODELS.OLLAMA.MXBAI)
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(result.embedding).toEqual([0.5, 0.4, 0.3, 0.2, 0.1])
-      expect(result.model).toBe("mxbai-embed-large")
-      expect(result.dimensions).toBe(5)
+      expectEmbeddingResult(result, {
+        embedding: customEmbedding,
+        model: TEST_MODELS.OLLAMA.MXBAI,
+        dimensions: 5,
+      })
 
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "mxbai-embed-large",
+          model: TEST_MODELS.OLLAMA.MXBAI,
           input: ["Custom model test"],
         }),
       })
@@ -210,79 +220,68 @@ describe("Ollama Provider", () => {
         defaultModel: "nomic-embed-text",
       }
 
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        "nomic-embed-text"
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(customConfig))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
       await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(mockFetch).toHaveBeenCalledWith("http://custom-ollama:11434/api/embed", {
+      expectFetchCall("http://custom-ollama:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: expect.any(String),
+        body: JSON.stringify({
+          model: "nomic-embed-text",
+          input: ["Test text"],
+        }),
       })
     })
 
     it("should handle HTTP errors", async () => {
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: false,
         status: 404,
-        text: vi.fn().mockResolvedValue("Model not found"),
+        error: "Model not found",
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-        modelName: "nonexistent-model",
-      }
+      const request = createTestRequest("Test text", "nonexistent-model")
 
-      const result = await Effect.runPromiseExit(provider.generateEmbedding(request))
+      const error = await expectProviderError(
+        ProviderModelError,
+        provider.generateEmbedding(request)
+      )
 
-      expect(Exit.isFailure(result)).toBe(true)
-      if (Exit.isFailure(result)) {
-        expect(result.cause._tag).toBe("Fail")
-        const error = (result.cause as { error: ProviderModelError }).error
-        expect(error).toBeInstanceOf(ProviderModelError)
-        expect(error.provider).toBe("ollama")
-        expect(error.modelName).toBe("nonexistent-model")
-        expect(error.message).toContain("HTTP 404")
-      }
+      expect(error.provider).toBe("ollama")
+      expect(error.modelName).toBe("nonexistent-model")
+      expect(error.message).toContain("HTTP 404")
     })
 
     it("should handle network errors", async () => {
       const networkError = new Error("Network is unreachable")
-      mockFetch.mockRejectedValue(networkError)
+      setupMockFetchError(networkError)
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
-      const result = await Effect.runPromiseExit(provider.generateEmbedding(request))
+      const error = await expectProviderError(
+        ProviderModelError,
+        provider.generateEmbedding(request)
+      )
 
-      expect(Exit.isFailure(result)).toBe(true)
-      if (Exit.isFailure(result)) {
-        expect(result.cause._tag).toBe("Fail")
-        const error = (result.cause as { error: ProviderModelError }).error
-        expect(error).toBeInstanceOf(ProviderModelError)
-        expect(error.message).toContain("Failed to generate embedding")
-        expect(error.cause).toBe(networkError)
-      }
+      expect(error.message).toContain("Failed to generate embedding")
+      expect(error.cause).toBe(networkError)
     })
 
     it("should handle invalid response format", async () => {
@@ -291,27 +290,21 @@ describe("Ollama Provider", () => {
         model: "nomic-embed-text",
       }
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
-      const result = await Effect.runPromiseExit(provider.generateEmbedding(request))
+      const error = await expectProviderError(
+        ProviderModelError,
+        provider.generateEmbedding(request)
+      )
 
-      expect(Exit.isFailure(result)).toBe(true)
-      if (Exit.isFailure(result)) {
-        expect(result.cause._tag).toBe("Fail")
-        const error = (result.cause as { error: ProviderModelError }).error
-        expect(error).toBeInstanceOf(ProviderModelError)
-        expect(error.message).toContain("Invalid response format")
-      }
+      expect(error.message).toContain("Invalid response format")
     })
 
     it("should handle empty embeddings array", async () => {
@@ -320,49 +313,36 @@ describe("Ollama Provider", () => {
         model: "nomic-embed-text",
       }
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
-      const result = await Effect.runPromiseExit(provider.generateEmbedding(request))
+      const error = await expectProviderError(
+        ProviderModelError,
+        provider.generateEmbedding(request)
+      )
 
-      expect(Exit.isFailure(result)).toBe(true)
-      if (Exit.isFailure(result)) {
-        expect(result.cause._tag).toBe("Fail")
-        const error = (result.cause as { error: ProviderModelError }).error
-        expect(error.message).toContain("Invalid response format")
-      }
+      expect(error.message).toContain("Invalid response format")
     })
 
     it("should handle malformed JSON response", async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockRejectedValue(new Error("Invalid JSON")),
-        text: vi.fn().mockResolvedValue(""),
-        status: 200,
-      })
+      const jsonError = new Error("Invalid JSON")
+      setupMockFetchJsonError(jsonError)
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
-      const result = await Effect.runPromiseExit(provider.generateEmbedding(request))
+      const error = await expectProviderError(
+        ProviderModelError,
+        provider.generateEmbedding(request)
+      )
 
-      expect(Exit.isFailure(result)).toBe(true)
-      if (Exit.isFailure(result)) {
-        expect(result.cause._tag).toBe("Fail")
-        const error = (result.cause as { error: ProviderModelError }).error
-        expect(error).toBeInstanceOf(ProviderModelError)
-      }
+      expect(error).toBeInstanceOf(ProviderModelError)
     })
   })
 
@@ -493,68 +473,65 @@ describe("Ollama Provider", () => {
         defaultModel: "nomic-embed-text",
       }
 
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        "nomic-embed-text"
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(configWithoutUrl))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
       await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: expect.any(String),
+        body: JSON.stringify({
+          model: "nomic-embed-text",
+          input: ["Test text"],
+        }),
       })
     })
 
     it("should use default model when not specified in request", async () => {
       const customConfig: OllamaConfig = {
         baseUrl: "http://localhost:11434",
-        defaultModel: "mxbai-embed-large",
+        defaultModel: TEST_MODELS.OLLAMA.MXBAI,
       }
 
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "mxbai-embed-large",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        TEST_MODELS.OLLAMA.MXBAI
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(customConfig))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-        // No modelName specified
-      }
+      const request = createTestRequest("Test text")
+      // No modelName specified
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(result.model).toBe("mxbai-embed-large")
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expect(result.model).toBe(TEST_MODELS.OLLAMA.MXBAI)
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "mxbai-embed-large",
+          model: TEST_MODELS.OLLAMA.MXBAI,
           input: ["Test text"],
         }),
       })
@@ -563,33 +540,30 @@ describe("Ollama Provider", () => {
     it("should fallback to nomic-embed-text when no config default", async () => {
       const minimalConfig: OllamaConfig = {}
 
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        TEST_MODELS.OLLAMA.NOMIC
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(minimalConfig))
-      const request: EmbeddingRequest = {
-        text: "Test text",
-      }
+      const request = createTestRequest("Test text")
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
-      expect(result.model).toBe("nomic-embed-text")
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expect(result.model).toBe(TEST_MODELS.OLLAMA.NOMIC)
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "nomic-embed-text",
+          model: TEST_MODELS.OLLAMA.NOMIC,
           input: ["Test text"],
         }),
       })
@@ -599,55 +573,49 @@ describe("Ollama Provider", () => {
   describe("Edge Cases", () => {
     it("should handle large text input", async () => {
       const largeText = "A".repeat(10000)
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        TEST_MODELS.OLLAMA.NOMIC
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: largeText,
-      }
+      const request = createTestRequest(largeText)
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expect(result.embedding).toEqual([0.1, 0.2, 0.3])
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "nomic-embed-text",
+          model: TEST_MODELS.OLLAMA.NOMIC,
           input: [largeText],
         }),
       })
     })
 
     it("should handle empty text input", async () => {
-      const mockResponse = {
-        embeddings: [[0.0, 0.0, 0.0]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.0, 0.0, 0.0],
+        TEST_MODELS.OLLAMA.NOMIC
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: "",
-      }
+      const request = createTestRequest("")
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
@@ -656,33 +624,30 @@ describe("Ollama Provider", () => {
 
     it("should handle special characters in text", async () => {
       const specialText = "Hello 世界! 🌍 ñ á ü @#$%^&*()"
-      const mockResponse = {
-        embeddings: [[0.1, 0.2, 0.3]],
-        model: "nomic-embed-text",
-      }
+      const mockResponse = createMockEmbeddingResponse(
+        [0.1, 0.2, 0.3],
+        TEST_MODELS.OLLAMA.NOMIC
+      )
 
-      mockFetch.mockResolvedValue({
+      setupMockFetch({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponse),
-        text: vi.fn().mockResolvedValue(""),
         status: 200,
+        data: mockResponse,
       })
 
       const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request: EmbeddingRequest = {
-        text: specialText,
-      }
+      const request = createTestRequest(specialText)
 
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expect(result.embedding).toEqual([0.1, 0.2, 0.3])
-      expect(mockFetch).toHaveBeenCalledWith("http://localhost:11434/api/embed", {
+      expectFetchCall("http://localhost:11434/api/embed", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "nomic-embed-text",
+          model: TEST_MODELS.OLLAMA.NOMIC,
           input: [specialText],
         }),
       })
