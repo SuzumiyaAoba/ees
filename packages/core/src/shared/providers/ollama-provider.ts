@@ -9,8 +9,12 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OllamaConfig,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
 } from "./types"
-import { ProviderModelError } from "./types"
+import { createOllamaErrorHandler } from "./error-handler"
 
 export interface OllamaProviderService extends EmbeddingProvider {}
 
@@ -30,7 +34,7 @@ const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
     const baseUrl = config.baseUrl ?? "http://localhost:11434"
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
@@ -67,14 +71,10 @@ const make = (config: OllamaConfig) =>
             // Ollama doesn't provide token usage in embed API, so omit the property
           } satisfies EmbeddingResponse
         },
-        catch: (error) =>
-          new ProviderModelError({
-            provider: "ollama",
-            modelName:
-              request.modelName ?? config.defaultModel ?? "nomic-embed-text",
-            message: `Failed to generate embedding: ${error}`,
-            cause: error,
-          }),
+        catch: (error) => {
+          const handleError = createOllamaErrorHandler()
+          return handleError(error, "generate embedding", request.modelName, request, config)
+        },
       })
 
     const listModels = () =>

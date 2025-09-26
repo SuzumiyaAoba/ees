@@ -11,13 +11,12 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OpenAIConfig,
-} from "./types"
-import {
-  ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderModelError,
+  ProviderAuthenticationError,
   ProviderRateLimitError,
 } from "./types"
+import { createOpenAIErrorHandler } from "./error-handler"
 
 export interface OpenAIProviderService extends EmbeddingProvider {}
 
@@ -33,7 +32,7 @@ const make = (config: OpenAIConfig) =>
       ...(config.organization && { organization: config.organization }),
     })
 
-    const generateEmbedding = (request: EmbeddingRequest) =>
+    const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
@@ -53,59 +52,8 @@ const make = (config: OpenAIConfig) =>
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
-          // Parse OpenAI-specific error types
-          if (error && typeof error === "object" && "status" in error) {
-            const statusCode = error.status
-            const message =
-              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
-                ? error.message
-                : "Unknown OpenAI error"
-
-            switch (statusCode) {
-              case 401:
-                return new ProviderAuthenticationError({
-                  provider: "openai",
-                  message: `Authentication failed: ${message}`,
-                  errorCode: "UNAUTHORIZED",
-                  cause: error,
-                })
-              case 429:
-                return new ProviderRateLimitError({
-                  provider: "openai",
-                  message: `Rate limit exceeded: ${message}`,
-                  errorCode: "RATE_LIMITED",
-                  cause: error,
-                })
-              case 404:
-                return new ProviderModelError({
-                  provider: "openai",
-                  modelName:
-                    request.modelName ??
-                    config.defaultModel ??
-                    "text-embedding-3-small",
-                  message: `Model not found: ${message}`,
-                  errorCode: "MODEL_NOT_FOUND",
-                  cause: error,
-                })
-              default:
-                return new ProviderConnectionError({
-                  provider: "openai",
-                  message: `OpenAI API error: ${message}`,
-                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
-                  cause: error,
-                })
-            }
-          }
-
-          return new ProviderModelError({
-            provider: "openai",
-            modelName:
-              request.modelName ??
-              config.defaultModel ??
-              "text-embedding-3-small",
-            message: `Failed to generate embedding: ${error}`,
-            cause: error,
-          })
+          const handleError = createOpenAIErrorHandler()
+          return handleError(error, "generate embedding", request.modelName, request, config)
         },
       })
 
