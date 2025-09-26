@@ -12,12 +12,7 @@ import type {
   EmbeddingResponse,
   ModelInfo,
 } from "./types"
-import {
-  ProviderAuthenticationError,
-  ProviderConnectionError,
-  ProviderModelError,
-  ProviderRateLimitError,
-} from "./types"
+import { createCohereErrorHandler } from "./error-handler"
 
 export interface CohereProviderService extends EmbeddingProvider {}
 
@@ -52,57 +47,8 @@ const make = (config: CohereConfig) =>
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
-          // Parse Cohere-specific error types
-          if (error && typeof error === "object" && "status" in error) {
-            const statusCode = error.status
-            const message =
-              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
-                ? error.message
-                : "Unknown Cohere error"
-
-            switch (statusCode) {
-              case 401:
-                return new ProviderAuthenticationError({
-                  provider: "cohere",
-                  message: `Authentication failed: ${message}`,
-                  errorCode: "UNAUTHORIZED",
-                  cause: error,
-                })
-              case 429:
-                return new ProviderRateLimitError({
-                  provider: "cohere",
-                  message: `Rate limit exceeded: ${message}`,
-                  errorCode: "RATE_LIMITED",
-                  cause: error,
-                })
-              case 404:
-                return new ProviderModelError({
-                  provider: "cohere",
-                  modelName:
-                    request.modelName ??
-                    config.defaultModel ??
-                    "embed-english-v3.0",
-                  message: `Model not found: ${message}`,
-                  errorCode: "MODEL_NOT_FOUND",
-                  cause: error,
-                })
-              default:
-                return new ProviderConnectionError({
-                  provider: "cohere",
-                  message: `Cohere API error: ${message}`,
-                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
-                  cause: error,
-                })
-            }
-          }
-
-          return new ProviderModelError({
-            provider: "cohere",
-            modelName:
-              request.modelName ?? config.defaultModel ?? "embed-english-v3.0",
-            message: `Failed to generate embedding: ${error}`,
-            cause: error,
-          })
+          const handleError = createCohereErrorHandler()
+          return handleError(error, "generate embedding", request.modelName, request, config)
         },
       })
 

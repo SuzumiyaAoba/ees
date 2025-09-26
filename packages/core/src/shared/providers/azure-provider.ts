@@ -12,12 +12,7 @@ import type {
   EmbeddingResponse,
   ModelInfo,
 } from "./types"
-import {
-  ProviderAuthenticationError,
-  ProviderConnectionError,
-  ProviderModelError,
-  ProviderRateLimitError,
-} from "./types"
+import { createAzureOpenAIErrorHandler } from "./error-handler"
 
 export interface AzureProviderService extends EmbeddingProvider {}
 
@@ -53,59 +48,8 @@ const make = (config: AzureConfig) =>
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
-          // Parse Azure-specific error types
-          if (error && typeof error === "object" && "status" in error) {
-            const statusCode = error.status
-            const message =
-              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
-                ? error.message
-                : "Unknown Azure error"
-
-            switch (statusCode) {
-              case 401:
-                return new ProviderAuthenticationError({
-                  provider: "azure",
-                  message: `Authentication failed: ${message}`,
-                  errorCode: "UNAUTHORIZED",
-                  cause: error,
-                })
-              case 429:
-                return new ProviderRateLimitError({
-                  provider: "azure",
-                  message: `Rate limit exceeded: ${message}`,
-                  errorCode: "RATE_LIMITED",
-                  cause: error,
-                })
-              case 404:
-                return new ProviderModelError({
-                  provider: "azure",
-                  modelName:
-                    request.modelName ??
-                    config.defaultModel ??
-                    "text-embedding-ada-002",
-                  message: `Model not found: ${message}`,
-                  errorCode: "MODEL_NOT_FOUND",
-                  cause: error,
-                })
-              default:
-                return new ProviderConnectionError({
-                  provider: "azure",
-                  message: `Azure API error: ${message}`,
-                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
-                  cause: error,
-                })
-            }
-          }
-
-          return new ProviderModelError({
-            provider: "azure",
-            modelName:
-              request.modelName ??
-              config.defaultModel ??
-              "text-embedding-ada-002",
-            message: `Failed to generate embedding: ${error}`,
-            cause: error,
-          })
+          const handleError = createAzureOpenAIErrorHandler()
+          return handleError(error, "generate embedding", request.modelName, request, config)
         },
       })
 

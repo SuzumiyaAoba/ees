@@ -12,12 +12,7 @@ import type {
   GoogleConfig,
   ModelInfo,
 } from "./types"
-import {
-  ProviderAuthenticationError,
-  ProviderConnectionError,
-  ProviderModelError,
-  ProviderRateLimitError,
-} from "./types"
+import { createGoogleErrorHandler } from "./error-handler"
 
 export interface GoogleProviderService extends EmbeddingProvider {}
 
@@ -52,58 +47,8 @@ const make = (config: GoogleConfig) =>
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
-          // Parse Google AI-specific error types
-          if (error && typeof error === "object" && "status" in error) {
-            const statusCode = error.status
-            const message =
-              (error && typeof error === "object" && "message" in error && typeof error.message === "string")
-                ? error.message
-                : "Unknown Google AI error"
-
-            switch (statusCode) {
-              case 401:
-              case 403:
-                return new ProviderAuthenticationError({
-                  provider: "google",
-                  message: `Authentication failed: ${message}`,
-                  errorCode: "UNAUTHORIZED",
-                  cause: error,
-                })
-              case 429:
-                return new ProviderRateLimitError({
-                  provider: "google",
-                  message: `Rate limit exceeded: ${message}`,
-                  errorCode: "RATE_LIMITED",
-                  cause: error,
-                })
-              case 404:
-                return new ProviderModelError({
-                  provider: "google",
-                  modelName:
-                    request.modelName ??
-                    config.defaultModel ??
-                    "text-embedding-004",
-                  message: `Model not found: ${message}`,
-                  errorCode: "MODEL_NOT_FOUND",
-                  cause: error,
-                })
-              default:
-                return new ProviderConnectionError({
-                  provider: "google",
-                  message: `Google AI API error: ${message}`,
-                  errorCode: statusCode?.toString() ?? "UNKNOWN_ERROR",
-                  cause: error,
-                })
-            }
-          }
-
-          return new ProviderModelError({
-            provider: "google",
-            modelName:
-              request.modelName ?? config.defaultModel ?? "embedding-001",
-            message: `Failed to generate embedding: ${error}`,
-            cause: error,
-          })
+          const handleError = createGoogleErrorHandler()
+          return handleError(error, "generate embedding", request.modelName, request, config)
         },
       })
 
