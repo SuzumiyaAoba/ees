@@ -128,7 +128,7 @@ export const createPinoLogger = (config: LoggerConfig): PinoLogger => {
       : {
           // Production JSON format
           formatters: {
-            level: (label) => ({ level: label }),
+            level: (label: string) => ({ level: label }),
           },
           timestamp: pino.stdTimeFunctions.isoTime,
         }),
