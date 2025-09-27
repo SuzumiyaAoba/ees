@@ -1,5 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { Effect } from "effect"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -13,8 +14,6 @@ import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
 import { rootRoute } from "./config/routes"
-import { AppLayer } from "@/app/providers/main"
-import { handleErrorResponse } from "@/shared/error-handler"
 import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
 
 
@@ -91,7 +90,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
         modelName: model_name,
       })
     )
-  )
+  ) as any
 })
 
 /**
@@ -105,7 +104,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.createBatchEmbeddings(request)
     )
-  )
+  ) as any
 })
 
 /**
@@ -119,7 +118,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.searchEmbeddings(request)
     )
-  )
+  ) as any
 })
 
 /**
@@ -136,7 +135,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
       appService.getEmbeddingByUri(decodedUri, decodedModelName)
     ),
     "Embedding not found"
-  )
+  ) as any
 })
 
 /**
@@ -170,7 +169,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.listEmbeddings(filters)
     )
-  )
+  ) as any
 })
 
 /**
@@ -198,7 +197,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
       })
     ),
     "Embedding not found"
-  )
+  ) as any
 })
 
 /**
@@ -221,7 +220,7 @@ app.openapi(listModelsRoute, async (c) => {
         }
       })
     )
-  )
+  ) as any
 })
 
 /**
