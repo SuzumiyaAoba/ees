@@ -1,6 +1,7 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
+import { createPinoLogger, createLoggerConfig } from "../../../core/src/shared/observability/logger"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -35,10 +36,13 @@ import {
  * Supports creating, searching, listing, and deleting embeddings with OpenAPI documentation.
  */
 
-console.log("Initializing Hono app...")
+// Initialize structured logger for application startup
+const logger = createPinoLogger(createLoggerConfig())
+
+logger.info({ component: "app", phase: "initialization" }, "Initializing Hono app")
 const app = new OpenAPIHono()
 
-console.log("Setting up observability middleware...")
+logger.info({ component: "app", phase: "middleware-setup" }, "Setting up observability middleware")
 // Observability middleware (must be first for proper request tracking)
 app.use(requestLoggingMiddleware)
 app.use(metricsMiddleware)
@@ -49,7 +53,7 @@ app.use(memoryMonitoringMiddleware)
 app.use(healthCheckMiddleware)
 app.use(metricsEndpointMiddleware)
 
-console.log("Setting up security middleware...")
+logger.info({ component: "app", phase: "security-setup" }, "Setting up security middleware")
 const security = createSecurityMiddleware()
 
 // Apply security middleware
@@ -61,11 +65,16 @@ app.use(security.textLengthValidation)
 // Rate limiting metrics (after rate limiting middleware)
 app.use(rateLimitMetricsMiddleware)
 
-console.log("Setting up error handling...")
+logger.info({ component: "app", phase: "error-handling-setup" }, "Setting up error handling")
 
 // Global error handling middleware
 app.onError((err, c) => {
-  console.error("Global error handler:", err)
+  logger.error({
+    error: err.message,
+    stack: err.stack,
+    path: c.req.path,
+    method: c.req.method
+  }, "Global error handler triggered")
 
   // Handle validation errors (usually from Zod/OpenAPI validation)
   if (err.message.includes("validation") || err.message.includes("required") || err.message.includes("invalid")) {
@@ -86,7 +95,7 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error", details: err.message }, 500)
 })
 
-console.log("Setting up routes...")
+logger.info({ component: "app", phase: "routes-setup" }, "Setting up routes")
 
 /**
  * Root endpoint - Health check and service identification
