@@ -23,6 +23,9 @@ export default defineConfig({
     passWithNoTests: true,
     testTimeout: 30000, // 30 second timeout for E2E tests
     hookTimeout: 30000, // 30 second timeout for setup/teardown
+    env: {
+      NODE_ENV: 'test'
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
