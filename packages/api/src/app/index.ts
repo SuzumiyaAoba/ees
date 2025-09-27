@@ -15,6 +15,7 @@ import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
 import { rootRoute } from "./config/routes"
 import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
+import { createSecurityMiddleware } from "@/middleware/security"
 
 
 
@@ -27,6 +28,15 @@ import { executeEffectHandler, withEmbeddingService, withModelManager, executeEf
 
 console.log("Initializing Hono app...")
 const app = new OpenAPIHono()
+
+console.log("Setting up security middleware...")
+const security = createSecurityMiddleware()
+
+// Apply security middleware
+app.use(security.secureHeaders)
+app.use(security.cors)
+app.use(security.requestSizeLimits)
+app.use(security.textLengthValidation)
 
 console.log("Setting up error handling...")
 
@@ -79,6 +89,7 @@ app.route("/", providerApp)
  * Create embedding endpoint
  * Generates a new embedding for the provided text using the configured provider
  */
+app.use("/embeddings", security.rateLimits.embedding)
 app.openapi(createEmbeddingRoute, async (c) => {
   const { uri, text, model_name } = c.req.valid("json")
 
@@ -97,6 +108,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
  * Batch create embeddings endpoint
  * Processes multiple texts in a single request for efficient bulk embedding generation
  */
+app.use("/embeddings/batch", security.rateLimits.embedding)
 app.openapi(batchCreateEmbeddingRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -111,6 +123,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
  * Search embeddings endpoint
  * Finds similar embeddings using vector similarity search with configurable metrics
  */
+app.use("/embeddings/search", security.rateLimits.search)
 app.openapi(searchEmbeddingsRoute, async (c) => {
   const request = c.req.valid("json")
 
@@ -125,6 +138,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
  * Get embedding by URI endpoint
  * Retrieves a specific embedding using its unique URI identifier
  */
+app.use("/embeddings/:uri/:model_name", security.rateLimits.read)
 app.openapi(getEmbeddingByUriRoute, async (c) => {
   const { uri, model_name } = c.req.valid("param")
   const decodedUri = decodeURIComponent(uri)
@@ -176,6 +190,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
  * Delete embedding endpoint
  * Removes an embedding from the database by its ID
  */
+app.use("/embeddings/:id", security.rateLimits.general)
 app.openapi(deleteEmbeddingRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
   const validationResult = validateNumericId(idStr, c)
@@ -204,6 +219,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
  * List available models endpoint
  * Returns all models available through configured providers including environment variables and Ollama response
  */
+app.use("/models", security.rateLimits.read)
 app.openapi(listModelsRoute, async (c) => {
   return executeEffectHandler(c, "listModels",
     withModelManager(modelManager =>
