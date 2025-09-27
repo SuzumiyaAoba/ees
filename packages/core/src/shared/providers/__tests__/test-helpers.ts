@@ -324,3 +324,172 @@ export function expectModelListStructure(
     expect(typeof model.dimensions).toBe("number")
   }
 }
+
+/**
+ * Helper to create a provider instance for testing
+ */
+export async function createProviderInstance<T>(
+  providerFactory: (...args: any[]) => Effect.Effect<T>,
+  ...args: any[]
+): Promise<T> {
+  return await Effect.runPromise(providerFactory(...args))
+}
+
+/**
+ * Run a complete provider test with setup, execution, and assertion
+ */
+export async function runCompleteProviderTest<T extends EmbeddingProvider>(
+  providerFactory: (...args: any[]) => Effect.Effect<T>,
+  providerArgs: any[],
+  request: EmbeddingRequest,
+  expected: Partial<EmbeddingResponse>
+): Promise<void> {
+  const provider = await createProviderInstance(providerFactory, ...providerArgs)
+  const result = await runProviderTest(provider, request)
+  expectEmbeddingResult(result, expected)
+}
+
+/**
+ * Run a provider error test with standardized setup
+ */
+export async function runProviderErrorTest<T extends EmbeddingProvider, E>(
+  providerFactory: (...args: any[]) => Effect.Effect<T>,
+  providerArgs: any[],
+  request: EmbeddingRequest,
+  errorType: new (...args: any[]) => E
+): Promise<E> {
+  const provider = await createProviderInstance(providerFactory, ...providerArgs)
+  return await expectProviderError(errorType, provider.generateEmbedding(request))
+}
+
+/**
+ * Setup a standard success test scenario
+ */
+export function setupSuccessTest(
+  embeddings: number[] | number[][],
+  model: string,
+  options?: {
+    provider?: string
+    usage?: { tokens: number }
+    total_duration?: number
+    load_duration?: number
+  }
+): void {
+  const mockResponse = createMockEmbeddingResponse(embeddings, model, options)
+  setupMockFetch({
+    ok: true,
+    status: 200,
+    data: mockResponse,
+  })
+}
+
+/**
+ * Create a standard test scenario with provider, request, and expected result
+ */
+export interface TestScenario<T> {
+  name: string
+  mockSetup: () => void
+  request: EmbeddingRequest
+  expected: Partial<EmbeddingResponse>
+  providerFactory: (...args: any[]) => Effect.Effect<T>
+  providerArgs: any[]
+}
+
+/**
+ * Run a collection of test scenarios
+ */
+export async function runTestScenarios<T extends EmbeddingProvider>(
+  scenarios: TestScenario<T>[]
+): Promise<void> {
+  for (const scenario of scenarios) {
+    scenario.mockSetup()
+    await runCompleteProviderTest(
+      scenario.providerFactory,
+      scenario.providerArgs,
+      scenario.request,
+      scenario.expected
+    )
+  }
+}
+
+/**
+ * Standard error test scenarios generator
+ */
+export function createErrorTestScenarios<T extends EmbeddingProvider>(
+  providerFactory: (...args: any[]) => Effect.Effect<T>,
+  providerArgs: any[],
+  providerName: string
+): Array<{
+  name: string
+  setup: () => void
+  errorType: any
+  expectedMessage?: string
+}> {
+  const scenarios = setupErrorScenarios()
+
+  return [
+    {
+      name: "should handle authentication errors",
+      setup: scenarios.unauthorized,
+      errorType: Error, // Will need to be specialized per provider
+      expectedMessage: "authentication",
+    },
+    {
+      name: "should handle rate limit errors",
+      setup: scenarios.rateLimited,
+      errorType: Error,
+      expectedMessage: "rate limit",
+    },
+    {
+      name: "should handle model not found errors",
+      setup: scenarios.modelNotFound,
+      errorType: Error,
+      expectedMessage: "not found",
+    },
+    {
+      name: "should handle server errors",
+      setup: scenarios.serverError,
+      errorType: Error,
+      expectedMessage: "server error",
+    },
+  ]
+}
+
+/**
+ * Simplified provider test helper that combines common patterns
+ */
+export async function testProviderEmbedding<T extends EmbeddingProvider>(
+  options: {
+    providerFactory: (...args: any[]) => Effect.Effect<T>
+    providerArgs: any[]
+    text: string
+    modelName?: string
+    embedding: number[]
+    expectedModel: string
+    expectedProvider: string
+    mockOptions?: {
+      usage?: { tokens: number }
+      total_duration?: number
+      load_duration?: number
+    }
+  }
+): Promise<void> {
+  // Setup mock response
+  setupSuccessTest(options.embedding, options.expectedModel, {
+    provider: options.expectedProvider,
+    ...options.mockOptions,
+  })
+
+  // Create provider and request
+  const provider = await createProviderInstance(options.providerFactory, ...options.providerArgs)
+  const request = createTestRequest(options.text, options.modelName)
+
+  // Execute and assert
+  const result = await runProviderTest(provider, request)
+  expectEmbeddingResult(result, {
+    embedding: options.embedding,
+    model: options.expectedModel,
+    provider: options.expectedProvider,
+    dimensions: options.embedding.length,
+  })
+}
