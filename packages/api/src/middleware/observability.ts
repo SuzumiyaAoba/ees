@@ -5,8 +5,8 @@
 
 import type { Context, Next } from 'hono'
 import { randomUUID } from 'crypto'
-import { createPinoLogger, createLoggerConfig } from "../../../core/src/shared/observability/logger"
-import { health, HealthLayer } from "../../../core/src/shared/observability/health"
+import { createPinoLogger, createLoggerConfig } from "@/core/shared/observability/logger"
+import { health, HealthLayer } from "@/core/shared/observability/health"
 import { Effect } from "effect"
 
 // Initialize shared logger for middleware
