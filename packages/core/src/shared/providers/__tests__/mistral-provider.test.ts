@@ -1,11 +1,11 @@
 /**
- * Comprehensive tests for Cohere provider implementation
- * Tests embedding generation, model management, and error handling using shared helpers
+ * Comprehensive tests for Mistral provider implementation
+ * Tests embedding generation, model management, and error handling
  */
 
 import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import type { EmbeddingRequest, EmbeddingResponse, CohereConfig } from "../types"
+import type { EmbeddingRequest, EmbeddingResponse, MistralConfig } from "../types"
 import {
   ProviderConnectionError,
   ProviderModelError,
@@ -28,17 +28,17 @@ import {
   TEST_MODELS,
 } from "./test-helpers"
 
-// Mock the Cohere provider factory function
-const createMockCohereProvider = (config: CohereConfig) =>
+// Mock the Mistral provider factory function
+const createMockMistralProvider = (config: MistralConfig) =>
   Effect.gen(function* () {
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.tryPromise({
         try: async () => {
           const modelName =
-            request.modelName ?? config.defaultModel ?? "embed-english-v3.0"
+            request.modelName ?? config.defaultModel ?? "mistral-embed"
 
-          // Simulate Cohere API call using Vercel AI SDK
-          const response = await fetch("https://api.cohere.ai/v1/embed", {
+          // Simulate Mistral API call using Vercel AI SDK
+          const response = await fetch("https://api.mistral.ai/v1/embeddings", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -46,8 +46,8 @@ const createMockCohereProvider = (config: CohereConfig) =>
             },
             body: JSON.stringify({
               model: modelName,
-              texts: [request.text],
-              input_type: "search_document",
+              input: [request.text],
+              encoding_format: "float",
             }),
           })
 
@@ -57,16 +57,23 @@ const createMockCohereProvider = (config: CohereConfig) =>
           }
 
           const result = await response.json() as {
-            embeddings: number[][]
-            id: string
+            data: Array<{
+              embedding: number[]
+              index: number
+            }>
+            model: string
+            usage: {
+              prompt_tokens: number
+              total_tokens: number
+            }
           }
 
           return {
-            embedding: result.embeddings[0],
-            model: modelName,
-            provider: "cohere",
-            dimensions: result.embeddings[0].length,
-            tokensUsed: undefined, // Cohere doesn't return token usage in embedding response
+            embedding: result.data[0].embedding,
+            model: result.model,
+            provider: "mistral",
+            dimensions: result.data[0].embedding.length,
+            tokensUsed: result.usage.total_tokens,
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
@@ -76,7 +83,7 @@ const createMockCohereProvider = (config: CohereConfig) =>
 
             if (message.includes("401") || message.includes("unauthorized")) {
               return new ProviderAuthenticationError({
-                provider: "cohere",
+                provider: "mistral",
                 modelName: request.modelName,
                 message: "Invalid API key",
               })
@@ -84,7 +91,7 @@ const createMockCohereProvider = (config: CohereConfig) =>
 
             if (message.includes("429") || message.includes("rate limit")) {
               return new ProviderRateLimitError({
-                provider: "cohere",
+                provider: "mistral",
                 modelName: request.modelName,
                 message: "Rate limit exceeded",
                 retryAfter: 60,
@@ -93,7 +100,7 @@ const createMockCohereProvider = (config: CohereConfig) =>
 
             if (message.includes("404") || message.includes("not found")) {
               return new ProviderModelError({
-                provider: "cohere",
+                provider: "mistral",
                 modelName: request.modelName || "unknown",
                 message: "Model not found",
               })
@@ -101,7 +108,7 @@ const createMockCohereProvider = (config: CohereConfig) =>
 
             if (message.includes("400") || message.includes("bad request")) {
               return new ProviderModelError({
-                provider: "cohere",
+                provider: "mistral",
                 modelName: request.modelName,
                 message: "Invalid request parameters",
               })
@@ -109,7 +116,7 @@ const createMockCohereProvider = (config: CohereConfig) =>
           }
 
           return new ProviderConnectionError({
-            provider: "cohere",
+            provider: "mistral",
             modelName: request.modelName,
             message: String(error),
           })
@@ -119,31 +126,10 @@ const createMockCohereProvider = (config: CohereConfig) =>
     const listModels = () =>
       Effect.succeed([
         {
-          name: "embed-english-v3.0",
-          provider: "cohere",
+          name: "mistral-embed",
+          provider: "mistral",
           dimensions: 1024,
-          maxTokens: 512,
-          pricePerToken: 0.1 / 1000000,
-        },
-        {
-          name: "embed-multilingual-v3.0",
-          provider: "cohere",
-          dimensions: 1024,
-          maxTokens: 512,
-          pricePerToken: 0.1 / 1000000,
-        },
-        {
-          name: "embed-english-light-v3.0",
-          provider: "cohere",
-          dimensions: 384,
-          maxTokens: 512,
-          pricePerToken: 0.1 / 1000000,
-        },
-        {
-          name: "embed-multilingual-light-v3.0",
-          provider: "cohere",
-          dimensions: 384,
-          maxTokens: 512,
+          maxTokens: 8192,
           pricePerToken: 0.1 / 1000000,
         },
       ])
@@ -169,16 +155,16 @@ const createMockCohereProvider = (config: CohereConfig) =>
     } as const
   })
 
-describe("Cohere Provider", () => {
+describe("Mistral Provider", () => {
   let testEnv: ReturnType<typeof createTestEnvironment>
-  let config: CohereConfig
+  let config: MistralConfig
 
   beforeEach(() => {
     testEnv = createTestEnvironment()
     config = {
       apiKey: "test-api-key",
-      baseUrl: "https://api.cohere.ai",
-      defaultModel: "embed-english-v3.0",
+      baseUrl: "https://api.mistral.ai/v1",
+      defaultModel: "mistral-embed",
     }
   })
 
@@ -189,149 +175,158 @@ describe("Cohere Provider", () => {
   describe("generateEmbedding", () => {
     it("should generate embedding successfully with default model", async () => {
       const mockResponse = createMockEmbeddingResponse(
-        TEST_EMBEDDINGS.COHERE,
-        TEST_MODELS.COHERE.ENGLISH
+        TEST_EMBEDDINGS.COHERE, // Mistral uses 1024 dimensions like Cohere
+        TEST_MODELS.MISTRAL.EMBED,
+        { usage: { tokens: 8 } }
       )
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [mockResponse.embedding],
-          id: "test-embedding-id",
+          data: [{ embedding: mockResponse.embedding, index: 0 }],
+          model: mockResponse.model,
+          usage: { prompt_tokens: 5, total_tokens: 8 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
         embedding: TEST_EMBEDDINGS.COHERE,
-        model: TEST_MODELS.COHERE.ENGLISH,
-        provider: "cohere",
+        model: TEST_MODELS.MISTRAL.EMBED,
+        provider: "mistral",
         dimensions: 1024,
+        tokensUsed: 8,
       })
 
-      expectFetchCall("https://api.cohere.ai/v1/embed", {
+      expectFetchCall("https://api.mistral.ai/v1/embeddings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer test-api-key",
         },
         body: JSON.stringify({
-          model: "embed-english-v3.0",
-          texts: ["test text"],
-          input_type: "search_document",
+          model: "mistral-embed",
+          input: ["test text"],
+          encoding_format: "float",
         }),
       })
     })
 
-    it("should generate embedding with multilingual model", async () => {
+    it("should generate embedding with explicit model", async () => {
       const mockResponse = createMockEmbeddingResponse(
         TEST_EMBEDDINGS.COHERE,
-        TEST_MODELS.COHERE.MULTILINGUAL
+        TEST_MODELS.MISTRAL.EMBED
       )
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [mockResponse.embedding],
-          id: "test-embedding-id",
+          data: [{ embedding: mockResponse.embedding, index: 0 }],
+          model: mockResponse.model,
+          usage: { prompt_tokens: 5, total_tokens: 8 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
-      const request = createTestRequest("Hola mundo", TEST_MODELS.COHERE.MULTILINGUAL)
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
+      const request = createTestRequest("test text", TEST_MODELS.MISTRAL.EMBED)
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
         embedding: TEST_EMBEDDINGS.COHERE,
-        model: TEST_MODELS.COHERE.MULTILINGUAL,
-        provider: "cohere",
+        model: TEST_MODELS.MISTRAL.EMBED,
+        provider: "mistral",
         dimensions: 1024,
       })
     })
 
-    it("should generate embedding with light model", async () => {
-      const mockResponse = createMockEmbeddingResponse(
-        TEST_EMBEDDINGS.MEDIUM, // Light models have 384 dimensions
-        "embed-english-light-v3.0"
-      )
-
-      setupMockFetch({
-        ok: true,
-        status: 200,
-        data: {
-          embeddings: [mockResponse.embedding],
-          id: "test-embedding-id",
-        },
-      })
-
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
-      const request = createTestRequest("test text", "embed-english-light-v3.0")
-      const result = await Effect.runPromise(provider.generateEmbedding(request))
-
-      expectEmbeddingResult(result, {
-        embedding: TEST_EMBEDDINGS.MEDIUM,
-        model: "embed-english-light-v3.0",
-        provider: "cohere",
-        dimensions: 384,
-      })
-    })
-
     it("should generate embedding for long text", async () => {
-      const longText = "word ".repeat(100).trim() // Cohere has lower token limits
+      const longText = "word ".repeat(2000).trim() // Mistral supports up to 8192 tokens
       const mockResponse = createMockEmbeddingResponse(
         TEST_EMBEDDINGS.COHERE,
-        TEST_MODELS.COHERE.ENGLISH
+        TEST_MODELS.MISTRAL.EMBED
       )
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [mockResponse.embedding],
-          id: "test-embedding-id",
+          data: [{ embedding: mockResponse.embedding, index: 0 }],
+          model: mockResponse.model,
+          usage: { prompt_tokens: 1500, total_tokens: 1500 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest(longText)
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
         embedding: TEST_EMBEDDINGS.COHERE,
-        model: TEST_MODELS.COHERE.ENGLISH,
-        provider: "cohere",
+        model: TEST_MODELS.MISTRAL.EMBED,
+        provider: "mistral",
+        tokensUsed: 1500,
       })
     })
 
     it("should generate embedding for multilingual text", async () => {
-      const multilingualText = "Hello world. Bonjour le monde. 你好世界。"
+      const multilingualText = "Hello world. Bonjour le monde. Hola mundo. こんにちは世界。"
       const mockResponse = createMockEmbeddingResponse(
         TEST_EMBEDDINGS.COHERE,
-        TEST_MODELS.COHERE.MULTILINGUAL
+        TEST_MODELS.MISTRAL.EMBED
       )
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [mockResponse.embedding],
-          id: "test-embedding-id",
+          data: [{ embedding: mockResponse.embedding, index: 0 }],
+          model: mockResponse.model,
+          usage: { prompt_tokens: 15, total_tokens: 15 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
-      const request = createTestRequest(multilingualText, TEST_MODELS.COHERE.MULTILINGUAL)
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
+      const request = createTestRequest(multilingualText)
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
         embedding: TEST_EMBEDDINGS.COHERE,
-        model: TEST_MODELS.COHERE.MULTILINGUAL,
-        provider: "cohere",
+        model: TEST_MODELS.MISTRAL.EMBED,
+        provider: "mistral",
+        tokensUsed: 15,
+      })
+    })
+
+    it("should generate embedding for technical text", async () => {
+      const technicalText = "function calculateEmbedding(text: string): Promise<number[]> { return model.embed(text); }"
+      const mockResponse = createMockEmbeddingResponse(
+        TEST_EMBEDDINGS.COHERE,
+        TEST_MODELS.MISTRAL.EMBED
+      )
+
+      setupMockFetch({
+        ok: true,
+        status: 200,
+        data: {
+          data: [{ embedding: mockResponse.embedding, index: 0 }],
+          model: mockResponse.model,
+          usage: { prompt_tokens: 25, total_tokens: 25 },
+        },
+      })
+
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
+      const request = createTestRequest(technicalText)
+      const result = await Effect.runPromise(provider.generateEmbedding(request))
+
+      expectEmbeddingResult(result, {
+        embedding: TEST_EMBEDDINGS.COHERE,
+        model: TEST_MODELS.MISTRAL.EMBED,
+        provider: "mistral",
       })
     })
   })
@@ -341,7 +336,7 @@ describe("Cohere Provider", () => {
       const scenarios = setupErrorScenarios()
       scenarios.unauthorized()
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
 
       const error = await expectProviderError(
@@ -349,7 +344,7 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
       expect(error.message).toContain("Invalid API key")
     })
 
@@ -357,7 +352,7 @@ describe("Cohere Provider", () => {
       const scenarios = setupErrorScenarios()
       scenarios.rateLimited()
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
 
       const error = await expectProviderError(
@@ -365,7 +360,7 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
       expect(error.retryAfter).toBe(60)
     })
 
@@ -373,7 +368,7 @@ describe("Cohere Provider", () => {
       const scenarios = setupErrorScenarios()
       scenarios.modelNotFound()
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text", "invalid-model")
 
       const error = await expectProviderError(
@@ -381,7 +376,7 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
       expect(error.modelName).toBe("invalid-model")
     })
 
@@ -389,7 +384,7 @@ describe("Cohere Provider", () => {
       const scenarios = setupErrorScenarios()
       scenarios.invalidRequest()
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("")
 
       const error = await expectProviderError(
@@ -397,7 +392,7 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
       expect(error.message).toContain("Invalid request parameters")
     })
 
@@ -405,7 +400,7 @@ describe("Cohere Provider", () => {
       const scenarios = setupErrorScenarios()
       scenarios.serverError()
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
 
       const error = await expectProviderError(
@@ -413,13 +408,13 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
     })
 
     it("should handle network errors", async () => {
       setupMockFetchError(new Error("Network timeout"))
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
 
       const error = await expectProviderError(
@@ -427,7 +422,7 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
       expect(error.message).toContain("Network timeout")
     })
 
@@ -438,7 +433,7 @@ describe("Cohere Provider", () => {
         data: null, // This will cause JSON parsing issues
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const request = createTestRequest("test text")
 
       const error = await expectProviderError(
@@ -446,81 +441,68 @@ describe("Cohere Provider", () => {
         provider.generateEmbedding(request)
       )
 
-      expect(error.provider).toBe("cohere")
+      expect(error.provider).toBe("mistral")
+    })
+
+    it("should handle service unavailable errors", async () => {
+      setupMockFetch({
+        ok: false,
+        status: 503,
+        error: "Service temporarily unavailable",
+      })
+
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
+      const request = createTestRequest("test text")
+
+      const error = await expectProviderError(
+        ProviderConnectionError,
+        provider.generateEmbedding(request)
+      )
+
+      expect(error.provider).toBe("mistral")
     })
   })
 
   describe("listModels", () => {
-    it("should return available Cohere models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+    it("should return available Mistral models", async () => {
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const models = await Effect.runPromise(provider.listModels())
 
-      expectModelListStructure(models, "cohere")
-      expect(models).toHaveLength(4)
+      expectModelListStructure(models, "mistral")
+      expect(models).toHaveLength(1)
 
       const modelNames = models.map((m) => m.name)
-      expect(modelNames).toContain("embed-english-v3.0")
-      expect(modelNames).toContain("embed-multilingual-v3.0")
-      expect(modelNames).toContain("embed-english-light-v3.0")
-      expect(modelNames).toContain("embed-multilingual-light-v3.0")
+      expect(modelNames).toContain("mistral-embed")
     })
 
     it("should return models with correct metadata", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
       const models = await Effect.runPromise(provider.listModels())
 
-      const englishModel = models.find((m) => m.name === "embed-english-v3.0")
-      expect(englishModel).toEqual({
-        name: "embed-english-v3.0",
-        provider: "cohere",
+      const mistralEmbed = models.find((m) => m.name === "mistral-embed")
+      expect(mistralEmbed).toEqual({
+        name: "mistral-embed",
+        provider: "mistral",
         dimensions: 1024,
-        maxTokens: 512,
+        maxTokens: 8192,
         pricePerToken: 0.1 / 1000000,
       })
-
-      const lightModel = models.find((m) => m.name === "embed-english-light-v3.0")
-      expect(lightModel).toEqual({
-        name: "embed-english-light-v3.0",
-        provider: "cohere",
-        dimensions: 384,
-        maxTokens: 512,
-        pricePerToken: 0.1 / 1000000,
-      })
-    })
-
-    it("should include both full and light model variants", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
-      const models = await Effect.runPromise(provider.listModels())
-
-      const fullDimensionModels = models.filter((m) => m.dimensions === 1024)
-      const lightDimensionModels = models.filter((m) => m.dimensions === 384)
-
-      expect(fullDimensionModels).toHaveLength(2)
-      expect(lightDimensionModels).toHaveLength(2)
     })
   })
 
   describe("isModelAvailable", () => {
     it("should return true for available models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
 
-      const isEnglishAvailable = await Effect.runPromise(
-        provider.isModelAvailable("embed-english-v3.0")
-      )
-      const isMultilingualAvailable = await Effect.runPromise(
-        provider.isModelAvailable("embed-multilingual-v3.0")
-      )
-      const isLightAvailable = await Effect.runPromise(
-        provider.isModelAvailable("embed-english-light-v3.0")
+      const isAvailable = await Effect.runPromise(
+        provider.isModelAvailable("mistral-embed")
       )
 
-      expect(isEnglishAvailable).toBe(true)
-      expect(isMultilingualAvailable).toBe(true)
-      expect(isLightAvailable).toBe(true)
+      expect(isAvailable).toBe(true)
     })
 
     it("should return false for unavailable models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
 
       const isAvailable = await Effect.runPromise(
         provider.isModelAvailable("invalid-model")
@@ -532,23 +514,23 @@ describe("Cohere Provider", () => {
 
   describe("getModelInfo", () => {
     it("should return model info for available models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
 
       const modelInfo = await Effect.runPromise(
-        provider.getModelInfo("embed-english-v3.0")
+        provider.getModelInfo("mistral-embed")
       )
 
       expect(modelInfo).toEqual({
-        name: "embed-english-v3.0",
-        provider: "cohere",
+        name: "mistral-embed",
+        provider: "mistral",
         dimensions: 1024,
-        maxTokens: 512,
+        maxTokens: 8192,
         pricePerToken: 0.1 / 1000000,
       })
     })
 
     it("should return null for unavailable models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
+      const provider = await Effect.runPromise(createMockMistralProvider(config))
 
       const modelInfo = await Effect.runPromise(
         provider.getModelInfo("invalid-model")
@@ -556,41 +538,26 @@ describe("Cohere Provider", () => {
 
       expect(modelInfo).toBeNull()
     })
-
-    it("should return correct info for light models", async () => {
-      const provider = await Effect.runPromise(createMockCohereProvider(config))
-
-      const modelInfo = await Effect.runPromise(
-        provider.getModelInfo("embed-english-light-v3.0")
-      )
-
-      expect(modelInfo).toEqual({
-        name: "embed-english-light-v3.0",
-        provider: "cohere",
-        dimensions: 384,
-        maxTokens: 512,
-        pricePerToken: 0.1 / 1000000,
-      })
-    })
   })
 
   describe("configuration", () => {
     it("should use custom base URL when provided", async () => {
       const customConfig = {
         ...config,
-        baseUrl: "https://custom.cohere.ai",
+        baseUrl: "https://custom.mistral.ai/v1",
       }
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [TEST_EMBEDDINGS.COHERE],
-          id: "test-embedding-id",
+          data: [{ embedding: TEST_EMBEDDINGS.COHERE, index: 0 }],
+          model: TEST_MODELS.MISTRAL.EMBED,
+          usage: { prompt_tokens: 5, total_tokens: 8 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(customConfig))
+      const provider = await Effect.runPromise(createMockMistralProvider(customConfig))
       const request = createTestRequest("test text")
       await Effect.runPromise(provider.generateEmbedding(request))
 
@@ -602,25 +569,26 @@ describe("Cohere Provider", () => {
     it("should use custom default model when provided", async () => {
       const customConfig = {
         ...config,
-        defaultModel: "embed-multilingual-v3.0",
+        defaultModel: "custom-embed-model",
       }
 
       setupMockFetch({
         ok: true,
         status: 200,
         data: {
-          embeddings: [TEST_EMBEDDINGS.COHERE],
-          id: "test-embedding-id",
+          data: [{ embedding: TEST_EMBEDDINGS.COHERE, index: 0 }],
+          model: "custom-embed-model",
+          usage: { prompt_tokens: 5, total_tokens: 8 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(customConfig))
+      const provider = await Effect.runPromise(createMockMistralProvider(customConfig))
       const request = createTestRequest("test text") // No model specified
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
-        model: "embed-multilingual-v3.0",
-        provider: "cohere",
+        model: "custom-embed-model",
+        provider: "mistral",
       })
     })
 
@@ -633,45 +601,20 @@ describe("Cohere Provider", () => {
         ok: true,
         status: 200,
         data: {
-          embeddings: [TEST_EMBEDDINGS.COHERE],
-          id: "test-embedding-id",
+          data: [{ embedding: TEST_EMBEDDINGS.COHERE, index: 0 }],
+          model: "mistral-embed",
+          usage: { prompt_tokens: 5, total_tokens: 8 },
         },
       })
 
-      const provider = await Effect.runPromise(createMockCohereProvider(minimalConfig))
+      const provider = await Effect.runPromise(createMockMistralProvider(minimalConfig))
       const request = createTestRequest("test text")
       const result = await Effect.runPromise(provider.generateEmbedding(request))
 
       expectEmbeddingResult(result, {
         embedding: TEST_EMBEDDINGS.COHERE,
-        model: "embed-english-v3.0", // Default model
-        provider: "cohere",
-      })
-    })
-
-    it("should handle configuration without base URL", async () => {
-      const configWithoutBaseUrl = {
-        apiKey: "test-api-key",
-        defaultModel: "embed-english-v3.0",
-      }
-
-      setupMockFetch({
-        ok: true,
-        status: 200,
-        data: {
-          embeddings: [TEST_EMBEDDINGS.COHERE],
-          id: "test-embedding-id",
-        },
-      })
-
-      const provider = await Effect.runPromise(createMockCohereProvider(configWithoutBaseUrl))
-      const request = createTestRequest("test text")
-      const result = await Effect.runPromise(provider.generateEmbedding(request))
-
-      expectEmbeddingResult(result, {
-        embedding: TEST_EMBEDDINGS.COHERE,
-        model: "embed-english-v3.0",
-        provider: "cohere",
+        model: "mistral-embed", // Default model
+        provider: "mistral",
       })
     })
   })
