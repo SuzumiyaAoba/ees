@@ -16,6 +16,15 @@ import { uploadApp } from "@/features/upload-embeddings"
 import { rootRoute } from "./config/routes"
 import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
 import { createSecurityMiddleware } from "@/middleware/security"
+import {
+  requestLoggingMiddleware,
+  metricsMiddleware,
+  rateLimitMetricsMiddleware,
+  errorLoggingMiddleware,
+  memoryMonitoringMiddleware,
+  healthCheckMiddleware,
+  metricsEndpointMiddleware,
+} from "@/middleware/observability"
 
 
 
@@ -29,6 +38,17 @@ import { createSecurityMiddleware } from "@/middleware/security"
 console.log("Initializing Hono app...")
 const app = new OpenAPIHono()
 
+console.log("Setting up observability middleware...")
+// Observability middleware (must be first for proper request tracking)
+app.use(requestLoggingMiddleware)
+app.use(metricsMiddleware)
+app.use(errorLoggingMiddleware)
+app.use(memoryMonitoringMiddleware)
+
+// Special endpoint middleware (before security to avoid rate limiting)
+app.use(healthCheckMiddleware)
+app.use(metricsEndpointMiddleware)
+
 console.log("Setting up security middleware...")
 const security = createSecurityMiddleware()
 
@@ -37,6 +57,9 @@ app.use(security.secureHeaders)
 app.use(security.cors)
 app.use(security.requestSizeLimits)
 app.use(security.textLengthValidation)
+
+// Rate limiting metrics (after rate limiting middleware)
+app.use(rateLimitMetricsMiddleware)
 
 console.log("Setting up error handling...")
 
