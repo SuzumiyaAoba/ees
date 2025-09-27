@@ -73,3 +73,6 @@ export {
 } from './shared/lib/index'
 
 export { DatabaseService } from './shared/database/connection'
+
+// Export observability system
+export * from './shared/observability/index'
