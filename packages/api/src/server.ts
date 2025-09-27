@@ -1,19 +1,33 @@
 import { serve } from "@hono/node-server"
 import { getPort } from "@ees/core"
+import { createPinoLogger, createLoggerConfig } from "../../core/src/shared/observability/logger"
 import app from "./app"
 
 const port = getPort(3000)
+const logger = createPinoLogger(createLoggerConfig())
 
-console.log(`🚀 Starting EES API server on port ${port}`)
+logger.info({
+  port,
+  component: "server",
+  phase: "startup"
+}, "Starting EES API server")
 
 // Add process error handlers
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error)
+  logger.fatal({
+    error: error.message,
+    stack: error.stack,
+    component: "server"
+  }, "Uncaught Exception")
   process.exit(1)
 })
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+  logger.fatal({
+    reason: String(reason),
+    promise: String(promise),
+    component: "server"
+  }, "Unhandled Rejection")
   process.exit(1)
 })
 
@@ -24,11 +38,19 @@ try {
       port,
     },
     () => {
-      console.log(`✅ EES API server is running on http://localhost:${port}`)
-      console.log(`📚 API documentation available at http://localhost:${port}/docs`)
+      logger.info({
+        url: `http://localhost:${port}`,
+        docsUrl: `http://localhost:${port}/docs`,
+        component: "server",
+        phase: "ready"
+      }, "EES API server is running")
     }
   )
 } catch (error) {
-  console.error('Failed to start server:', error)
+  logger.fatal({
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    component: "server"
+  }, "Failed to start server")
   process.exit(1)
 }

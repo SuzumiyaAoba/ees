@@ -5,6 +5,12 @@
 
 import type { Context, Next } from 'hono'
 import { randomUUID } from 'crypto'
+import { createPinoLogger, createLoggerConfig } from "../../../core/src/shared/observability/logger"
+import { health, HealthLayer } from "../../../core/src/shared/observability/health"
+import { Effect } from "effect"
+
+// Initialize shared logger for middleware
+const logger = createPinoLogger(createLoggerConfig())
 
 /**
  * Basic request logging middleware with correlation IDs
@@ -31,10 +37,7 @@ export const requestLoggingMiddleware = async (c: Context, next: Next) => {
   }
 
   // Log request start
-  console.log(JSON.stringify({
-    level: 'info',
-    message: 'HTTP request started',
-    timestamp: new Date().toISOString(),
+  logger.info({
     requestId,
     userId,
     method,
@@ -43,7 +46,7 @@ export const requestLoggingMiddleware = async (c: Context, next: Next) => {
     ip,
     contentLength: c.req.header('content-length'),
     contentType: c.req.header('content-type'),
-  }))
+  }, 'HTTP request started')
 
   let statusCode = 200
   let error: unknown = null
@@ -60,10 +63,7 @@ export const requestLoggingMiddleware = async (c: Context, next: Next) => {
 
     // Log request completion
     if (error) {
-      console.log(JSON.stringify({
-        level: 'error',
-        message: 'HTTP request failed',
-        timestamp: new Date().toISOString(),
+      logger.error({
         requestId,
         userId,
         method,
@@ -71,19 +71,16 @@ export const requestLoggingMiddleware = async (c: Context, next: Next) => {
         statusCode,
         duration,
         error: String(error),
-      }))
+      }, 'HTTP request failed')
     } else {
-      console.log(JSON.stringify({
-        level: 'info',
-        message: 'HTTP request completed',
-        timestamp: new Date().toISOString(),
+      logger.info({
         requestId,
         userId,
         method,
         path,
         statusCode,
         duration,
-      }))
+      }, 'HTTP request completed')
     }
   }
 }
@@ -103,29 +100,23 @@ export const metricsMiddleware = async (c: Context, next: Next) => {
     const statusCode = c.res.status
 
     // Log metrics data
-    console.log(JSON.stringify({
-      level: 'info',
-      message: 'HTTP metrics',
-      timestamp: new Date().toISOString(),
+    logger.info({
       metric: 'http_request',
       method,
       path,
       statusCode,
       duration,
-    }))
+    }, 'HTTP metrics')
   } catch (error) {
     const duration = Date.now() - startTime
-    console.log(JSON.stringify({
-      level: 'error',
-      message: 'HTTP error metrics',
-      timestamp: new Date().toISOString(),
+    logger.error({
       metric: 'http_error',
       method,
       path,
       statusCode: 500,
       duration,
       error: String(error),
-    }))
+    }, 'HTTP error metrics')
     throw error
   }
 }
@@ -140,17 +131,14 @@ export const errorLoggingMiddleware = async (c: Context, next: Next) => {
   } catch (error) {
     const requestId = c.req.header('x-request-id') || 'unknown'
 
-    console.log(JSON.stringify({
-      level: 'error',
-      message: 'Unhandled request error',
-      timestamp: new Date().toISOString(),
+    logger.error({
       requestId,
       method: c.req.method,
       path: c.req.path,
       error: String(error),
       stack: error instanceof Error ? error.stack : undefined,
       statusCode: c.res.status || 500,
-    }))
+    }, 'Unhandled request error')
 
     throw error
   }
@@ -171,16 +159,13 @@ export const memoryMonitoringMiddleware = (() => {
       lastUpdate = now
       const memUsage = process.memoryUsage()
 
-      console.log(JSON.stringify({
-        level: 'info',
-        message: 'Memory usage',
-        timestamp: new Date().toISOString(),
+      logger.info({
         metric: 'memory_usage',
         heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
         heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
         rssMB: Math.round(memUsage.rss / 1024 / 1024),
         externalMB: Math.round(memUsage.external / 1024 / 1024),
-      }))
+      }, 'Memory usage')
     }
 
     await next()
@@ -188,32 +173,101 @@ export const memoryMonitoringMiddleware = (() => {
 })()
 
 /**
- * Basic health check endpoint middleware
+ * Enhanced health check endpoint middleware with dependency monitoring
  */
 export const healthCheckMiddleware = async (c: Context, next: Next) => {
   const path = c.req.path
 
   if (path === '/health') {
-    const healthInfo = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: process.env['SERVICE_VERSION'] || '1.0.0',
-      environment: process.env['NODE_ENV'] || 'development',
-    }
+    try {
+      // Use the Effect-based health service with a simple fallback
+      const healthResult = await Effect.runPromise(
+        health.get.pipe(
+          Effect.timeout(5000), // 5 second timeout
+          Effect.catchAll(() =>
+            Effect.succeed({
+              status: 'degraded' as const,
+              timestamp: new Date().toISOString(),
+              uptime: process.uptime(),
+              version: process.env['SERVICE_VERSION'] || '1.0.0',
+              environment: process.env['NODE_ENV'] || 'development',
+              dependencies: {},
+              summary: { total: 0, healthy: 0, degraded: 0, unhealthy: 0 },
+              message: 'Health service unavailable'
+            })
+          ),
+          Effect.provide(HealthLayer)
+        )
+      )
 
-    return c.json(healthInfo, 200)
+      const statusCode = healthResult.status === 'healthy' ? 200 :
+                        healthResult.status === 'degraded' ? 200 : 503
+
+      return c.json(healthResult, statusCode)
+    } catch (error) {
+      logger.error({
+        error: String(error),
+        path: '/health'
+      }, 'Health check failed')
+
+      return c.json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: process.env['SERVICE_VERSION'] || '1.0.0',
+        environment: process.env['NODE_ENV'] || 'development',
+        error: 'Health check failed'
+      }, 503)
+    }
   } else if (path === '/health/ready') {
-    return c.json({ ready: true, timestamp: new Date().toISOString() }, 200)
+    try {
+      const ready = await Effect.runPromise(
+        health.ready.pipe(
+          Effect.timeout(3000),
+          Effect.catchAll(() => Effect.succeed(false)),
+          Effect.provide(HealthLayer)
+        )
+      )
+
+      return c.json({
+        ready,
+        timestamp: new Date().toISOString()
+      }, ready ? 200 : 503)
+    } catch (error) {
+      return c.json({
+        ready: false,
+        timestamp: new Date().toISOString(),
+        error: String(error)
+      }, 503)
+    }
   } else if (path === '/health/live') {
-    return c.json({ alive: true, timestamp: new Date().toISOString() }, 200)
+    try {
+      const alive = await Effect.runPromise(
+        health.alive.pipe(
+          Effect.timeout(3000),
+          Effect.catchAll(() => Effect.succeed(true)), // Liveness is more permissive
+          Effect.provide(HealthLayer)
+        )
+      )
+
+      return c.json({
+        alive,
+        timestamp: new Date().toISOString()
+      }, alive ? 200 : 503)
+    } catch (error) {
+      return c.json({
+        alive: false,
+        timestamp: new Date().toISOString(),
+        error: String(error)
+      }, 503)
+    }
   }
 
   return await next()
 }
 
 /**
- * Placeholder metrics endpoint (for future Prometheus integration)
+ * Enhanced Prometheus metrics endpoint with comprehensive application metrics
  */
 export const metricsEndpointMiddleware = async (c: Context, next: Next) => {
   if (c.req.path === '/metrics') {
@@ -253,16 +307,13 @@ export const rateLimitMetricsMiddleware = async (c: Context, next: Next) => {
       const endpoint = c.req.path
       const limitType = determineLimitType(endpoint)
 
-      console.log(JSON.stringify({
-        level: 'warn',
-        message: 'Rate limit violation',
-        timestamp: new Date().toISOString(),
+      logger.warn({
         metric: 'rate_limit_violation',
         endpoint,
         limitType,
         ip: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown',
         userAgent: c.req.header('user-agent'),
-      }))
+      }, 'Rate limit violation')
     }
 
     throw error
