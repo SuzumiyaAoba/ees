@@ -211,6 +211,8 @@ export const TEST_EMBEDDINGS = {
   COHERE: new Array(1024).fill(0.1),
   GOOGLE: new Array(768).fill(0.1),
   OLLAMA: [0.1, 0.2, 0.3, 0.4, 0.5],
+  AZURE: new Array(1536).fill(0.1),
+  AZURE_LARGE: new Array(3072).fill(0.1),
 } as const
 
 /**
@@ -239,8 +241,9 @@ export const TEST_MODELS = {
     EMBED: "mistral-embed",
   },
   AZURE: {
-    ADA: "text-embedding-ada-002",
+    ADA_002: "text-embedding-ada-002",
     SMALL: "text-embedding-3-small",
+    LARGE: "text-embedding-3-large",
   },
 } as const
 
