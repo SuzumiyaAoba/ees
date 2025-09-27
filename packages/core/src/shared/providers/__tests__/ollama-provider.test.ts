@@ -12,6 +12,9 @@ import {
   expectFetchCall,
   createTestRequest,
   createTestEnvironment,
+  createProviderInstance,
+  testProviderEmbedding,
+  setupSuccessTest,
   TEST_EMBEDDINGS,
   TEST_MODELS,
 } from "./test-helpers"
@@ -138,32 +141,17 @@ describe("Ollama Provider", () => {
 
   describe("generateEmbedding", () => {
     it("should generate embedding with default model", async () => {
-      const mockResponse = createMockEmbeddingResponse(
-        TEST_EMBEDDINGS.SMALL,
-        "nomic-embed-text",
-        {
+      await testProviderEmbedding({
+        providerFactory: createMockOllamaProvider,
+        providerArgs: [config],
+        text: "Hello world",
+        embedding: TEST_EMBEDDINGS.SMALL,
+        expectedModel: "nomic-embed-text",
+        expectedProvider: "ollama",
+        mockOptions: {
           total_duration: 1000000,
           load_duration: 500000,
-        }
-      )
-
-      setupMockFetch({
-        ok: true,
-        status: 200,
-        data: mockResponse,
-      })
-
-      const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request = createTestRequest("Hello world")
-
-      const result = await Effect.runPromise(provider.generateEmbedding(request))
-
-      expectEmbeddingResult(result, {
-        embedding: TEST_EMBEDDINGS.SMALL,
-        model: "nomic-embed-text",
-        provider: "ollama",
-        dimensions: 5,
-        tokensUsed: undefined,
+        },
       })
 
       expectFetchCall("http://localhost:11434/api/embed", {
@@ -180,26 +168,15 @@ describe("Ollama Provider", () => {
 
     it("should generate embedding with custom model", async () => {
       const customEmbedding = [0.5, 0.4, 0.3, 0.2, 0.1]
-      const mockResponse = createMockEmbeddingResponse(
-        customEmbedding,
-        TEST_MODELS.OLLAMA.MXBAI
-      )
 
-      setupMockFetch({
-        ok: true,
-        status: 200,
-        data: mockResponse,
-      })
-
-      const provider = await Effect.runPromise(createMockOllamaProvider(config))
-      const request = createTestRequest("Custom model test", TEST_MODELS.OLLAMA.MXBAI)
-
-      const result = await Effect.runPromise(provider.generateEmbedding(request))
-
-      expectEmbeddingResult(result, {
+      await testProviderEmbedding({
+        providerFactory: createMockOllamaProvider,
+        providerArgs: [config],
+        text: "Custom model test",
+        modelName: TEST_MODELS.OLLAMA.MXBAI,
         embedding: customEmbedding,
-        model: TEST_MODELS.OLLAMA.MXBAI,
-        dimensions: 5,
+        expectedModel: TEST_MODELS.OLLAMA.MXBAI,
+        expectedProvider: "ollama",
       })
 
       expectFetchCall("http://localhost:11434/api/embed", {
@@ -220,21 +197,14 @@ describe("Ollama Provider", () => {
         defaultModel: "nomic-embed-text",
       }
 
-      const mockResponse = createMockEmbeddingResponse(
-        [0.1, 0.2, 0.3],
-        "nomic-embed-text"
-      )
-
-      setupMockFetch({
-        ok: true,
-        status: 200,
-        data: mockResponse,
+      await testProviderEmbedding({
+        providerFactory: createMockOllamaProvider,
+        providerArgs: [customConfig],
+        text: "Test text",
+        embedding: [0.1, 0.2, 0.3],
+        expectedModel: "nomic-embed-text",
+        expectedProvider: "ollama",
       })
-
-      const provider = await Effect.runPromise(createMockOllamaProvider(customConfig))
-      const request = createTestRequest("Test text")
-
-      await Effect.runPromise(provider.generateEmbedding(request))
 
       expectFetchCall("http://custom-ollama:11434/api/embed", {
         method: "POST",

@@ -324,3 +324,73 @@ export function expectModelListStructure(
     expect(typeof model.dimensions).toBe("number")
   }
 }
+
+/**
+ * Helper to create a provider instance for testing
+ */
+export async function createProviderInstance<T>(
+  providerFactory: (...args: any[]) => Effect.Effect<T>,
+  ...args: any[]
+): Promise<T> {
+  return await Effect.runPromise(providerFactory(...args))
+}
+
+/**
+ * Setup a standard success test scenario
+ */
+export function setupSuccessTest(
+  embeddings: number[] | number[][],
+  model: string,
+  options?: {
+    provider?: string
+    usage?: { tokens: number }
+    total_duration?: number
+    load_duration?: number
+  }
+): void {
+  const mockResponse = createMockEmbeddingResponse(embeddings, model, options)
+  setupMockFetch({
+    ok: true,
+    status: 200,
+    data: mockResponse,
+  })
+}
+
+/**
+ * Simplified provider test helper that combines common patterns
+ */
+export async function testProviderEmbedding<T extends EmbeddingProvider>(
+  options: {
+    providerFactory: (...args: any[]) => Effect.Effect<T>
+    providerArgs: any[]
+    text: string
+    modelName?: string
+    embedding: number[]
+    expectedModel: string
+    expectedProvider: string
+    mockOptions?: {
+      usage?: { tokens: number }
+      total_duration?: number
+      load_duration?: number
+    }
+  }
+): Promise<void> {
+  // Setup mock response
+  setupSuccessTest(options.embedding, options.expectedModel, {
+    provider: options.expectedProvider,
+    ...options.mockOptions,
+  })
+
+  // Create provider and request
+  const provider = await createProviderInstance(options.providerFactory, ...options.providerArgs)
+  const request = createTestRequest(options.text, options.modelName)
+
+  // Execute and assert
+  const result = await runProviderTest(provider, request)
+  expectEmbeddingResult(result, {
+    embedding: options.embedding,
+    model: options.expectedModel,
+    provider: options.expectedProvider,
+    dimensions: options.embedding.length,
+  })
+}
