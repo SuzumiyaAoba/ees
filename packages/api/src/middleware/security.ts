@@ -27,7 +27,7 @@ const createRateLimiter = (config: {
     const limiter = rateLimiter({
       ...config,
       standardHeaders: true,
-      keyGenerator: (c) => c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown',
+      keyGenerator: (c: Context) => c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown',
     })
 
     return await limiter(c, next)
