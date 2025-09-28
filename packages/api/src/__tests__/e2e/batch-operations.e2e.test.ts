@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
-import { parseJsonResponse, parseUnknownJsonResponse, isBatchCreateResponse, isBatchCreateResponse } from "@/__tests__/types/test-types"
+import { parseJsonResponse, parseUnknownJsonResponse, isBatchCreateResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -56,7 +56,7 @@ describe("Batch Operations E2E Tests", () => {
 
       expect(response.headers.get("content-type")).toContain("application/json")
 
-      const batchResult = await parseUnknownJsonResponse(response)
+      const batchResult = await parseJsonResponse(response, isBatchCreateResponse)
 
       // Validate batch result structure
       expect(batchResult).toHaveProperty("results")
@@ -138,7 +138,7 @@ describe("Batch Operations E2E Tests", () => {
       })
     })
 
-    it.skipIf(process.env.CI === "true")("should handle large batch operations", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle large batch operations", async () => {
       const batchSize = 50
       const items = []
 
@@ -392,7 +392,7 @@ And a final paragraph.`
       })
     })
 
-    it.skipIf(process.env.CI === "true")("should handle batch timeout gracefully", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle batch timeout gracefully", async () => {
       // Create a very large batch that might timeout
       const largeBatchSize = 100
       const items = []
@@ -527,7 +527,6 @@ And a final paragraph.`
       expect(processingTime).toBeLessThan(30000) // 30 seconds max
 
       const batchResult = await parseJsonResponse(response, isBatchCreateResponse)
-      const { results } = batchResult
 
       // Register successful embeddings for cleanup
       batchResult.results.forEach(result => {

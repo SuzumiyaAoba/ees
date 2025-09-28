@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, isCreateEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
+import { parseJsonResponse, isCreateEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -338,7 +338,7 @@ describe("Performance and Load Testing E2E Tests", () => {
   })
 
   describe("Concurrent Load Testing", () => {
-    it.skipIf(process.env.CI === "true")("should handle concurrent embedding creation", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle concurrent embedding creation", async () => {
       const concurrentCount = 10
 
       await measurePerformance(
@@ -386,7 +386,7 @@ describe("Performance and Load Testing E2E Tests", () => {
       )
     })
 
-    it.skipIf(process.env.CI === "true")("should handle concurrent search requests", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle concurrent search requests", async () => {
       // Create some embeddings for search testing
       const searchEmbeddings = []
       for (let i = 0; i < 5; i++) {
@@ -467,7 +467,7 @@ describe("Performance and Load Testing E2E Tests", () => {
       )
     })
 
-    it.skipIf(process.env.CI === "true")("should handle mixed concurrent operations", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle mixed concurrent operations", async () => {
       const operationCount = 12
 
       await measurePerformance(
@@ -550,7 +550,7 @@ describe("Performance and Load Testing E2E Tests", () => {
   })
 
   describe("Stress Testing", () => {
-    it.skipIf(process.env.CI === "true")("should handle rapid sequential requests", async () => {
+    it.skipIf(process.env["CI"] === "true")("should handle rapid sequential requests", async () => {
       const sequentialCount = 20
       const requests: Promise<Response>[] = []
 

@@ -11,7 +11,6 @@
     "dev": "npm run dev --workspace=packages/api",
     "dev:web": "npm run dev --workspace=packages/web",
     "test": "npm run test --workspaces --if-present",
-    "test:run": "npm run test:run --workspaces --if-present",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
