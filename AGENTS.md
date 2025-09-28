@@ -38,8 +38,7 @@ The only exceptions are:
 - `npm run dev:web` - Start development server for web frontend
 - `npm run build` - Build all packages (core, cli, api, web)
 - `npm start` - Run production build
-- `npm test` - Run tests across all workspaces (watch mode)
-- `npm run test:run` - Run tests once across all workspaces
+- `npm test` - Run tests once across all workspaces
 
 ### Code Quality
 - `npm run lint` - Check code with Biome linter
@@ -55,8 +54,7 @@ The only exceptions are:
 - `npm run dev --workspace=packages/web` - Start web frontend in development mode
 
 ### Testing Commands
-- `npm test` - Run all tests in watch mode across workspaces
-- `npm run test:run` - Run all tests once (CI mode)
+- `npm test` - Run all tests once across workspaces
 - `npm run test --workspace=@ees/core` - Run core package tests only
 - `npm run test --workspace=@ees/api` - Run API package tests only
 - `npm run test:watch --workspace=@ees/core` - Run core tests in watch mode
@@ -168,7 +166,7 @@ After creating a PR:
 3. **Fix failing CI** - If CI fails, investigate and fix issues immediately:
    - For linting errors: Run `npm run lint` locally and fix issues
    - For type errors: Run `npm run type-check` and resolve TypeScript issues
-   - For test failures: Run `npm run test:run` and fix failing tests
+   - For test failures: Run `npm test` and fix failing tests
    - For formatting issues: Run `npm run format` to auto-format code
    - For security vulnerabilities: Run `npm audit` and update dependencies
 4. **View detailed CI logs** - Use `gh run view <RUN_ID> --log-failed` for detailed error information
