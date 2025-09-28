@@ -48,30 +48,22 @@ describe("Embedding Lifecycle E2E Tests", () => {
 
       expect(response.headers.get("content-type")).toContain("application/json")
 
-      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
+      const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
 
-      // Validate response structure
-      expect(embedding).toHaveProperty("id")
-      expect(embedding).toHaveProperty("uri", requestData.uri)
-      expect(embedding).toHaveProperty("text", requestData.text)
-      expect(embedding).toHaveProperty("model_name")
-      expect(embedding).toHaveProperty("embedding")
-      expect(embedding).toHaveProperty("created_at")
+      // Validate create response structure (only what the create API actually returns)
+      expect(createResponse).toHaveProperty("id")
+      expect(createResponse).toHaveProperty("uri", requestData.uri)
+      expect(createResponse).toHaveProperty("model_name")
+      expect(createResponse).toHaveProperty("message")
 
       // Validate data types
-      expect(typeof embedding.id).toBe("number")
-      expect(typeof embedding.uri).toBe("string")
-      expect(typeof embedding.text).toBe("string")
-      expect(typeof embedding.model_name).toBe("string")
-      expect(Array.isArray(embedding.embedding)).toBe(true)
-      expect(typeof embedding.created_at).toBe("string")
-
-      // Validate embedding vector
-      expect(embedding.embedding.length).toBeGreaterThan(0)
-      expect(embedding.embedding.every(num => typeof num === "number")).toBe(true)
+      expect(typeof createResponse.id).toBe("number")
+      expect(typeof createResponse.uri).toBe("string")
+      expect(typeof createResponse.model_name).toBe("string")
+      expect(typeof createResponse.message).toBe("string")
 
       // Register for cleanup
-      registerEmbeddingForCleanup(embedding.id)
+      registerEmbeddingForCleanup(createResponse.id)
     })
 
     it("should create embedding with all optional fields", async () => {
