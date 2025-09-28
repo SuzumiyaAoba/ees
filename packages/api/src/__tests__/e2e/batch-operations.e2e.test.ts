@@ -127,16 +127,14 @@ describe("Batch Operations E2E Tests", () => {
 
       // Both should succeed
       results.forEach((result, index) => {
-        expect(result.success).toBe(true)
-        if (result.embedding) {
-          expect(result.embedding.uri).toBe(batchData.texts[index]?.uri)
+        expect(result.status).toBe("success")
+        expect(result.uri).toBe(batchData.texts[index]?.uri)
 
-          if (batchData.texts[index]?.model_name) {
-            expect(result.embedding.model_name).toBe(batchData.texts[index]?.model_name)
-          }
-
-          registerEmbeddingForCleanup(result.embedding.id)
+        if (batchData.texts[index]?.model_name) {
+          expect(result.model_name).toBe(batchData.texts[index]?.model_name)
         }
+
+        registerEmbeddingForCleanup(result.id)
       })
     })
 
@@ -232,12 +230,10 @@ And a final paragraph.`
 
       // All should succeed
       results.forEach((result, index) => {
-        expect(result.success).toBe(true)
-        expect(result.embedding).toBeDefined()
-        if (result.embedding) {
-          expect(result.embedding.text).toBe(batchData.texts[index]?.text)
-          registerEmbeddingForCleanup(result.embedding.id)
-        }
+        expect(result.status).toBe("success")
+        expect(result).toBeDefined()
+        expect(result.uri).toBe(batchData.texts[index]?.uri)
+        registerEmbeddingForCleanup(result.id)
       })
     })
 
@@ -335,11 +331,9 @@ And a final paragraph.`
 
       // Results should be in the same order as input
       results.forEach((result, index) => {
-        if (result.success && result.embedding) {
-          expect(result.embedding.uri).toBe(batchData.texts[index]?.uri)
-          expect(result.embedding.text).toBe(batchData.texts[index]?.text)
-
-          registerEmbeddingForCleanup(result.embedding.id)
+        if (result.status === "success") {
+          expect(result.uri).toBe(batchData.texts[index]?.uri)
+          registerEmbeddingForCleanup(result.id)
         }
       })
     })
@@ -386,10 +380,8 @@ And a final paragraph.`
       // At least the unique URI should succeed
       const uniqueResult = results[1]
       if (uniqueResult) {
-        expect(uniqueResult.success).toBe(true)
-        if (uniqueResult.embedding) {
-          expect(uniqueResult.embedding.uri).toBe("unique-uri-test")
-        }
+        expect(uniqueResult.status).toBe("success")
+        expect(uniqueResult.uri).toBe("unique-uri-test")
       }
 
       // Register successful embeddings for cleanup
@@ -431,8 +423,8 @@ And a final paragraph.`
 
         // Register successful embeddings for cleanup
         results.forEach(result => {
-          if (result.success && result.embedding) {
-            registerEmbeddingForCleanup(result.embedding.id)
+          if (result.status === "success") {
+            registerEmbeddingForCleanup(result.id)
           }
         })
       }

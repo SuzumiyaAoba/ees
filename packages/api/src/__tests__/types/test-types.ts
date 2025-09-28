@@ -120,12 +120,12 @@ export function isBatchCreateResponse(obj: unknown): obj is BatchCreateResponse 
 // List embeddings response type
 export interface EmbeddingListResponse {
   embeddings: EmbeddingResponse[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
+  count: number
+  page: number
+  limit: number
+  total_pages: number
+  has_next: boolean
+  has_prev: boolean
 }
 
 // Type guard for embedding list response
@@ -134,8 +134,19 @@ export function isEmbeddingListResponse(obj: unknown): obj is EmbeddingListRespo
     typeof obj === 'object' &&
     obj !== null &&
     'embeddings' in obj &&
-    'pagination' in obj &&
-    Array.isArray((obj as EmbeddingListResponse).embeddings)
+    'count' in obj &&
+    'page' in obj &&
+    'limit' in obj &&
+    'total_pages' in obj &&
+    'has_next' in obj &&
+    'has_prev' in obj &&
+    Array.isArray((obj as EmbeddingListResponse).embeddings) &&
+    typeof (obj as EmbeddingListResponse).count === 'number' &&
+    typeof (obj as EmbeddingListResponse).page === 'number' &&
+    typeof (obj as EmbeddingListResponse).limit === 'number' &&
+    typeof (obj as EmbeddingListResponse).total_pages === 'number' &&
+    typeof (obj as EmbeddingListResponse).has_next === 'boolean' &&
+    typeof (obj as EmbeddingListResponse).has_prev === 'boolean'
   )
 }
 
