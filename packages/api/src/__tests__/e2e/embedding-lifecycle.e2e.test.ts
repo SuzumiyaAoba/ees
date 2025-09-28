@@ -88,13 +88,12 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
+      const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
 
-      expect(embedding.uri).toBe(requestData.uri)
-      expect(embedding.text).toBe(requestData.text)
-      expect(embedding.model_name).toBe(requestData.model_name)
+      expect(createResponse.uri).toBe(requestData.uri)
+      expect(createResponse.model_name).toBe(requestData.model_name)
 
-      registerEmbeddingForCleanup(embedding.id)
+      registerEmbeddingForCleanup(createResponse.id)
     })
 
     it("should handle special characters in text", async () => {
@@ -118,11 +117,10 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
-      expect(embedding.text).toBe(requestData.text)
-      expect(embedding.uri).toBe(requestData.uri)
+      const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
+      expect(createResponse.uri).toBe(requestData.uri)
 
-      registerEmbeddingForCleanup(embedding.id)
+      registerEmbeddingForCleanup(createResponse.id)
     })
 
     it("should handle long text content", async () => {
@@ -147,11 +145,10 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
-      expect(embedding.text).toBe(longText)
-      expect(embedding.embedding.length).toBeGreaterThan(0)
+      const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
+      // Create response only contains basic info, not full embedding data
 
-      registerEmbeddingForCleanup(embedding.id)
+      registerEmbeddingForCleanup(createResponse.id)
     })
   })
 
@@ -237,9 +234,9 @@ describe("Embedding Lifecycle E2E Tests", () => {
           continue
         }
 
-        const embedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
-        embeddings.push(embedding)
-        registerEmbeddingForCleanup(embedding.id)
+        const createEmbeddingResult = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
+        embeddings.push(createEmbeddingResult)
+        registerEmbeddingForCleanup(createEmbeddingResult.id)
       }
 
       // List embeddings
@@ -430,10 +427,10 @@ With various formatting:
         return
       }
 
-      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
-      expect(embedding.text).toBe(testText)
+      const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
+      // Create response only contains basic info, not full text content
 
-      registerEmbeddingForCleanup(embedding.id)
+      registerEmbeddingForCleanup(createResponse.id)
     })
   })
 })

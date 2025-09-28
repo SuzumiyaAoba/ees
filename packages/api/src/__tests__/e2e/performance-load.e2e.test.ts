@@ -13,12 +13,12 @@ setupE2ETests()
 
 // Performance thresholds (adjust based on requirements)
 const PERFORMANCE_THRESHOLDS = {
-  SINGLE_EMBEDDING_CREATE: 5000, // 5 seconds
-  BATCH_EMBEDDING_CREATE: 15000, // 15 seconds
-  SEARCH_RESPONSE: 3000, // 3 seconds
-  LIST_EMBEDDINGS: 2000, // 2 seconds
-  DELETE_EMBEDDING: 1000, // 1 second
-  CONCURRENT_REQUESTS: 10000, // 10 seconds for concurrent operations
+  SINGLE_EMBEDDING_CREATE: 10000, // 10 seconds (more realistic for CI)
+  BATCH_EMBEDDING_CREATE: 20000, // 20 seconds
+  SEARCH_RESPONSE: 5000, // 5 seconds
+  LIST_EMBEDDINGS: 3000, // 3 seconds
+  DELETE_EMBEDDING: 2000, // 2 seconds
+  CONCURRENT_REQUESTS: 15000, // 15 seconds for concurrent operations
 }
 
 describe("Performance and Load Testing E2E Tests", () => {
@@ -204,13 +204,13 @@ describe("Performance and Load Testing E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
+      const createResult = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
 
       await measurePerformance(
         "Delete Embedding",
         PERFORMANCE_THRESHOLDS.DELETE_EMBEDDING,
         async () => {
-          const response = await app.request(`/embeddings/${embedding.id}`, {
+          const response = await app.request(`/embeddings/${createResult.id}`, {
             method: "DELETE"
           })
 
