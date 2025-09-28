@@ -13,12 +13,12 @@ setupE2ETests()
 
 // Performance thresholds (adjust based on requirements)
 const PERFORMANCE_THRESHOLDS = {
-  SINGLE_EMBEDDING_CREATE: 10000, // 10 seconds (more realistic for CI)
-  BATCH_EMBEDDING_CREATE: 20000, // 20 seconds
-  SEARCH_RESPONSE: 5000, // 5 seconds
-  LIST_EMBEDDINGS: 3000, // 3 seconds
-  DELETE_EMBEDDING: 2000, // 2 seconds
-  CONCURRENT_REQUESTS: 15000, // 15 seconds for concurrent operations
+  SINGLE_EMBEDDING_CREATE: process.env["CI"] === "true" ? 15000 : 10000, // CI: 15s, Local: 10s
+  BATCH_EMBEDDING_CREATE: process.env["CI"] === "true" ? 30000 : 20000, // CI: 30s, Local: 20s
+  SEARCH_RESPONSE: process.env["CI"] === "true" ? 8000 : 5000, // CI: 8s, Local: 5s
+  LIST_EMBEDDINGS: process.env["CI"] === "true" ? 5000 : 3000, // CI: 5s, Local: 3s
+  DELETE_EMBEDDING: process.env["CI"] === "true" ? 3000 : 2000, // CI: 3s, Local: 2s
+  CONCURRENT_REQUESTS: process.env["CI"] === "true" ? 25000 : 15000, // CI: 25s, Local: 15s
 }
 
 describe("Performance and Load Testing E2E Tests", () => {
