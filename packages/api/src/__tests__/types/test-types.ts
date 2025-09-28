@@ -35,6 +35,14 @@ export interface EmbeddingResponse {
   created_at: string
 }
 
+// Create embedding response type (simpler confirmation response)
+export interface CreateEmbeddingResponse {
+  id: number
+  uri: string
+  model_name: string
+  message: string
+}
+
 // Error response types
 export interface ErrorResponse {
   error: string
@@ -134,6 +142,21 @@ export function isEmbeddingResponse(obj: unknown): obj is EmbeddingResponse {
     typeof (obj as EmbeddingResponse).model_name === 'string' &&
     Array.isArray((obj as EmbeddingResponse).embedding) &&
     typeof (obj as EmbeddingResponse).created_at === 'string'
+  )
+}
+
+export function isCreateEmbeddingResponse(obj: unknown): obj is CreateEmbeddingResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'uri' in obj &&
+    'model_name' in obj &&
+    'message' in obj &&
+    typeof (obj as CreateEmbeddingResponse).id === 'number' &&
+    typeof (obj as CreateEmbeddingResponse).uri === 'string' &&
+    typeof (obj as CreateEmbeddingResponse).model_name === 'string' &&
+    typeof (obj as CreateEmbeddingResponse).message === 'string'
   )
 }
 

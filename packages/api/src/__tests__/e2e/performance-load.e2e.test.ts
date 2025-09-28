@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
+import { parseJsonResponse, isEmbeddingResponse, isCreateEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -95,9 +95,9 @@ describe("Performance and Load Testing E2E Tests", () => {
           expect([200, 400, 404, 500]).toContain(response.status)
 
           if (response.status === 200) {
-            const embedding = await parseJsonResponse(response, isEmbeddingResponse)
-            registerEmbeddingForCleanup(embedding.id)
-            return embedding
+            const createResponse = await parseJsonResponse(response, isCreateEmbeddingResponse)
+            registerEmbeddingForCleanup(createResponse.id)
+            return createResponse
           } else {
             // Service unavailable - skip this performance test
             console.log("Skipping performance test - service unavailable")
@@ -125,7 +125,7 @@ describe("Performance and Load Testing E2E Tests", () => {
         expect([200, 404, 500]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           testEmbeddings.push(embedding)
           registerEmbeddingForCleanup(embedding.id)
         }
@@ -204,7 +204,7 @@ describe("Performance and Load Testing E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
 
       await measurePerformance(
         "Delete Embedding",
@@ -351,7 +351,7 @@ describe("Performance and Load Testing E2E Tests", () => {
 
             if (response.status === 200) {
               successCount++
-              const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+              const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
               registerEmbeddingForCleanup(embedding.id)
             }
           }
@@ -385,7 +385,7 @@ describe("Performance and Load Testing E2E Tests", () => {
         expect([200, 404, 500]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           searchEmbeddings.push(embedding)
           registerEmbeddingForCleanup(embedding.id)
         }
@@ -512,7 +512,7 @@ describe("Performance and Load Testing E2E Tests", () => {
 
               // Register embeddings for cleanup
               if (i % 4 === 0) { // Create operations
-                const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+                const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
                 registerEmbeddingForCleanup(embedding.id)
               }
             }
@@ -565,7 +565,7 @@ describe("Performance and Load Testing E2E Tests", () => {
 
             if (response.status === 200) {
               successCount++
-              const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+              const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
               registerEmbeddingForCleanup(embedding.id)
             }
           }
@@ -605,7 +605,7 @@ describe("Performance and Load Testing E2E Tests", () => {
             expect([200, 400, 404, 500]).toContain(response.status)
 
             if (response.status === 200) {
-              const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+              const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
               registerEmbeddingForCleanup(embedding.id)
               return embedding
             } else {
@@ -640,7 +640,7 @@ describe("Performance and Load Testing E2E Tests", () => {
         expect([200, 404, 500]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           embeddingIds.push(embedding.id)
         }
       }
