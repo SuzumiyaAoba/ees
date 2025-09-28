@@ -158,72 +158,16 @@ const make = (config: OllamaConfig) =>
               pricePerToken: 0, // Ollama is free/local
             } satisfies ModelInfo))
 
-          // Include default models even if not installed
-          const defaultModels: ModelInfo[] = [
-            {
-              name: "nomic-embed-text",
-              provider: "ollama" as const,
-              dimensions: 768,
-              maxTokens: 8192,
-              pricePerToken: 0,
-            },
-            {
-              name: "mxbai-embed-large",
-              provider: "ollama" as const,
-              dimensions: 1024,
-              maxTokens: 512,
-              pricePerToken: 0,
-            },
-            {
-              name: "snowflake-arctic-embed",
-              provider: "ollama" as const,
-              dimensions: 1024,
-              maxTokens: 512,
-              pricePerToken: 0,
-            },
-          ]
-
-          // Combine fetched models with defaults, avoiding duplicates
-          const allModels = [...embeddingModels]
-
-          for (const defaultModel of defaultModels) {
-            if (!allModels.some(model => model.name === defaultModel.name)) {
-              allModels.push(defaultModel)
-            }
-          }
-
-          return allModels
+          return embeddingModels
         },
         catch: (error) => {
           const handleError = createOllamaErrorHandler()
           return handleError(error, "list models", undefined, { text: "" }, config)
         },
       }).pipe(
-        // Fallback to default models if API fails
+        // Return empty array if API fails (no default models)
         Effect.catchAll(() =>
-          Effect.succeed([
-            {
-              name: "nomic-embed-text",
-              provider: "ollama" as const,
-              dimensions: 768,
-              maxTokens: 8192,
-              pricePerToken: 0,
-            },
-            {
-              name: "mxbai-embed-large",
-              provider: "ollama" as const,
-              dimensions: 1024,
-              maxTokens: 512,
-              pricePerToken: 0,
-            },
-            {
-              name: "snowflake-arctic-embed",
-              provider: "ollama" as const,
-              dimensions: 1024,
-              maxTokens: 512,
-              pricePerToken: 0,
-            },
-          ] satisfies ModelInfo[])
+          Effect.succeed([] satisfies ModelInfo[])
         )
       )
 
