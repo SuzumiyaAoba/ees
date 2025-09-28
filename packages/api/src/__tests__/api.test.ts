@@ -61,8 +61,19 @@ describe("API Endpoints", () => {
     it("should handle pagination parameters", async () => {
       const response = await app.request("/embeddings?page=1&limit=5")
 
-      // With improved error handling, service errors are properly mapped
-      expect([404, 500]).toContain(response.status)
+      // Should return 200 with empty results when no embeddings exist
+      expect(response.status).toBe(200)
+
+      const data = await response.json()
+      expect(data).toMatchObject({
+        embeddings: [],
+        count: 0,
+        page: 1,
+        limit: 5,
+        total_pages: 0,
+        has_next: false,
+        has_prev: false,
+      })
     })
 
     it("should handle invalid pagination parameters", async () => {
