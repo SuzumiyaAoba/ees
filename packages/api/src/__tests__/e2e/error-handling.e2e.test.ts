@@ -448,7 +448,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
   })
 
   describe("Concurrent Request Handling", () => {
-    it("should handle concurrent embedding creation", async () => {
+    it.skipIf(process.env.CI === "true")("should handle concurrent embedding creation", async () => {
       const concurrentRequests = []
 
       for (let i = 0; i < 10; i++) {

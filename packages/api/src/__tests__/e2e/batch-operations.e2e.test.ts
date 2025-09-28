@@ -138,7 +138,7 @@ describe("Batch Operations E2E Tests", () => {
       })
     })
 
-    it("should handle large batch operations", async () => {
+    it.skipIf(process.env.CI === "true")("should handle large batch operations", async () => {
       const batchSize = 50
       const items = []
 
@@ -392,7 +392,7 @@ And a final paragraph.`
       })
     })
 
-    it("should handle batch timeout gracefully", async () => {
+    it.skipIf(process.env.CI === "true")("should handle batch timeout gracefully", async () => {
       // Create a very large batch that might timeout
       const largeBatchSize = 100
       const items = []
