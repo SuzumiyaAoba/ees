@@ -76,6 +76,20 @@ export interface BatchResult {
   }
 }
 
+// Batch create response type (actual API response format)
+export interface BatchCreateResponse {
+  results: Array<{
+    id: number
+    uri: string
+    model_name: string
+    status: "success" | "error"
+    error?: string
+  }>
+  total: number
+  successful: number
+  failed: number
+}
+
 // Type guard for batch results
 export function isBatchResult(obj: unknown): obj is BatchResult {
   return (
@@ -84,6 +98,22 @@ export function isBatchResult(obj: unknown): obj is BatchResult {
     'results' in obj &&
     'summary' in obj &&
     Array.isArray((obj as BatchResult).results)
+  )
+}
+
+// Type guard for batch create response
+export function isBatchCreateResponse(obj: unknown): obj is BatchCreateResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'results' in obj &&
+    'total' in obj &&
+    'successful' in obj &&
+    'failed' in obj &&
+    Array.isArray((obj as BatchCreateResponse).results) &&
+    typeof (obj as BatchCreateResponse).total === 'number' &&
+    typeof (obj as BatchCreateResponse).successful === 'number' &&
+    typeof (obj as BatchCreateResponse).failed === 'number'
   )
 }
 
