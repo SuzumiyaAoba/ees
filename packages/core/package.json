@@ -35,7 +35,6 @@
     "build": "tsc && tsc-alias",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "test:run": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit"

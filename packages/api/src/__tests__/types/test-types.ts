@@ -35,6 +35,14 @@ export interface EmbeddingResponse {
   created_at: string
 }
 
+// Create embedding response type (simpler confirmation response)
+export interface CreateEmbeddingResponse {
+  id: number
+  uri: string
+  model_name: string
+  message: string
+}
+
 // Error response types
 export interface ErrorResponse {
   error: string
@@ -68,6 +76,20 @@ export interface BatchResult {
   }
 }
 
+// Batch create response type (actual API response format)
+export interface BatchCreateResponse {
+  results: Array<{
+    id: number
+    uri: string
+    model_name: string
+    status: "success" | "error"
+    error?: string
+  }>
+  total: number
+  successful: number
+  failed: number
+}
+
 // Type guard for batch results
 export function isBatchResult(obj: unknown): obj is BatchResult {
   return (
@@ -79,15 +101,31 @@ export function isBatchResult(obj: unknown): obj is BatchResult {
   )
 }
 
+// Type guard for batch create response
+export function isBatchCreateResponse(obj: unknown): obj is BatchCreateResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'results' in obj &&
+    'total' in obj &&
+    'successful' in obj &&
+    'failed' in obj &&
+    Array.isArray((obj as BatchCreateResponse).results) &&
+    typeof (obj as BatchCreateResponse).total === 'number' &&
+    typeof (obj as BatchCreateResponse).successful === 'number' &&
+    typeof (obj as BatchCreateResponse).failed === 'number'
+  )
+}
+
 // List embeddings response type
 export interface EmbeddingListResponse {
   embeddings: EmbeddingResponse[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
+  count: number
+  page: number
+  limit: number
+  total_pages: number
+  has_next: boolean
+  has_prev: boolean
 }
 
 // Type guard for embedding list response
@@ -96,8 +134,19 @@ export function isEmbeddingListResponse(obj: unknown): obj is EmbeddingListRespo
     typeof obj === 'object' &&
     obj !== null &&
     'embeddings' in obj &&
-    'pagination' in obj &&
-    Array.isArray((obj as EmbeddingListResponse).embeddings)
+    'count' in obj &&
+    'page' in obj &&
+    'limit' in obj &&
+    'total_pages' in obj &&
+    'has_next' in obj &&
+    'has_prev' in obj &&
+    Array.isArray((obj as EmbeddingListResponse).embeddings) &&
+    typeof (obj as EmbeddingListResponse).count === 'number' &&
+    typeof (obj as EmbeddingListResponse).page === 'number' &&
+    typeof (obj as EmbeddingListResponse).limit === 'number' &&
+    typeof (obj as EmbeddingListResponse).total_pages === 'number' &&
+    typeof (obj as EmbeddingListResponse).has_next === 'boolean' &&
+    typeof (obj as EmbeddingListResponse).has_prev === 'boolean'
   )
 }
 
@@ -134,6 +183,21 @@ export function isEmbeddingResponse(obj: unknown): obj is EmbeddingResponse {
     typeof (obj as EmbeddingResponse).model_name === 'string' &&
     Array.isArray((obj as EmbeddingResponse).embedding) &&
     typeof (obj as EmbeddingResponse).created_at === 'string'
+  )
+}
+
+export function isCreateEmbeddingResponse(obj: unknown): obj is CreateEmbeddingResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'uri' in obj &&
+    'model_name' in obj &&
+    'message' in obj &&
+    typeof (obj as CreateEmbeddingResponse).id === 'number' &&
+    typeof (obj as CreateEmbeddingResponse).uri === 'string' &&
+    typeof (obj as CreateEmbeddingResponse).model_name === 'string' &&
+    typeof (obj as CreateEmbeddingResponse).message === 'string'
   )
 }
 
