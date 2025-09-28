@@ -15,7 +15,15 @@ vi.mock("@hono/node-server", () => ({
 }))
 
 vi.mock("@ees/core", () => ({
-  getPort: mockGetPort
+  getPort: mockGetPort,
+  createPinoLogger: vi.fn().mockReturnValue({
+    info: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }),
+  createLoggerConfig: vi.fn().mockReturnValue({})
 }))
 
 vi.mock("../app", () => ({
