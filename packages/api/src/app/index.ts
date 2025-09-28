@@ -1,7 +1,7 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
-import { createPinoLogger, createLoggerConfig } from "@/core/shared/observability/logger"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"

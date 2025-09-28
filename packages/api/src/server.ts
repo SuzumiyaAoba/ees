@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server"
 import { getPort } from "@ees/core"
-import { createPinoLogger, createLoggerConfig } from "@/core/shared/observability/logger"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import app from "./app"
 
 const port = getPort(3000)
