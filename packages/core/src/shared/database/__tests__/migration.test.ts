@@ -1,7 +1,7 @@
 import { createClient } from "@libsql/client"
 import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { DatabaseConnectionError } from "../../errors/database"
+import { DatabaseConnectionError } from "@/shared/errors/database"
 
 // Mock dependencies
 vi.mock("node:fs")

@@ -32,7 +32,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:run": "vitest run",
@@ -50,6 +50,7 @@
   "devDependencies": {
     "@types/node": "^24.4.0",
     "@types/pino": "^7.0.4",
+    "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

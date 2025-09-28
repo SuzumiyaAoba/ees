@@ -4,13 +4,13 @@
 
 import { Effect, Layer } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { EmbeddingService } from "../../../entities/embedding/api/embedding.js"
-import { DatabaseService } from "../../database/connection"
+import { EmbeddingService } from "@/entities/embedding/api/embedding.js"
+import { DatabaseService } from "@/shared/database/connection"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
 } from "../embedding-application"
-import { ApplicationLayer, CoreApplicationLayer } from "../layers"
+import { ApplicationLayer, CoreApplicationLayer } from "@/shared/application/layers"
 
 describe("Application Layers", () => {
   const createMockServices = () => {

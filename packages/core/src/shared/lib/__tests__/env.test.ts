@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { getEnv, getEnvWithDefault, getPort, isTestEnv } from "../env"
+import { getEnv, getEnvWithDefault, getPort, isTestEnv } from "@/shared/lib/env"
 
 describe("Environment Variable Utilities", () => {
   let originalEnv: NodeJS.ProcessEnv

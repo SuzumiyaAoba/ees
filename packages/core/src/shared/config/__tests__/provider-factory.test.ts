@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
-import { createProviderConfig, createSimpleProviderConfig } from "../provider-factory"
-import type { ProviderConfigTemplate } from "../provider-factory"
+import { createProviderConfig, createSimpleProviderConfig } from "@/shared/config/provider-factory"
+import type { ProviderConfigTemplate } from "@/shared/config/provider-factory"
 import type {
   OpenAIConfig,
   GoogleConfig,
@@ -14,7 +14,7 @@ vi.mock("../../lib/env", () => ({
   getEnvWithDefault: vi.fn(),
 }))
 
-import { getEnv, getEnvWithDefault } from "../../lib/env"
+import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
 
 const mockGetEnv = vi.mocked(getEnv)
 const mockGetEnvWithDefault = vi.mocked(getEnvWithDefault)

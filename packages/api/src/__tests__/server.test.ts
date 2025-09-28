@@ -15,7 +15,15 @@ vi.mock("@hono/node-server", () => ({
 }))
 
 vi.mock("@ees/core", () => ({
-  getPort: mockGetPort
+  getPort: mockGetPort,
+  createPinoLogger: vi.fn().mockReturnValue({
+    info: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }),
+  createLoggerConfig: vi.fn().mockReturnValue({})
 }))
 
 vi.mock("../app", () => ({
@@ -194,7 +202,7 @@ describe("Server Components", () => {
 
     it("should handle module loading", async () => {
       // Test that the module can be imported without errors
-      const serverModule = await import("../server")
+      const serverModule = await import("@/server")
       expect(serverModule).toBeDefined()
     })
   })

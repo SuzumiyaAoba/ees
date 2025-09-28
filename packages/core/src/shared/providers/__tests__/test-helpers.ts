@@ -5,7 +5,7 @@
 
 import { Effect, Either } from "effect"
 import { vi } from "vitest"
-import type { EmbeddingProvider, EmbeddingRequest, EmbeddingResponse } from "../types"
+import type { EmbeddingProvider, EmbeddingRequest, EmbeddingResponse } from "@/shared/providers/types"
 
 /**
  * Mock embedding response structure

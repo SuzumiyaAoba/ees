@@ -5,13 +5,13 @@
 
 import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import type { EmbeddingRequest, EmbeddingResponse, OpenAIConfig } from "../types"
+import type { EmbeddingRequest, EmbeddingResponse, OpenAIConfig } from "@/shared/providers/types"
 import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "../types"
+} from "@/shared/providers/types"
 import {
   createMockEmbeddingResponse,
   setupMockFetch,
