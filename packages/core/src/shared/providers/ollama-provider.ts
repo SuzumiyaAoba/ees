@@ -142,14 +142,29 @@ const make = (config: OllamaConfig) =>
           const result = await response.json() as OllamaListResponse
 
           // Filter and map Ollama models to our ModelInfo format
-          // Focus on embedding models (models that contain "embed" in name)
+          // Focus on embedding models based on name, families, or tags
           const embeddingModels: ModelInfo[] = result.models
-            .filter(model =>
-              model.name.toLowerCase().includes("embed") ||
-              model.name.toLowerCase().includes("nomic") ||
-              model.name.toLowerCase().includes("sentence") ||
-              model.name.toLowerCase().includes("arctic")
-            )
+            .filter(model => {
+              const name = model.name.toLowerCase()
+              const families = model.details?.families || []
+
+              // Check name-based filters
+              const nameMatch = name.includes("embed") ||
+                name.includes("nomic") ||
+                name.includes("sentence") ||
+                name.includes("arctic")
+
+              // Check family-based filters for embedding models
+              const familyMatch = families.some(family => {
+                const lowerFamily = family.toLowerCase()
+                return lowerFamily.includes("embed") ||
+                  lowerFamily.includes("bert") ||
+                  lowerFamily.includes("sentence") ||
+                  lowerFamily === "nomic-bert"
+              })
+
+              return nameMatch || familyMatch
+            })
             .map(model => ({
               name: model.name,
               provider: "ollama" as const,
