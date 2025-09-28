@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
+import { parseJsonResponse, isEmbeddingResponse, isCreateEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -96,7 +96,7 @@ describe("External Service Integration E2E Tests", () => {
           return
         }
 
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
         expect(embedding.model_name).toBe(modelToTest.name)
         expect(embedding.embedding.length).toBeGreaterThan(0)
 
@@ -175,7 +175,7 @@ describe("External Service Integration E2E Tests", () => {
         expect([200, 404, 500]).toContain(createResponse.status)
 
         if (createResponse.status === 200) {
-          const embedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
           testEmbeddings.push(embedding)
           registerEmbeddingForCleanup(embedding.id)
         }
@@ -361,7 +361,7 @@ describe("External Service Integration E2E Tests", () => {
       expect([200, 400, 404, 408, 413, 500, 503]).toContain(response.status)
 
       if (response.status === 200) {
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
         registerEmbeddingForCleanup(embedding.id)
       }
 
@@ -402,7 +402,7 @@ describe("External Service Integration E2E Tests", () => {
 
           if (response.status === 200) {
             successCount++
-            const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+            const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
             registerEmbeddingForCleanup(embedding.id)
           } else if (response.status === 429) { // Too Many Requests
             rateLimitCount++
@@ -435,7 +435,7 @@ describe("External Service Integration E2E Tests", () => {
       expect([200, 404, 500, 503]).toContain(response.status)
 
       if (response.status === 200) {
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
 
         // Validate embedding properties
         expect(embedding.model_name).toBeDefined()

@@ -48,7 +48,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
 
       expect(response.headers.get("content-type")).toContain("application/json")
 
-      const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
 
       // Validate response structure
       expect(embedding).toHaveProperty("id")
@@ -96,7 +96,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
 
       expect(embedding.uri).toBe(requestData.uri)
       expect(embedding.text).toBe(requestData.text)
@@ -126,7 +126,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
       expect(embedding.text).toBe(requestData.text)
       expect(embedding.uri).toBe(requestData.uri)
 
@@ -155,7 +155,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
       expect(embedding.text).toBe(longText)
       expect(embedding.embedding.length).toBeGreaterThan(0)
 
@@ -186,7 +186,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const createdEmbedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+      const createdEmbedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
       registerEmbeddingForCleanup(createdEmbedding.id)
 
       // Now retrieve it by URI and model name (use default model)
@@ -245,7 +245,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
           continue
         }
 
-        const embedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
         embeddings.push(embedding)
         registerEmbeddingForCleanup(embedding.id)
       }
@@ -319,7 +319,7 @@ describe("Embedding Lifecycle E2E Tests", () => {
         return
       }
 
-      const createdEmbedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+      const createdEmbedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
 
       // Delete the embedding
       const deleteResponse = await app.request(`/embeddings/${createdEmbedding.id}`, {
@@ -438,7 +438,7 @@ With various formatting:
         return
       }
 
-      const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+      const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
       expect(embedding.text).toBe(testText)
 
       registerEmbeddingForCleanup(embedding.id)

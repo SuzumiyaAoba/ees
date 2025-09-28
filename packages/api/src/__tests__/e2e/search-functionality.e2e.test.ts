@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import app from "@/app"
 import { setupE2ETests, registerEmbeddingForCleanup, testState } from "@/__tests__/e2e-setup"
-import { parseJsonResponse, isEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
+import { parseJsonResponse, isEmbeddingResponse, isCreateEmbeddingResponse, parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
 // Setup E2E test environment
 setupE2ETests()
@@ -58,7 +58,7 @@ describe("Search Functionality E2E Tests", () => {
       expect([200, 404, 500]).toContain(response.status)
 
       if (response.status === 200) {
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
         testEmbeddings.push({
           id: embedding.id,
           uri: doc.uri,
@@ -352,7 +352,7 @@ describe("Search Functionality E2E Tests", () => {
         return
       }
 
-      const japaneseEmbedding = await parseJsonResponse(createResponse, isEmbeddingResponse)
+      const japaneseEmbedding = await parseJsonResponse(createResponse, isCreateEmbeddingResponse)
       registerEmbeddingForCleanup(japaneseEmbedding.id)
 
       // Wait for indexing

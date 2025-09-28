@@ -362,7 +362,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       expect([200, 400, 404, 413, 500]).toContain(response.status)
 
       if (response.status === 200) {
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
         expect(embedding.text).toBe(veryLargeText)
         registerEmbeddingForCleanup(embedding.id)
       } else {
@@ -399,7 +399,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       expect([200, 400, 404]).toContain(response.status)
 
       if (response.status === 200) {
-        const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+        const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
         expect(embedding.uri).toBe("test-many-fields")
         registerEmbeddingForCleanup(embedding.id)
       }
@@ -439,7 +439,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
         expect([200, 400, 404]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           expect(embedding.uri).toBe(uri)
           registerEmbeddingForCleanup(embedding.id)
         }
@@ -477,7 +477,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
 
         if (response.status === 200) {
           successCount++
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           registerEmbeddingForCleanup(embedding.id)
         }
       }
@@ -514,7 +514,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
         expect([200, 400, 404]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           registerEmbeddingForCleanup(embedding.id)
         }
       }
@@ -544,7 +544,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
         expect([200, 400, 404]).toContain(response.status)
 
         if (response.status === 200) {
-          const embedding = await parseJsonResponse(response, isEmbeddingResponse)
+          const embedding = await parseJsonResponse(response, isCreateEmbeddingResponse)
           registerEmbeddingForCleanup(embedding.id)
         }
       }
