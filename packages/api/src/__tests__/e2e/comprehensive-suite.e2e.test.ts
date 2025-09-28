@@ -39,7 +39,7 @@ describe("Comprehensive E2E Test Suite", () => {
       console.log("🔧 CI environment detected - checking service readiness...")
 
       // Import waitForServices from e2e-setup
-      const { waitForServices } = await import("../e2e-setup")
+      const { waitForServices } = await import("@/__tests__/e2e-setup")
 
       const servicesReady = await waitForServices(60000) // 60 second timeout for CI
       if (!servicesReady) {

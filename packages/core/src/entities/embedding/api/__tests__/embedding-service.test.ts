@@ -6,9 +6,9 @@ import { describe, expect, it, beforeEach, vi } from "vitest"
 import { Effect, Layer } from "effect"
 import { eq } from "drizzle-orm"
 
-import { EmbeddingService, EmbeddingServiceLive } from "../embedding"
-import { DatabaseService } from "../../../../shared/database/connection"
-import { EmbeddingProviderService } from "../../../../shared/providers"
+import { EmbeddingService, EmbeddingServiceLive } from "@/entities/embedding/api/embedding"
+import { DatabaseService } from "@/shared/database/connection"
+import { EmbeddingProviderService } from "@/shared/providers"
 
 describe("EmbeddingService", () => {
   let mockDatabaseService: any

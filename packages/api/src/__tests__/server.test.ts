@@ -194,7 +194,7 @@ describe("Server Components", () => {
 
     it("should handle module loading", async () => {
       // Test that the module can be imported without errors
-      const serverModule = await import("../server")
+      const serverModule = await import("@/server")
       expect(serverModule).toBeDefined()
     })
   })

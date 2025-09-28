@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CreateEmbeddingRequestSchema as CreateEmbeddingSchema } from "../model/openapi"
+import { CreateEmbeddingRequestSchema as CreateEmbeddingSchema } from "@/entities/embedding/model/openapi"
 
 describe("Validation Schemas", () => {
   describe("CreateEmbeddingSchema", () => {

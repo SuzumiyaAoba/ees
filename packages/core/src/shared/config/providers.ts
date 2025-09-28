@@ -4,7 +4,7 @@
  * Refactored to use generic configuration factory pattern
  */
 
-import { getEnv, getEnvWithDefault } from "../lib/env"
+import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
 import type {
   AzureConfig,
   CohereConfig,

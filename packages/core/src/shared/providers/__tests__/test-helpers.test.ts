@@ -19,8 +19,8 @@ import {
   TEST_MODELS,
   type MockFetchConfig,
 } from "./test-helpers"
-import type { EmbeddingResponse } from "../types"
-import { ProviderModelError } from "../types"
+import type { EmbeddingResponse } from "@/shared/providers/types"
+import { ProviderModelError } from "@/shared/providers/types"
 
 describe("Test Helpers", () => {
   let testEnv: ReturnType<typeof createTestEnvironment>

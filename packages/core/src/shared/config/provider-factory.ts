@@ -3,8 +3,8 @@
  * Eliminates code duplication in provider configuration functions
  */
 
-import { getEnv, getEnvWithDefault } from "../lib/env"
-import type { ProviderConfig } from "../providers/types"
+import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
+import type { ProviderConfig } from "@/shared/providers/types"
 
 /**
  * Configuration template for creating provider configurations

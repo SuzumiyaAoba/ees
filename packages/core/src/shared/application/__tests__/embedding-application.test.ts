@@ -4,7 +4,7 @@
 
 import { Effect, Layer } from "effect"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { EmbeddingService } from "../../../entities/embedding/api/embedding.js"
+import { EmbeddingService } from "@/entities/embedding/api/embedding.js"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -14,7 +14,7 @@ import type {
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
 } from "../../../entities/embedding/model/embedding"
-import { DatabaseService } from "../../database/connection"
+import { DatabaseService } from "@/shared/database/connection"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,

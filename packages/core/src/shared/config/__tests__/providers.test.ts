@@ -12,7 +12,7 @@ import {
   getProviderConfigSummary,
   validateProviderConfig,
 } from "../providers"
-import { ENV_KEYS } from "../env-keys"
+import { ENV_KEYS } from "@/shared/config/env-keys"
 
 describe("Provider Configuration", () => {
   let originalEnv: NodeJS.ProcessEnv

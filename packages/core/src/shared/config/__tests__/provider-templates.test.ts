@@ -8,8 +8,8 @@ import {
   OPENAI_CONFIG_TEMPLATE,
   ALL_PROVIDER_TEMPLATES,
 } from "../provider-templates"
-import { createProviderConfig, createSimpleProviderConfig } from "../provider-factory"
-import { ENV_KEYS } from "../env-keys"
+import { createProviderConfig, createSimpleProviderConfig } from "@/shared/config/provider-factory"
+import { ENV_KEYS } from "@/shared/config/env-keys"
 
 // Mock the env module
 vi.mock("../../lib/env", () => ({
@@ -17,7 +17,7 @@ vi.mock("../../lib/env", () => ({
   getEnvWithDefault: vi.fn(),
 }))
 
-import { getEnv, getEnvWithDefault } from "../../lib/env"
+import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
 
 const mockGetEnv = vi.mocked(getEnv)
 const mockGetEnvWithDefault = vi.mocked(getEnvWithDefault)
