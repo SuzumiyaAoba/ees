@@ -93,13 +93,16 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
     const { AppLayer } = await import("@/app/providers/main")
 
     const getCurrentProviderProgram = Effect.gen(function* () {
-      // For now, return Ollama as the default provider
-      // This will be enhanced with actual provider configuration checking
+      // Get provider configuration from environment variables
+      const providerType = process.env["EES_DEFAULT_PROVIDER"] || "ollama"
+      const baseUrl = process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434"
+      const defaultModel = process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text"
+
       const currentProvider: CurrentProvider = {
-        provider: "ollama",
+        provider: providerType,
         configuration: {
-          baseUrl: "http://localhost:11434",
-          model: "nomic-embed-text",
+          baseUrl,
+          model: defaultModel,
         },
       }
 
@@ -255,7 +258,7 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
             try: () => modelsResponse.json() as Promise<{ models?: Array<{ name: string }> }>,
             catch: () => new Error("Failed to parse Ollama models"),
           })
-          models = modelsData.models?.map((m) => m.name) || []
+          models = modelsData.models?.map((m) => m.name.replace(/:latest$/, '').replace(/:[\w\-\.]+$/, '')) || []
         }
 
         const responseTime = Date.now() - startTime

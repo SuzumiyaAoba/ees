@@ -9,11 +9,11 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OllamaConfig,
-  ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
 } from "./types"
+import { ProviderConnectionError } from "./types"
 import { createOllamaErrorHandler } from "./error-handler"
 
 export interface OllamaProviderService extends EmbeddingProvider {}
@@ -28,6 +28,13 @@ interface OllamaEmbedResponse {
   total_duration?: number
   load_duration?: number
   prompt_eval_count?: number
+}
+
+/**
+ * Normalize model name by removing version suffixes like :latest
+ */
+const normalizeModelName = (modelName: string): string => {
+  return modelName.replace(/:latest$/, '').replace(/:[\w\-\.]+$/, '')
 }
 
 
@@ -79,26 +86,75 @@ const make = (config: OllamaConfig) =>
       })
 
     const listModels = () =>
-      Effect.succeed([
-        {
-          name: "embeddinggemma",
-          provider: "ollama" as const,
-          dimensions: 768,
-          maxTokens: 8192,
-          pricePerToken: 0, // Ollama is free/local
+      Effect.tryPromise({
+        try: async () => {
+          const response = await fetch(`${baseUrl}/api/tags`, {
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          })
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`)
+          }
+
+          const result = await response.json() as { models?: Array<{ name: string, size?: number, modified_at?: string, digest?: string }> }
+
+          if (!result.models || !Array.isArray(result.models)) {
+            // Fallback to static model if API fails
+            return [
+              {
+                name: "nomic-embed-text",
+                provider: "ollama" as const,
+                dimensions: 768,
+                maxTokens: 8192,
+                pricePerToken: 0, // Ollama is free/local
+              },
+            ] satisfies ModelInfo[]
+          }
+
+          // Map Ollama API response to ModelInfo format with normalized names
+          return result.models.map(model => ({
+            name: normalizeModelName(model.name),
+            provider: "ollama" as const,
+            dimensions: 768, // Default embedding dimension for most models
+            maxTokens: 8192, // Default token limit
+            pricePerToken: 0, // Ollama is free/local
+          })) satisfies ModelInfo[]
         },
-      ] satisfies ModelInfo[])
+        catch: (error) => {
+          const handleError = createOllamaErrorHandler()
+          const handledError = handleError(error, "list models", undefined, undefined, config)
+          // Map any error to ProviderConnectionError for listModels interface compliance
+          if (handledError._tag === "ProviderModelError" || handledError._tag === "ProviderRateLimitError") {
+            return new ProviderConnectionError({
+              provider: handledError.provider || "ollama",
+              message: handledError.message,
+              cause: handledError.cause,
+            })
+          }
+          return handledError
+        },
+      })
 
     const isModelAvailable = (modelName: string) =>
       Effect.gen(function* () {
         const models = yield* listModels()
-        return models.some((model) => model.name.includes(modelName))
+        const normalizedSearchName = normalizeModelName(modelName)
+        return models.some((model) =>
+          model.name === normalizedSearchName ||
+          model.name.includes(normalizedSearchName) ||
+          normalizedSearchName.includes(model.name)
+        )
       })
 
     const getModelInfo = (modelName: string) =>
       Effect.gen(function* () {
         const models = yield* listModels()
-        const model = models.find((m) => m.name.includes(modelName))
+        const normalizedSearchName = normalizeModelName(modelName)
+        const model = models.find((m) =>
+          m.name === normalizedSearchName ||
+          m.name.includes(normalizedSearchName) ||
+          normalizedSearchName.includes(m.name)
+        )
         return model ?? null
       })
 
