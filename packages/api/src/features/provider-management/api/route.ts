@@ -92,6 +92,20 @@ const OllamaStatusSchema = z.object({
   models: z.array(z.string()).optional().openapi({
     description: "Available model names",
     example: ["nomic-embed-text", "llama2"]
+  }),
+  responseTime: z.number().optional().openapi({
+    description: "Response time in milliseconds",
+    example: 25
+  }),
+  baseUrl: z.string().optional().openapi({
+    description: "Ollama service base URL",
+    example: "http://localhost:11434"
+  }),
+  memory: z.object({
+    used: z.number().optional(),
+    total: z.number().optional()
+  }).optional().openapi({
+    description: "Memory usage information"
   })
 })
 
@@ -230,7 +244,7 @@ export const listProviderModelsRoute = createRoute({
  */
 export const getOllamaStatusRoute = createRoute({
   method: "get",
-  path: "/ollama/status",
+  path: "/providers/ollama/status",
   summary: "Get Ollama status",
   description: "Check Ollama service status and get list of available models",
   tags: ["Providers"],
