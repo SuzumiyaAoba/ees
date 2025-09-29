@@ -215,6 +215,9 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
  * Handler for getting Ollama status
  */
 providerApp.openapi(getOllamaStatusRoute, async (c) => {
+  const startTime = Date.now()
+  const baseUrl = "http://localhost:11434"
+
   try {
     // Import AppLayer dynamically
     const { AppLayer } = await import("@/app/providers/main")
@@ -223,12 +226,14 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
       // Try to connect to Ollama service
       try {
         const response = yield* Effect.tryPromise({
-          try: () => fetch("http://localhost:11434/api/version"),
+          try: () => fetch(`${baseUrl}/api/version`, {
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          }),
           catch: () => new Error("Ollama service unavailable"),
         })
 
         if (!response.ok) {
-          return yield* Effect.fail(new Error("Ollama service unavailable"))
+          return yield* Effect.fail(new Error(`Ollama service returned ${response.status}`))
         }
 
         const versionData = yield* Effect.tryPromise({
@@ -238,7 +243,9 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
 
         // Get list of available models
         const modelsResponse = yield* Effect.tryPromise({
-          try: () => fetch("http://localhost:11434/api/tags"),
+          try: () => fetch(`${baseUrl}/api/tags`, {
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          }),
           catch: () => new Error("Failed to get Ollama models"),
         })
 
@@ -251,10 +258,14 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
           models = modelsData.models?.map((m) => m.name) || []
         }
 
+        const responseTime = Date.now() - startTime
+
         const ollamaStatus: OllamaStatus = {
           status: "online",
           version: versionData.version || "unknown",
           models,
+          responseTime,
+          baseUrl,
         }
 
         return ollamaStatus
@@ -269,11 +280,14 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
+    const responseTime = Date.now() - startTime
     console.error("Error getting Ollama status:", error)
     return c.json(
       {
         status: "offline" as const,
-        error: "Ollama service unavailable",
+        error: error instanceof Error ? error.message : "Ollama service unavailable",
+        responseTime,
+        baseUrl,
       },
       503
     )
