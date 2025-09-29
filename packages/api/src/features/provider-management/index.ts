@@ -93,13 +93,16 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
     const { AppLayer } = await import("@/app/providers/main")
 
     const getCurrentProviderProgram = Effect.gen(function* () {
-      // For now, return Ollama as the default provider
-      // This will be enhanced with actual provider configuration checking
+      // Get provider configuration from environment variables
+      const providerType = process.env.EES_DEFAULT_PROVIDER || "ollama"
+      const baseUrl = process.env.EES_OLLAMA_BASE_URL || "http://localhost:11434"
+      const defaultModel = process.env.EES_OLLAMA_DEFAULT_MODEL || "nomic-embed-text"
+
       const currentProvider: CurrentProvider = {
-        provider: "ollama",
+        provider: providerType,
         configuration: {
-          baseUrl: "http://localhost:11434",
-          model: "nomic-embed-text",
+          baseUrl,
+          model: defaultModel,
         },
       }
 
@@ -216,11 +219,13 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
  */
 providerApp.openapi(getOllamaStatusRoute, async (c) => {
   const startTime = Date.now()
-  const baseUrl = "http://localhost:11434"
 
   try {
     // Import AppLayer dynamically
     const { AppLayer } = await import("@/app/providers/main")
+
+    // Get Ollama configuration from environment variables
+    const baseUrl = process.env.EES_OLLAMA_BASE_URL || "http://localhost:11434"
 
     const getOllamaStatusProgram = Effect.gen(function* () {
       // Try to connect to Ollama service
@@ -282,12 +287,16 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
   } catch (error) {
     const responseTime = Date.now() - startTime
     console.error("Error getting Ollama status:", error)
+
+    // Get fallback baseUrl from environment variables
+    const fallbackBaseUrl = process.env.EES_OLLAMA_BASE_URL || "http://localhost:11434"
+
     return c.json(
       {
         status: "offline" as const,
         error: error instanceof Error ? error.message : "Ollama service unavailable",
         responseTime,
-        baseUrl,
+        baseUrl: fallbackBaseUrl,
       },
       503
     )
