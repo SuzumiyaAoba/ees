@@ -12,6 +12,15 @@ A modern TypeScript monorepo service for generating and managing text embeddings
 - 🌐 **Multi-Interface**: Web API, CLI, and React frontend
 - 📝 **OpenAPI Documentation**: Auto-generated API docs with Swagger UI
 - 📦 **Reproducible**: Nix flakes for zero-config development environment
+- 🚀 **Caching**: LRU cache with TTL for improved performance
+- 📊 **Observability**: Structured logging and Prometheus metrics
+
+## Documentation
+
+- 📖 **[API Reference](docs/api-reference.md)** - Complete API endpoint documentation
+- ⚙️ **[Provider Configuration](docs/provider-configuration.md)** - Setup guides for all embedding providers
+- 💡 **[Usage Examples](docs/examples.md)** - Code examples in multiple languages
+- 🌐 **[Interactive API Docs](http://localhost:3000/docs)** - Swagger UI (when server is running)
 
 ## Quick Start
 
@@ -183,38 +192,50 @@ npm start
 
 ## Configuration
 
-Environment variables:
+### Environment Setup
 
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+**Essential Variables:**
 - `NODE_ENV` - Environment (development/production/test)
 - `PORT` - Server port (default: 3000)
+- `EES_PROVIDER` - Embedding provider (ollama, openai, google, cohere, mistral, azure)
 
-Default model: `nomic-embed-text` (Ollama)
+**Default Provider:** Ollama with `nomic-embed-text` model
 
 ### Provider Configuration
 
-Environment variables for different providers:
+See [Provider Configuration Guide](docs/provider-configuration.md) for detailed setup instructions.
 
-**Ollama (Default):**
-- `EES_OLLAMA_BASE_URL` - Ollama service URL (default: http://localhost:11434)
-- `EES_OLLAMA_DEFAULT_MODEL` - Default model (default: nomic-embed-text)
+**Quick Reference:**
+
+**Ollama (Default - No API Key Required):**
+```bash
+EES_PROVIDER=ollama
+EES_OLLAMA_BASE_URL=http://localhost:11434
+EES_OLLAMA_DEFAULT_MODEL=nomic-embed-text
+```
 
 **OpenAI:**
-- `EES_OPENAI_API_KEY` - OpenAI API key
-- `EES_OPENAI_BASE_URL` - Optional custom base URL
+```bash
+EES_PROVIDER=openai
+EES_OPENAI_API_KEY=sk-your-api-key
+EES_OPENAI_DEFAULT_MODEL=text-embedding-3-small
+```
 
 **Google AI:**
-- `EES_GOOGLE_API_KEY` - Google AI API key
+```bash
+EES_PROVIDER=google
+EES_GOOGLE_API_KEY=your-google-api-key
+EES_GOOGLE_DEFAULT_MODEL=text-embedding-004
+```
 
-**Cohere:**
-- `EES_COHERE_API_KEY` - Cohere API key
-
-**Mistral:**
-- `EES_MISTRAL_API_KEY` - Mistral API key
-
-**Azure OpenAI:**
-- `EES_AZURE_API_KEY` - Azure OpenAI API key
-- `EES_AZURE_BASE_URL` - Azure OpenAI endpoint
-- `EES_AZURE_API_VERSION` - API version
+**Other Providers:**
+See [.env.example](.env.example) for complete configuration options and [Provider Configuration Guide](docs/provider-configuration.md) for setup instructions.
 
 ## CLI Usage
 
