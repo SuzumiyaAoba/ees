@@ -6,7 +6,7 @@ import type {
   GoogleConfig,
   AzureConfig,
   OllamaConfig,
-} from "../../providers/types"
+} from "@/shared/providers/types"
 
 // Mock the env module
 vi.mock("../../lib/env", () => ({

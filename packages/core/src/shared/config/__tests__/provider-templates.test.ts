@@ -7,7 +7,7 @@ import {
   OLLAMA_CONFIG_TEMPLATE,
   OPENAI_CONFIG_TEMPLATE,
   ALL_PROVIDER_TEMPLATES,
-} from "../provider-templates"
+} from "@/shared/config/provider-templates"
 import { createProviderConfig, createSimpleProviderConfig } from "@/shared/config/provider-factory"
 import { ENV_KEYS } from "@/shared/config/env-keys"
 

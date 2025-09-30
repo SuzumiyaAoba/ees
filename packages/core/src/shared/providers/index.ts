@@ -12,8 +12,8 @@ export {
   getOpenAIConfig,
   getProviderConfigSummary,
   validateProviderConfig,
-} from "../config/providers"
-export { ENV_KEYS } from "../config/env-keys"
+} from "@/shared/config/providers"
+export { ENV_KEYS } from "@/shared/config/env-keys"
 // Provider implementations
 export {
   AzureProviderService,

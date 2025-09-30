@@ -5,7 +5,7 @@ import {
   EmbeddingSchema,
   EmbeddingsListResponseSchema,
   SearchEmbeddingResponseSchema,
-} from "../../entities/embedding/model/openapi"
+} from "@/entities/embedding/model/openapi"
 
 export class TestResponseParseError extends Error {
   constructor(message: string, cause?: unknown) {

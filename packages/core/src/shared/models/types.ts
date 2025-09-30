@@ -9,7 +9,7 @@ import type {
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError
-} from "../providers/types"
+} from "@/shared/providers/types"
 import type { DatabaseQueryError } from "@/shared/errors/database"
 
 /**

@@ -9,7 +9,7 @@ import { DatabaseService } from "@/shared/database/connection"
 import {
   EmbeddingApplicationService,
   EmbeddingApplicationServiceLive,
-} from "../embedding-application"
+} from "@/shared/application/embedding-application"
 import { ApplicationLayer, CoreApplicationLayer } from "@/shared/application/layers"
 
 describe("Application Layers", () => {

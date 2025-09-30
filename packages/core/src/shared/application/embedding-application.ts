@@ -15,14 +15,14 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "../../entities/embedding/model/embedding"
+} from "@/entities/embedding/model/embedding"
 import type { DatabaseQueryError } from "@/shared/errors/database"
 import type {
   ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "../providers/types"
+} from "@/shared/providers/types"
 
 /**
  * Application-level embedding operations interface

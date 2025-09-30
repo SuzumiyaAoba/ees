@@ -9,9 +9,9 @@ import type {
   GoogleConfig,
   MistralConfig,
   OpenAIConfig,
-} from "../providers/types"
-import type { ProviderConfigTemplate } from "./provider-factory"
-import { ENV_KEYS } from "./env-keys"
+} from "@/shared/providers/types"
+import type { ProviderConfigTemplate } from "@/shared/config/provider-factory"
+import { ENV_KEYS } from "@/shared/config/env-keys"
 
 /**
  * Ollama configuration template
