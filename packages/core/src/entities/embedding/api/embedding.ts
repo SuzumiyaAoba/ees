@@ -4,7 +4,7 @@
  */
 
 import { and, eq, type SQL, sql } from "drizzle-orm"
-import { Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer, Option } from "effect"
 import { getDefaultProvider } from "@/shared/config/providers"
 import {
   DatabaseService,
@@ -23,6 +23,12 @@ import {
 import { createEmbeddingProviderService } from "@/shared/providers/factory"
 import { parseStoredEmbeddingData } from "@/entities/embedding/lib/embedding-data"
 import { MetricsServiceTag } from "@/shared/observability/metrics"
+import {
+  CacheService,
+  embeddingCacheKey,
+  CacheTTL,
+  getCacheConfig,
+} from "@/shared/cache"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -250,6 +256,8 @@ const make = Effect.gen(function* () {
   const { db, client } = yield* DatabaseService
   const providerService = yield* EmbeddingProviderService
   const metricsService = yield* MetricsServiceTag
+  const cacheService = yield* CacheService
+  const cacheConfig = getCacheConfig()
 
   /**
    * Helper function to create a single embedding with input validation
@@ -301,6 +309,14 @@ const make = Effect.gen(function* () {
         // Record successful embedding creation metrics
         const duration = (Date.now() - startTime) / 1000
         yield* metricsService.recordEmbeddingCreated(provider.type, embeddingResponse.model, duration)
+
+        // Invalidate cache for this embedding (ignore cache errors)
+        if (cacheConfig.enabled) {
+          const cacheKey = embeddingCacheKey(embeddingResponse.model, uri)
+          yield* cacheService.delete(cacheKey).pipe(
+            Effect.catchAll(() => Effect.void)
+          )
+        }
 
         return {
           id: Number(result[0]?.["id"] ?? 0),
@@ -375,6 +391,23 @@ const make = Effect.gen(function* () {
 
   const getEmbedding = (uri: string, modelName: string) =>
     Effect.gen(function* () {
+      // Check cache first if enabled
+      if (cacheConfig.enabled) {
+        const cacheKey = embeddingCacheKey(modelName, uri)
+        // Catch cache errors and treat as cache miss
+        const cached = yield* cacheService.get<Embedding>(cacheKey).pipe(
+          Effect.catchAll(() => Effect.succeed(Option.none()))
+        )
+
+        if (Option.isSome(cached)) {
+          yield* metricsService.recordCacheHit("embedding")
+          return cached.value
+        }
+
+        yield* metricsService.recordCacheMiss("embedding")
+      }
+
+      // Cache miss or disabled - fetch from database
       const result = yield* Effect.tryPromise({
         try: () =>
           db.select().from(embeddings).where(
@@ -406,7 +439,7 @@ const make = Effect.gen(function* () {
         )
       )
 
-      return {
+      const embeddingResult = {
         id: row.id,
         uri: row.uri,
         text: row.text,
@@ -415,6 +448,16 @@ const make = Effect.gen(function* () {
         created_at: row.createdAt,
         updated_at: row.updatedAt,
       }
+
+      // Store in cache if enabled (ignore cache errors)
+      if (cacheConfig.enabled) {
+        const cacheKey = embeddingCacheKey(modelName, uri)
+        yield* cacheService.set(cacheKey, embeddingResult, CacheTTL.EMBEDDING).pipe(
+          Effect.catchAll(() => Effect.void)
+        )
+      }
+
+      return embeddingResult
     })
 
   const getAllEmbeddings = (filters?: {
