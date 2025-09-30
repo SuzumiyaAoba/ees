@@ -40,6 +40,10 @@ export interface SystemMetrics {
   readonly databaseQueryDuration: Histogram<"operation">
   readonly memoryUsage: Gauge<"type">
   readonly activeConnections: Gauge<"type">
+  readonly cacheHits: Counter<"type">
+  readonly cacheMisses: Counter<"type">
+  readonly cacheSize: Gauge<"type">
+  readonly cacheEvictions: Counter
 }
 
 /**
@@ -106,6 +110,10 @@ export interface MetricsService {
     type: string,
     count: number
   ) => Effect.Effect<void>
+  readonly recordCacheHit: (type: string) => Effect.Effect<void>
+  readonly recordCacheMiss: (type: string) => Effect.Effect<void>
+  readonly updateCacheSize: (type: string, size: number) => Effect.Effect<void>
+  readonly recordCacheEviction: () => Effect.Effect<void>
   readonly getPrometheusMetrics: () => Effect.Effect<string>
 }
 
@@ -224,6 +232,29 @@ const createSystemMetrics = (): SystemMetrics => ({
     name: "ees_active_connections",
     help: "Number of active connections by type",
     labelNames: ["type"],
+  }),
+
+  cacheHits: new Counter({
+    name: "ees_cache_hits_total",
+    help: "Total number of cache hits",
+    labelNames: ["type"],
+  }),
+
+  cacheMisses: new Counter({
+    name: "ees_cache_misses_total",
+    help: "Total number of cache misses",
+    labelNames: ["type"],
+  }),
+
+  cacheSize: new Gauge({
+    name: "ees_cache_size",
+    help: "Current cache size by type",
+    labelNames: ["type"],
+  }),
+
+  cacheEvictions: new Counter({
+    name: "ees_cache_evictions_total",
+    help: "Total number of cache evictions",
   }),
 })
 
@@ -357,6 +388,26 @@ class MetricsServiceImpl implements MetricsService {
       this.metrics.system.activeConnections.set({ type }, count)
     })
 
+  recordCacheHit = (type: string): Effect.Effect<void> =>
+    Effect.sync(() => {
+      this.metrics.system.cacheHits.inc({ type })
+    })
+
+  recordCacheMiss = (type: string): Effect.Effect<void> =>
+    Effect.sync(() => {
+      this.metrics.system.cacheMisses.inc({ type })
+    })
+
+  updateCacheSize = (type: string, size: number): Effect.Effect<void> =>
+    Effect.sync(() => {
+      this.metrics.system.cacheSize.set({ type }, size)
+    })
+
+  recordCacheEviction = (): Effect.Effect<void> =>
+    Effect.sync(() => {
+      this.metrics.system.cacheEvictions.inc()
+    })
+
   getPrometheusMetrics = (): Effect.Effect<string> =>
     Effect.promise(() => this.metrics.registry.metrics())
 }
@@ -448,6 +499,30 @@ export const metrics = {
     Effect.gen(function* () {
       const service = yield* MetricsServiceTag
       yield* service.updateActiveConnections(type, count)
+    }),
+
+  recordCacheHit: (type: string) =>
+    Effect.gen(function* () {
+      const service = yield* MetricsServiceTag
+      yield* service.recordCacheHit(type)
+    }),
+
+  recordCacheMiss: (type: string) =>
+    Effect.gen(function* () {
+      const service = yield* MetricsServiceTag
+      yield* service.recordCacheMiss(type)
+    }),
+
+  updateCacheSize: (type: string, size: number) =>
+    Effect.gen(function* () {
+      const service = yield* MetricsServiceTag
+      yield* service.updateCacheSize(type, size)
+    }),
+
+  recordCacheEviction: () =>
+    Effect.gen(function* () {
+      const service = yield* MetricsServiceTag
+      yield* service.recordCacheEviction()
     }),
 
   getPrometheusMetrics: () =>

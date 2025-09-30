@@ -3,14 +3,27 @@
  * Centralized exports for logging, metrics, health checks, and correlation
  */
 
-// Logging
-export * from './logger'
+// Logging - export all except 'log' to avoid conflict with lib/console.ts
+export {
+  type LogLevel,
+  type LogContext,
+  type Logger,
+  LoggerService,
+  type LoggerConfig,
+  createLoggerConfig,
+  createPinoLogger,
+  createLoggerLayer,
+  LoggerLayer,
+  withOperationLogging,
+} from './logger'
 
 // Metrics
 export * from './metrics'
+export { metrics } from './metrics'
 
 // Health checks
 export * from './health'
+export { health } from './health'
 
 // Correlation and tracing
 export * from './correlation'
