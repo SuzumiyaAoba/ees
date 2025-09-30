@@ -10,6 +10,7 @@ import { EmbeddingServiceLive } from "@/entities/embedding/api/embedding.js"
 import { EmbeddingApplicationServiceLive } from "./embedding-application"
 import { ModelManagerLive } from "@/shared/models"
 import { DatabaseServiceLive } from "@/shared/database/connection"
+import { MetricsLayer } from "@/shared/observability/metrics"
 
 /**
  * Core application layer including all business logic services
@@ -25,8 +26,11 @@ export const CoreApplicationLayer = Layer.mergeAll(
 /**
  * Full application layer with all dependencies
  * Ready to use for any interface (web, CLI, test)
- * Includes database service as the foundational layer
+ * Includes database service and metrics as the foundational layers
  */
 export const ApplicationLayer = CoreApplicationLayer.pipe(
-  Layer.provide(DatabaseServiceLive)
+  Layer.provideMerge(Layer.mergeAll(
+    DatabaseServiceLive,
+    MetricsLayer
+  ))
 )

@@ -5,7 +5,7 @@
 
 import type { Context, Next } from 'hono'
 import { randomUUID } from 'crypto'
-import { createPinoLogger, createLoggerConfig } from "@ees/core"
+import { createPinoLogger, createLoggerConfig, metrics, MetricsLayer } from "@ees/core"
 import { health, HealthLayer } from "@ees/core"
 import { Effect } from "effect"
 
@@ -86,8 +86,8 @@ export const requestLoggingMiddleware = async (c: Context, next: Next) => {
 }
 
 /**
- * Basic metrics collection middleware
- * Records simple metrics for monitoring
+ * Enhanced metrics collection middleware with Prometheus metrics
+ * Records HTTP request metrics for monitoring and alerting
  */
 export const metricsMiddleware = async (c: Context, next: Next) => {
   const startTime = Date.now()
@@ -96,8 +96,16 @@ export const metricsMiddleware = async (c: Context, next: Next) => {
 
   try {
     await next()
-    const duration = Date.now() - startTime
-    const statusCode = c.res.status
+    const duration = (Date.now() - startTime) / 1000 // Convert to seconds
+    const statusCode = String(c.res.status)
+
+    // Record metrics asynchronously (don't block request)
+    Effect.runPromise(
+      metrics.recordHttpRequest(method, path, statusCode, duration).pipe(
+        Effect.provide(MetricsLayer),
+        Effect.catchAll(() => Effect.void) // Ignore metrics errors
+      )
+    ).catch(() => {}) // Don't fail requests on metrics errors
 
     // Log metrics data
     logger.info({
@@ -105,16 +113,26 @@ export const metricsMiddleware = async (c: Context, next: Next) => {
       method,
       path,
       statusCode,
-      duration,
+      duration: duration * 1000, // Log in milliseconds for readability
     }, 'HTTP metrics')
   } catch (error) {
-    const duration = Date.now() - startTime
+    const duration = (Date.now() - startTime) / 1000
+    const statusCode = String(c.res.status || 500)
+
+    // Record error metrics
+    Effect.runPromise(
+      metrics.recordHttpRequest(method, path, statusCode, duration).pipe(
+        Effect.provide(MetricsLayer),
+        Effect.catchAll(() => Effect.void)
+      )
+    ).catch(() => {})
+
     logger.error({
       metric: 'http_error',
       method,
       path,
-      statusCode: 500,
-      duration,
+      statusCode,
+      duration: duration * 1000,
       error: String(error),
     }, 'HTTP error metrics')
     throw error
@@ -145,8 +163,8 @@ export const errorLoggingMiddleware = async (c: Context, next: Next) => {
 }
 
 /**
- * Memory monitoring middleware
- * Periodically logs memory usage
+ * Memory monitoring middleware with Prometheus metrics
+ * Periodically logs and records memory usage metrics
  */
 export const memoryMonitoringMiddleware = (() => {
   let lastUpdate = 0
@@ -158,6 +176,14 @@ export const memoryMonitoringMiddleware = (() => {
     if (now - lastUpdate > updateInterval) {
       lastUpdate = now
       const memUsage = process.memoryUsage()
+
+      // Record metrics asynchronously
+      Effect.runPromise(
+        metrics.updateMemoryUsage().pipe(
+          Effect.provide(MetricsLayer),
+          Effect.catchAll(() => Effect.void)
+        )
+      ).catch(() => {})
 
       logger.info({
         metric: 'memory_usage',
@@ -268,35 +294,38 @@ export const healthCheckMiddleware = async (c: Context, next: Next) => {
 
 /**
  * Enhanced Prometheus metrics endpoint with comprehensive application metrics
+ * Returns full Prometheus-compatible metrics including business and system metrics
  */
 export const metricsEndpointMiddleware = async (c: Context, next: Next) => {
   if (c.req.path === '/metrics') {
-    const basicMetrics = `
-# HELP ees_info EES service information
-# TYPE ees_info gauge
-ees_info{version="${process.env['SERVICE_VERSION'] || '1.0.0'}",environment="${process.env['NODE_ENV'] || 'development'}"} 1
+    try {
+      // Get full Prometheus metrics from metrics service
+      const metricsText = await Effect.runPromise(
+        metrics.getPrometheusMetrics().pipe(
+          Effect.provide(MetricsLayer),
+          Effect.catchAll(() =>
+            Effect.succeed('# Error: Unable to collect metrics\n')
+          )
+        )
+      )
 
-# HELP ees_uptime_seconds EES service uptime in seconds
-# TYPE ees_uptime_seconds counter
-ees_uptime_seconds ${process.uptime()}
+      c.header('Content-Type', 'text/plain; version=0.0.4')
+      return c.text(metricsText)
+    } catch (error) {
+      logger.error({
+        error: String(error),
+        path: '/metrics'
+      }, 'Failed to generate metrics')
 
-# HELP ees_memory_usage_bytes Memory usage by type
-# TYPE ees_memory_usage_bytes gauge
-ees_memory_usage_bytes{type="heap_used"} ${process.memoryUsage().heapUsed}
-ees_memory_usage_bytes{type="heap_total"} ${process.memoryUsage().heapTotal}
-ees_memory_usage_bytes{type="rss"} ${process.memoryUsage().rss}
-ees_memory_usage_bytes{type="external"} ${process.memoryUsage().external}
-`.trim()
-
-    c.header('Content-Type', 'text/plain')
-    return c.text(basicMetrics)
+      return c.text('# Error: Unable to collect metrics\n', 500)
+    }
   }
 
   return await next()
 }
 
 /**
- * Rate limit violation tracking middleware
+ * Rate limit violation tracking middleware with Prometheus metrics
  */
 export const rateLimitMetricsMiddleware = async (c: Context, next: Next) => {
   try {
@@ -306,6 +335,14 @@ export const rateLimitMetricsMiddleware = async (c: Context, next: Next) => {
     if (c.res.status === 429) {
       const endpoint = c.req.path
       const limitType = determineLimitType(endpoint)
+
+      // Record rate limit violation metrics
+      Effect.runPromise(
+        metrics.recordRateLimitViolation(endpoint, limitType).pipe(
+          Effect.provide(MetricsLayer),
+          Effect.catchAll(() => Effect.void)
+        )
+      ).catch(() => {})
 
       logger.warn({
         metric: 'rate_limit_violation',

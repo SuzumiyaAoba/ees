@@ -16,12 +16,13 @@ import {
   EmbeddingProviderService,
   type EmbeddingRequest,
   ProviderConnectionError,
-  type ProviderAuthenticationError,
-  type ProviderModelError,
-  type ProviderRateLimitError,
+  ProviderAuthenticationError,
+  ProviderModelError,
+  ProviderRateLimitError,
 } from "@/shared/providers"
 import { createEmbeddingProviderService } from "@/shared/providers/factory"
 import { parseStoredEmbeddingData } from "@/entities/embedding/lib/embedding-data"
+import { MetricsServiceTag } from "@/shared/observability/metrics"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -248,6 +249,7 @@ const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, 
 const make = Effect.gen(function* () {
   const { db, client } = yield* DatabaseService
   const providerService = yield* EmbeddingProviderService
+  const metricsService = yield* MetricsServiceTag
 
   /**
    * Helper function to create a single embedding with input validation
@@ -262,40 +264,59 @@ const make = Effect.gen(function* () {
     ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError | DatabaseQueryError
   > =>
     Effect.gen(function* () {
-      // Validate input parameters
-      yield* validateEmbeddingInput(uri, text)
+      const startTime = Date.now()
+      const provider = getDefaultProvider()
 
-      // Generate embedding using the current provider
-      const embeddingRequest: EmbeddingRequest = {
-        text,
-        modelName,
-      }
-      const embeddingResponse =
-        yield* providerService.generateEmbedding(embeddingRequest)
+      try {
+        // Validate input parameters
+        yield* validateEmbeddingInput(uri, text)
 
-      // Convert embedding array to libSQL F32_BLOB format using vector() function
-      const embeddingVector = JSON.stringify(embeddingResponse.embedding)
+        // Generate embedding using the current provider
+        const embeddingRequest: EmbeddingRequest = {
+          text,
+          modelName,
+        }
+        const embeddingResponse =
+          yield* providerService.generateEmbedding(embeddingRequest)
 
-      // Insert or update embedding in database using parameterized query
-      const result = yield* Effect.tryPromise({
-        try: async () => {
-          const insertResult = await client.execute({
-            sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
-            args: [uri, text, embeddingResponse.model, embeddingVector]
-          })
-          return insertResult.rows
-        },
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to save embedding to database",
-            cause: error,
-          }),
-      })
+        // Convert embedding array to libSQL F32_BLOB format using vector() function
+        const embeddingVector = JSON.stringify(embeddingResponse.embedding)
 
-      return {
-        id: Number(result[0]?.["id"] ?? 0),
-        uri,
-        model_name: embeddingResponse.model,
+        // Insert or update embedding in database using parameterized query
+        const result = yield* Effect.tryPromise({
+          try: async () => {
+            const insertResult = await client.execute({
+              sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
+              args: [uri, text, embeddingResponse.model, embeddingVector]
+            })
+            return insertResult.rows
+          },
+          catch: (error) =>
+            new DatabaseQueryError({
+              message: "Failed to save embedding to database",
+              cause: error,
+            }),
+        })
+
+        // Record successful embedding creation metrics
+        const duration = (Date.now() - startTime) / 1000
+        yield* metricsService.recordEmbeddingCreated(provider.type, embeddingResponse.model, duration)
+
+        return {
+          id: Number(result[0]?.["id"] ?? 0),
+          uri,
+          model_name: embeddingResponse.model,
+        }
+      } catch (error) {
+        // Record embedding error metrics
+        const errorType = error instanceof ProviderConnectionError ? "connection_error" :
+                         error instanceof ProviderModelError ? "model_error" :
+                         error instanceof ProviderAuthenticationError ? "auth_error" :
+                         error instanceof ProviderRateLimitError ? "rate_limit" :
+                         error instanceof DatabaseQueryError ? "database_error" : "unknown_error"
+
+        yield* metricsService.recordEmbeddingError(provider.type, modelName ?? "unknown", errorType)
+        throw error
       }
     })
 
@@ -522,6 +543,7 @@ const make = Effect.gen(function* () {
 
   const searchEmbeddings = (request: SearchEmbeddingRequest) =>
     Effect.gen(function* () {
+      const startTime = Date.now()
       const {
         query,
         model_name,
@@ -611,6 +633,10 @@ const make = Effect.gen(function* () {
             // Apply threshold filter if specified for non-cosine metrics
             !threshold || result.similarity >= threshold
         )
+
+      // Record search operation metrics
+      const duration = (Date.now() - startTime) / 1000
+      yield* metricsService.recordSearchOperation(metric, duration)
 
       return {
         results,
