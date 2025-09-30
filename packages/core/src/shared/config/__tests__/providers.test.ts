@@ -11,7 +11,7 @@ import {
   getOpenAIConfig,
   getProviderConfigSummary,
   validateProviderConfig,
-} from "../providers"
+} from "@/shared/config/providers"
 import { ENV_KEYS } from "@/shared/config/env-keys"
 
 describe("Provider Configuration", () => {

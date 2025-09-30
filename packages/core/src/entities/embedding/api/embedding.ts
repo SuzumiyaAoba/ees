@@ -31,7 +31,7 @@ import type {
   EmbeddingsListResponse,
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
-} from "../model/embedding"
+} from "@/entities/embedding/model/embedding"
 
 /**
  * Multi-provider embedding service interface

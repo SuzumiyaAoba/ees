@@ -17,7 +17,7 @@ import { EmbeddingService, EmbeddingServiceLive } from "@/entities/embedding/api
 import type {
   BatchCreateEmbeddingRequest,
   SearchEmbeddingRequest,
-} from "../model/embedding"
+} from "@/entities/embedding/model/embedding"
 
 // Mock implementations
 interface MockEmbeddingProviderService {

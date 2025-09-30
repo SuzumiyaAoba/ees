@@ -22,7 +22,7 @@ import {
   ModelNotFoundError,
   ModelIncompatibleError,
   MigrationError,
-} from "../"
+} from "@/shared/models"
 
 describe("ModelManager", () => {
   let mockProviderService: typeof EmbeddingProviderService.Service

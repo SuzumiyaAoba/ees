@@ -10,7 +10,7 @@ import {
   createMultiProviderConfig,
   createOllamaConfig,
   EmbeddingProviderService,
-} from "../factory"
+} from "@/shared/providers/factory"
 import { createOllamaProvider } from "@/shared/providers/ollama-provider"
 
 describe("Provider System Integration", () => {

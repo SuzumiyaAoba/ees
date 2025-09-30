@@ -13,8 +13,8 @@ import type {
   OllamaConfig,
   OpenAIConfig,
   ProviderConfig,
-} from "../providers/types"
-import { createProviderConfig, createSimpleProviderConfig } from "./provider-factory"
+} from "@/shared/providers/types"
+import { createProviderConfig, createSimpleProviderConfig } from "@/shared/config/provider-factory"
 import {
   AZURE_CONFIG_TEMPLATE,
   COHERE_CONFIG_TEMPLATE,
@@ -22,8 +22,8 @@ import {
   MISTRAL_CONFIG_TEMPLATE,
   OLLAMA_CONFIG_TEMPLATE,
   OPENAI_CONFIG_TEMPLATE,
-} from "./provider-templates"
-import { ENV_KEYS } from "./env-keys"
+} from "@/shared/config/provider-templates"
+import { ENV_KEYS } from "@/shared/config/env-keys"
 
 /**
  * Get Ollama configuration from environment
