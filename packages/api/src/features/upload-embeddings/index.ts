@@ -118,7 +118,7 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
         )
 
         for (const file of files) {
-          const error = processingErrors.find((e: any) =>
+          const error = processingErrors.find((e: FileProcessorError) =>
             e && typeof e === 'object' && 'filename' in e && e.filename === file.name
           )
           results.push({

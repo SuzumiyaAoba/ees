@@ -3,6 +3,8 @@ import type { Context } from "hono"
 import { AppLayer } from "@/app/providers/main"
 import { handleErrorResponse } from "@/shared/error-handler"
 import { EmbeddingApplicationService, ModelManagerTag } from "@ees/core"
+import type { EmbeddingApplicationService as EmbeddingApplicationServiceType } from "@ees/core"
+import type { ModelManager } from "@ees/core"
 
 /**
  * Generic route handler that abstracts the common Effect execution pattern
@@ -30,9 +32,9 @@ export async function executeEffectHandler<T>(
  * Helper for creating Effect programs with EmbeddingApplicationService
  * Reduces boilerplate in embedding-related endpoints
  */
-export function withEmbeddingService<T>(
-  serviceCall: (service: any) => Effect.Effect<T, unknown, unknown>
-): Effect.Effect<T, unknown, unknown> {
+export function withEmbeddingService<T, E = never, R = never>(
+  serviceCall: (service: EmbeddingApplicationServiceType) => Effect.Effect<T, E, R>
+): Effect.Effect<T, E, EmbeddingApplicationServiceType | R> {
   return Effect.gen(function* () {
     const appService = yield* EmbeddingApplicationService
     return yield* serviceCall(appService)
@@ -43,9 +45,9 @@ export function withEmbeddingService<T>(
  * Helper for creating Effect programs with ModelManagerTag
  * Reduces boilerplate in model-related endpoints
  */
-export function withModelManager<T>(
-  serviceCall: (manager: any) => Effect.Effect<T, unknown, unknown>
-): Effect.Effect<T, unknown, unknown> {
+export function withModelManager<T, E = never, R = never>(
+  serviceCall: (manager: ModelManager) => Effect.Effect<T, E, R>
+): Effect.Effect<T, E, ModelManager | R> {
   return Effect.gen(function* () {
     const modelManager = yield* ModelManagerTag
     return yield* serviceCall(modelManager)

@@ -7,6 +7,17 @@ import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
 import type { ProviderConfig } from "@/shared/providers/types"
 
 /**
+ * Base configuration object used during provider setup
+ * Mutable during construction, converted to readonly provider config at the end
+ */
+interface BaseConfigObject extends Record<string, unknown> {
+  type: string
+  apiKey?: string
+  baseUrl?: string
+  defaultModel?: string
+}
+
+/**
  * Configuration template for creating provider configurations
  */
 export interface ProviderConfigTemplate<T extends ProviderConfig> {
@@ -25,9 +36,9 @@ export interface ProviderConfigTemplate<T extends ProviderConfig> {
   readonly defaults: {
     readonly model: string
     readonly baseUrl?: string
-    readonly [key: string]: any
+    readonly [key: string]: string | number | boolean | undefined
   }
-  readonly transform?: (baseConfig: any) => T
+  readonly transform?: (baseConfig: BaseConfigObject) => T
 }
 
 /**
@@ -43,7 +54,7 @@ export function createProviderConfig<T extends ProviderConfig>(
   const missingRequired: string[] = []
 
   // Build base configuration object
-  const config: any = {
+  const config: BaseConfigObject = {
     type: template.type,
   }
 
@@ -106,7 +117,7 @@ export function createProviderConfig<T extends ProviderConfig>(
   }
 
   // Apply custom transformation if provided
-  return template.transform ? template.transform(config) : (config as T)
+  return template.transform ? template.transform(config) : (config as unknown as T)
 }
 
 /**
@@ -119,7 +130,7 @@ export function createSimpleProviderConfig<T extends ProviderConfig>(
   }
 ): T {
   // Build base configuration
-  const config: any = {
+  const config: BaseConfigObject = {
     type: template.type,
   }
 
@@ -147,5 +158,5 @@ export function createSimpleProviderConfig<T extends ProviderConfig>(
   }
 
   // Apply custom transformation if provided
-  return template.transform ? template.transform(config) : (config as T)
+  return template.transform ? template.transform(config) : (config as unknown as T)
 }

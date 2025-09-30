@@ -48,9 +48,21 @@ export const CommonErrorResponses = {
 } as const
 
 /**
+ * OpenAPI response definition type
+ */
+interface ResponseDefinition {
+  readonly description: string
+  readonly content: {
+    readonly "application/json": {
+      readonly schema: unknown
+    }
+  }
+}
+
+/**
  * Helper function to create complete response definitions including common errors
  */
-export function createResponsesWithErrors<T extends Record<number, any>>(
+export function createResponsesWithErrors<T extends Record<number, ResponseDefinition>>(
   successResponses: T
 ): T & typeof CommonErrorResponses {
   return {
