@@ -11,6 +11,8 @@ export {
   getPort,
   getEnv,
   getEnvWithDefault,
+  getEnvNumber,
+  getEnvBoolean,
   isTestEnv,
   log,
   error,
@@ -25,6 +27,9 @@ export {
   FileProcessingError,
   FileTooLargeError,
 } from "./lib"
+
+// Export environment variable keys
+export { ENV_KEYS } from "./config/env-keys"
 
 // Export observability module (keeping the Effect-based log for Effect code)
 export * from "./observability"

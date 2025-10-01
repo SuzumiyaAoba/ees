@@ -7,22 +7,37 @@ import { cors } from 'hono/cors'
 import { secureHeaders } from 'hono/secure-headers'
 import { rateLimiter } from 'hono-rate-limiter'
 import type { Context, Next } from 'hono'
+import { ENV_KEYS, getEnvBoolean, getEnvNumber } from '@ees/core'
+
+/**
+ * Rate limit configuration structure
+ */
+interface RateLimitConfig {
+  readonly enabled: boolean
+  readonly windowMs: number
+  readonly limits: {
+    readonly general: number
+    readonly embedding: number
+    readonly search: number
+    readonly read: number
+  }
+}
 
 /**
  * Get rate limit configuration from environment or use defaults
  */
-function getRateLimitConfig() {
-  const enabled = process.env['EES_RATE_LIMIT_ENABLED'] !== 'false'
-  const windowMs = Number(process.env['EES_RATE_LIMIT_WINDOW_MS']) || 60000 // 1 minute default
+function getRateLimitConfig(): RateLimitConfig {
+  const enabled = getEnvBoolean(ENV_KEYS.RATE_LIMIT_ENABLED, true)
+  const windowMs = getEnvNumber(ENV_KEYS.RATE_LIMIT_WINDOW_MS, 60000) // 1 minute default
 
   return {
     enabled,
     windowMs,
     limits: {
-      general: Number(process.env['EES_RATE_LIMIT_GENERAL']) || 100,
-      embedding: Number(process.env['EES_RATE_LIMIT_EMBEDDING']) || 10,
-      search: Number(process.env['EES_RATE_LIMIT_SEARCH']) || 20,
-      read: Number(process.env['EES_RATE_LIMIT_READ']) || 200,
+      general: getEnvNumber(ENV_KEYS.RATE_LIMIT_GENERAL, 100),
+      embedding: getEnvNumber(ENV_KEYS.RATE_LIMIT_EMBEDDING, 10),
+      search: getEnvNumber(ENV_KEYS.RATE_LIMIT_SEARCH, 20),
+      read: getEnvNumber(ENV_KEYS.RATE_LIMIT_READ, 200),
     }
   }
 }
