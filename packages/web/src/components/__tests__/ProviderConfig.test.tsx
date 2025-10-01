@@ -39,10 +39,6 @@ const mockOllamaStatusOnline = {
   models: ['nomic-embed-text', 'mxbai-embed-large'],
 }
 
-const mockOllamaStatusOffline = {
-  status: 'offline' as const,
-}
-
 describe('ProviderConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
