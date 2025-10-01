@@ -27,6 +27,7 @@ const mockModels = {
       provider: 'ollama',
       dimensions: 768,
       maxTokens: 8192,
+      available: true,
     },
     {
       name: 'text-embedding-3-small',
@@ -34,14 +35,18 @@ const mockModels = {
       provider: 'openai',
       dimensions: 1536,
       maxTokens: 8191,
+      available: true,
     },
     {
       name: 'text-embedding-3-large',
       provider: 'openai',
       dimensions: 3072,
       maxTokens: 8191,
+      available: true,
     },
   ],
+  count: 3,
+  providers: ['ollama', 'openai'],
 }
 
 const mockCompatibilitySuccess = {
@@ -62,9 +67,9 @@ const mockMigrationResult = {
   failed: 5,
   duration: 5000,
   details: [
-    { uri: 'doc1', status: 'success' as const },
-    { uri: 'doc2', status: 'success' as const },
-    { uri: 'doc3', status: 'error' as const, error: 'Failed to generate embedding' },
+    { id: 1, uri: 'doc1', status: 'success' as const },
+    { id: 2, uri: 'doc2', status: 'success' as const },
+    { id: 3, uri: 'doc3', status: 'error' as const, error: 'Failed to generate embedding' },
   ],
 }
 
