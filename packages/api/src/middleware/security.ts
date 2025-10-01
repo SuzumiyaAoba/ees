@@ -7,6 +7,40 @@ import { cors } from 'hono/cors'
 import { secureHeaders } from 'hono/secure-headers'
 import { rateLimiter } from 'hono-rate-limiter'
 import type { Context, Next } from 'hono'
+import { ENV_KEYS, getEnvBoolean, getEnvNumber } from '@ees/core'
+
+/**
+ * Rate limit configuration structure
+ */
+interface RateLimitConfig {
+  readonly enabled: boolean
+  readonly windowMs: number
+  readonly limits: {
+    readonly general: number
+    readonly embedding: number
+    readonly search: number
+    readonly read: number
+  }
+}
+
+/**
+ * Get rate limit configuration from environment or use defaults
+ */
+function getRateLimitConfig(): RateLimitConfig {
+  const enabled = getEnvBoolean(ENV_KEYS.RATE_LIMIT_ENABLED, true)
+  const windowMs = getEnvNumber(ENV_KEYS.RATE_LIMIT_WINDOW_MS, 60000) // 1 minute default
+
+  return {
+    enabled,
+    windowMs,
+    limits: {
+      general: getEnvNumber(ENV_KEYS.RATE_LIMIT_GENERAL, 100),
+      embedding: getEnvNumber(ENV_KEYS.RATE_LIMIT_EMBEDDING, 10),
+      search: getEnvNumber(ENV_KEYS.RATE_LIMIT_SEARCH, 20),
+      read: getEnvNumber(ENV_KEYS.RATE_LIMIT_READ, 200),
+    }
+  }
+}
 
 /**
  * Rate limiting configuration based on endpoint type and sensitivity
@@ -18,8 +52,10 @@ const createRateLimiter = (config: {
 }) => {
   // Return a function that checks environment at runtime
   return async (c: Context, next: Next) => {
-    // Disable rate limiting in test environment
-    if (process.env['NODE_ENV'] === 'test') {
+    const rateLimitConfig = getRateLimitConfig()
+
+    // Disable rate limiting in test environment or if explicitly disabled
+    if (process.env['NODE_ENV'] === 'test' || !rateLimitConfig.enabled) {
       return await next()
     }
 
@@ -34,44 +70,47 @@ const createRateLimiter = (config: {
   }
 }
 
+// Get rate limit configuration at module load time
+const config = getRateLimitConfig()
+
 export const rateLimitConfig = {
   // General API endpoints - moderate limits
   general: createRateLimiter({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 100, // 100 requests per minute per IP
+    windowMs: config.windowMs,
+    limit: config.limits.general,
     message: {
       error: 'Too many requests, please try again later.',
-      retryAfter: '1 minute'
+      retryAfter: `${config.windowMs / 1000} seconds`
     },
   }),
 
   // Embedding generation - more restrictive (expensive operations)
   embedding: createRateLimiter({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 10, // 10 embeddings per minute per IP
+    windowMs: config.windowMs,
+    limit: config.limits.embedding,
     message: {
       error: 'Too many embedding requests, please try again later.',
-      retryAfter: '1 minute'
+      retryAfter: `${config.windowMs / 1000} seconds`
     },
   }),
 
   // Search operations - moderate restrictions
   search: createRateLimiter({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 20, // 20 searches per minute per IP
+    windowMs: config.windowMs,
+    limit: config.limits.search,
     message: {
       error: 'Too many search requests, please try again later.',
-      retryAfter: '1 minute'
+      retryAfter: `${config.windowMs / 1000} seconds`
     },
   }),
 
   // Read operations - more lenient
   read: createRateLimiter({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    limit: 200, // 200 requests per minute per IP
+    windowMs: config.windowMs,
+    limit: config.limits.read,
     message: {
       error: 'Too many read requests, please try again later.',
-      retryAfter: '1 minute'
+      retryAfter: `${config.windowMs / 1000} seconds`
     },
   })
 }

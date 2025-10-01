@@ -57,6 +57,8 @@ export {
   getPort,
   getEnv,
   getEnvWithDefault,
+  getEnvNumber,
+  getEnvBoolean,
   isTestEnv,
   log,
   error,

@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { getEnv, getEnvWithDefault, getPort, isTestEnv } from "@/shared/lib/env"
+import { getEnv, getEnvWithDefault, getEnvNumber, getEnvBoolean, getPort, isTestEnv } from "@/shared/lib/env"
 
 describe("Environment Variable Utilities", () => {
   let originalEnv: NodeJS.ProcessEnv
@@ -145,6 +145,186 @@ describe("Environment Variable Utilities", () => {
     })
   })
 
+  describe("getEnvNumber", () => {
+    it("should return numeric value when environment variable is a valid number", () => {
+      process.env.NUMERIC_VAR = "42"
+
+      const result = getEnvNumber("NUMERIC_VAR", 0)
+
+      expect(result).toBe(42)
+    })
+
+    it("should return default value when environment variable is not set", () => {
+      process.env.NUMERIC_VAR = undefined
+
+      const result = getEnvNumber("NUMERIC_VAR", 100)
+
+      expect(result).toBe(100)
+    })
+
+    it("should return default value when environment variable is not a valid number", () => {
+      process.env.NUMERIC_VAR = "not-a-number"
+
+      const result = getEnvNumber("NUMERIC_VAR", 50)
+
+      expect(result).toBe(50)
+    })
+
+    it("should return default value when environment variable is empty", () => {
+      process.env.NUMERIC_VAR = ""
+
+      const result = getEnvNumber("NUMERIC_VAR", 25)
+
+      expect(result).toBe(25)
+    })
+
+    it("should handle floating point numbers", () => {
+      process.env.FLOAT_VAR = "3.14"
+
+      const result = getEnvNumber("FLOAT_VAR", 0)
+
+      expect(result).toBe(3.14)
+    })
+
+    it("should handle negative numbers", () => {
+      process.env.NEGATIVE_VAR = "-100"
+
+      const result = getEnvNumber("NEGATIVE_VAR", 0)
+
+      expect(result).toBe(-100)
+    })
+
+    it("should handle zero", () => {
+      process.env.ZERO_VAR = "0"
+
+      const result = getEnvNumber("ZERO_VAR", 100)
+
+      expect(result).toBe(0)
+    })
+
+    it("should handle large numbers", () => {
+      process.env.LARGE_VAR = "9999999999"
+
+      const result = getEnvNumber("LARGE_VAR", 0)
+
+      expect(result).toBe(9999999999)
+    })
+  })
+
+  describe("getEnvBoolean", () => {
+    it("should return true for 'true' string", () => {
+      process.env.BOOL_VAR = "true"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return true for 'TRUE' string (case-insensitive)", () => {
+      process.env.BOOL_VAR = "TRUE"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return true for '1' string", () => {
+      process.env.BOOL_VAR = "1"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return true for 'yes' string", () => {
+      process.env.BOOL_VAR = "yes"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return true for 'YES' string (case-insensitive)", () => {
+      process.env.BOOL_VAR = "YES"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return false for 'false' string", () => {
+      process.env.BOOL_VAR = "false"
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for 'FALSE' string (case-insensitive)", () => {
+      process.env.BOOL_VAR = "FALSE"
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for '0' string", () => {
+      process.env.BOOL_VAR = "0"
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for 'no' string", () => {
+      process.env.BOOL_VAR = "no"
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return false for 'NO' string (case-insensitive)", () => {
+      process.env.BOOL_VAR = "NO"
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return default value when environment variable is not set", () => {
+      process.env.BOOL_VAR = undefined
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(true)
+    })
+
+    it("should return default value for invalid boolean strings", () => {
+      process.env.BOOL_VAR = "maybe"
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(false)
+    })
+
+    it("should return default value when environment variable is empty", () => {
+      process.env.BOOL_VAR = ""
+
+      const result = getEnvBoolean("BOOL_VAR", true)
+
+      expect(result).toBe(true)
+    })
+
+    it("should handle whitespace in boolean values", () => {
+      process.env.BOOL_VAR = "  true  "
+
+      const result = getEnvBoolean("BOOL_VAR", false)
+
+      expect(result).toBe(true)
+    })
+  })
+
   describe("getPort", () => {
     it("should return port from environment when set", () => {
       process.env.PORT = "8080"
@@ -246,15 +426,21 @@ describe("Environment Variable Utilities", () => {
   describe("Type Safety", () => {
     it("should maintain correct return types", () => {
       process.env.TEST_VAR = "test"
+      process.env.NUM_VAR = "42"
+      process.env.BOOL_VAR = "true"
 
       // TypeScript should enforce these types at compile time
       const envValue = getEnv("TEST_VAR")
       const envWithDefault = getEnvWithDefault("TEST_VAR", "default")
+      const envNum = getEnvNumber("NUM_VAR", 0)
+      const envBool = getEnvBoolean("BOOL_VAR", false)
       const testEnv = isTestEnv()
       const port = getPort()
 
       expect(typeof envValue).toBe("string")
       expect(typeof envWithDefault).toBe("string")
+      expect(typeof envNum).toBe("number")
+      expect(typeof envBool).toBe("boolean")
       expect(typeof testEnv).toBe("boolean")
       expect(typeof port).toBe("number")
     })
