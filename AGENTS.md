@@ -128,13 +128,13 @@ function parseJson(json: string): unknown {
 // ✅ Use union types
 type Status = "pending" | "completed" | "failed"
 
-// ❌ Never use any
+// ❌ Never use any - not even in test files
 function badFunction(data: any): any {
   return data
 }
 ```
 
-**Exception**: The `any` type is only permitted in test files under `src/__tests__/**/*` where mocking or testing scenarios require it.
+**No Exceptions**: The `any` type is prohibited in all code, including test files. Use `unknown`, generics, or proper type definitions instead.
 
 ### Biome Configuration Policy
 
@@ -151,7 +151,7 @@ function badFunction(data: any): any {
 - Follow established patterns and best practices
 - Maintain consistent code quality standards across the entire codebase
 
-**Exception**: The existing test file override for `src/__tests__/**/*` is permitted as testing code has different requirements for `any` types and unused variables.
+**Test File Overrides**: The existing test file override for `src/__tests__/**/*` only permits `noUnusedVariables: "off"` for testing scenarios. The `noExplicitAny` rule remains enforced for all files including tests.
 
 If you encounter linting errors, you MUST fix the underlying code issues rather than modifying the Biome configuration. This ensures consistent code quality and maintainability across the project.
 

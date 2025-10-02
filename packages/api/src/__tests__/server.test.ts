@@ -100,7 +100,7 @@ describe("Server Components", () => {
       const testPromise = Promise.reject(testReason)
 
       // Simulate the unhandled rejection handler
-      const unhandledRejectionHandler = (reason: any, promise: Promise<any>) => {
+      const unhandledRejectionHandler = (reason: unknown, promise: Promise<unknown>) => {
         console.error('Unhandled Rejection at:', promise, 'reason:', reason)
         process.exit(1)
       }
