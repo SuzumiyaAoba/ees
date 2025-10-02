@@ -73,4 +73,4 @@ export {
   ProviderError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "./types"
+} from "@/shared/errors/database"

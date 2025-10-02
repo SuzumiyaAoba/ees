@@ -4,8 +4,7 @@ import type { SearchEmbeddingRequest, SearchEmbeddingResult } from "@/entities/e
 import type { EmbeddingService } from "@/entities/embedding/api/embedding"
 import type { ProviderService } from "@/shared/providers/provider-service"
 import type { DatabaseService } from "@/shared/database/database-service"
-import { DatabaseQueryError } from "@/shared/errors/database"
-import { ProviderModelError } from "@/shared/providers/types"
+import { DatabaseQueryError, ProviderModelError } from "@/shared/errors/database"
 
 // Mock interfaces for testing
 interface MockDatabaseClient {

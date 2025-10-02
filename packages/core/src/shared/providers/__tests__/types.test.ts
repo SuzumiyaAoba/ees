@@ -8,7 +8,7 @@ import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "@/shared/providers/types"
+} from "@/shared/errors/database"
 
 describe("Provider Error Types", () => {
   describe("ProviderConnectionError", () => {

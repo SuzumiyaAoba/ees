@@ -1,10 +1,10 @@
 import { Effect, Exit } from "effect"
 import { describe, expect, it } from "vitest"
 import {
-  EmbeddingDataParseError,
   parseStoredEmbeddingData,
   validateEmbeddingVector,
 } from "@/entities/embedding/lib/embedding-data"
+import { EmbeddingDataParseError } from "@/shared/errors/database"
 
 describe("EmbeddingDataParser", () => {
   describe("parseStoredEmbeddingData", () => {

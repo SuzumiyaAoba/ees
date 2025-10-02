@@ -11,11 +11,13 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OpenAIConfig,
+} from "./types"
+import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "./types"
+} from "@/shared/errors/database"
 import { createOpenAIErrorHandler } from "./error-handler"
 
 export interface OpenAIProviderService extends EmbeddingProvider {}

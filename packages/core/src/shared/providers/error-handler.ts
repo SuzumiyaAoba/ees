@@ -3,14 +3,16 @@
  * Eliminates duplicate error handling patterns across all AI providers
  */
 
+import type {
+  ProviderConfig,
+  EmbeddingRequest,
+} from "./types"
 import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-  type ProviderConfig,
-  type EmbeddingRequest,
-} from "./types"
+} from "@/shared/errors/database"
 
 /**
  * Context information needed for error handling

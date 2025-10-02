@@ -11,11 +11,13 @@ import type {
   EmbeddingResponse,
   MistralConfig,
   ModelInfo,
+} from "./types"
+import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "./types"
+} from "@/shared/errors/database"
 import { createMistralErrorHandler } from "./error-handler"
 
 export interface MistralProviderService extends EmbeddingProvider {}

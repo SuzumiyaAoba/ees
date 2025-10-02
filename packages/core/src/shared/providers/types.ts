@@ -4,7 +4,12 @@
  */
 
 import type { Effect } from "effect"
-import { Data } from "effect"
+import type {
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
+} from "@/shared/errors/database"
 
 /**
  * Base configuration interface for all embedding providers
@@ -125,51 +130,6 @@ export interface EmbeddingResponse {
   /** Number of tokens consumed (if available from provider) */
   readonly tokensUsed?: number
 }
-
-/**
- * Provider-specific error types using Effect Data
- */
-export class ProviderError extends Data.TaggedError("ProviderError")<{
-  readonly provider: string
-  readonly message: string
-  readonly cause?: unknown
-}> {}
-
-export class ProviderConnectionError extends Data.TaggedError(
-  "ProviderConnectionError"
-)<{
-  readonly provider: string
-  readonly message: string
-  readonly errorCode?: string
-  readonly cause?: unknown
-}> {}
-
-export class ProviderModelError extends Data.TaggedError("ProviderModelError")<{
-  readonly provider: string
-  readonly modelName: string
-  readonly message: string
-  readonly errorCode?: string
-  readonly cause?: unknown
-}> {}
-
-export class ProviderAuthenticationError extends Data.TaggedError(
-  "ProviderAuthenticationError"
-)<{
-  readonly provider: string
-  readonly message: string
-  readonly errorCode?: string
-  readonly cause?: unknown
-}> {}
-
-export class ProviderRateLimitError extends Data.TaggedError(
-  "ProviderRateLimitError"
-)<{
-  readonly provider: string
-  readonly message: string
-  readonly retryAfter?: number
-  readonly errorCode?: string
-  readonly cause?: unknown
-}> {}
 
 /**
  * Generic embedding provider interface
