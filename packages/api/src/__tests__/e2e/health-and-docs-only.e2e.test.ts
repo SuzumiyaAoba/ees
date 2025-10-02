@@ -65,7 +65,7 @@ describe("Health Check and Documentation E2E Tests", () => {
       expect(Array.isArray(spec.tags)).toBe(true)
 
       // Validate required tags
-      const tagNames = spec.tags.map((tag: any) => tag.name)
+      const tagNames = spec.tags.map((tag: { name: string }) => tag.name)
       expect(tagNames).toContain("Health")
       expect(tagNames).toContain("Embeddings")
       expect(tagNames).toContain("Models")

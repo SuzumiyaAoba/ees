@@ -8,18 +8,20 @@ import { expect } from "vitest"
  * Helper function to validate response structure
  */
 export function validateResponseStructure(
-  response: any,
+  response: unknown,
   expectedStructure: { required: string[]; optional: string[] }
 ): void {
+  const resp = response as Record<string, unknown>
+
   // Check that all required fields are present
   expectedStructure.required.forEach(field => {
-    expect(response).toHaveProperty(field)
-    expect(response[field]).toBeDefined()
+    expect(resp).toHaveProperty(field)
+    expect(resp[field]).toBeDefined()
   })
 
   // Check that no unexpected fields are present (only required and optional fields allowed)
   const allowedFields = [...expectedStructure.required, ...expectedStructure.optional]
-  Object.keys(response).forEach(field => {
+  Object.keys(resp).forEach(field => {
     expect(allowedFields).toContain(field)
   })
 }
@@ -27,24 +29,27 @@ export function validateResponseStructure(
 /**
  * Helper function to validate embedding structure
  */
-export function validateEmbeddingStructure(embedding: any): void {
-  expect(embedding).toHaveProperty("id")
-  expect(embedding).toHaveProperty("uri")
-  expect(embedding).toHaveProperty("text")
-  expect(embedding).toHaveProperty("model_name")
-  expect(embedding).toHaveProperty("embedding")
-  expect(embedding).toHaveProperty("created_at")
+export function validateEmbeddingStructure(embedding: unknown): void {
+  const emb = embedding as Record<string, unknown>
 
-  expect(typeof embedding.id).toBe("number")
-  expect(typeof embedding.uri).toBe("string")
-  expect(typeof embedding.text).toBe("string")
-  expect(typeof embedding.model_name).toBe("string")
-  expect(Array.isArray(embedding.embedding)).toBe(true)
-  expect(typeof embedding.created_at).toBe("string")
+  expect(emb).toHaveProperty("id")
+  expect(emb).toHaveProperty("uri")
+  expect(emb).toHaveProperty("text")
+  expect(emb).toHaveProperty("model_name")
+  expect(emb).toHaveProperty("embedding")
+  expect(emb).toHaveProperty("created_at")
+
+  expect(typeof emb["id"]).toBe("number")
+  expect(typeof emb["uri"]).toBe("string")
+  expect(typeof emb["text"]).toBe("string")
+  expect(typeof emb["model_name"]).toBe("string")
+  expect(Array.isArray(emb["embedding"])).toBe(true)
+  expect(typeof emb["created_at"]).toBe("string")
 
   // Validate embedding vector
-  expect(embedding.embedding.length).toBeGreaterThan(0)
-  embedding.embedding.forEach((value: any) => {
+  const embVector = emb["embedding"] as unknown[]
+  expect(embVector.length).toBeGreaterThan(0)
+  embVector.forEach((value: unknown) => {
     expect(typeof value).toBe("number")
   })
 }
@@ -52,52 +57,58 @@ export function validateEmbeddingStructure(embedding: any): void {
 /**
  * Helper function to validate pagination structure
  */
-export function validatePaginationStructure(response: any): void {
-  expect(response).toHaveProperty("page")
-  expect(response).toHaveProperty("limit")
-  expect(response).toHaveProperty("total_pages")
-  expect(response).toHaveProperty("has_next")
-  expect(response).toHaveProperty("has_prev")
+export function validatePaginationStructure(response: unknown): void {
+  const resp = response as Record<string, unknown>
 
-  expect(typeof response.page).toBe("number")
-  expect(typeof response.limit).toBe("number")
-  expect(typeof response.total_pages).toBe("number")
-  expect(typeof response.has_next).toBe("boolean")
-  expect(typeof response.has_prev).toBe("boolean")
+  expect(resp).toHaveProperty("page")
+  expect(resp).toHaveProperty("limit")
+  expect(resp).toHaveProperty("total_pages")
+  expect(resp).toHaveProperty("has_next")
+  expect(resp).toHaveProperty("has_prev")
 
-  expect(response.page).toBeGreaterThan(0)
-  expect(response.limit).toBeGreaterThan(0)
-  expect(response.total_pages).toBeGreaterThanOrEqual(0)
+  expect(typeof resp["page"]).toBe("number")
+  expect(typeof resp["limit"]).toBe("number")
+  expect(typeof resp["total_pages"]).toBe("number")
+  expect(typeof resp["has_next"]).toBe("boolean")
+  expect(typeof resp["has_prev"]).toBe("boolean")
+
+  expect(resp["page"] as number).toBeGreaterThan(0)
+  expect(resp["limit"] as number).toBeGreaterThan(0)
+  expect(resp["total_pages"] as number).toBeGreaterThanOrEqual(0)
 }
 
 /**
  * Helper function to validate search result structure
  */
-export function validateSearchResultStructure(result: any): void {
-  expect(result).toHaveProperty("id")
-  expect(result).toHaveProperty("uri")
-  expect(result).toHaveProperty("text")
-  expect(result).toHaveProperty("model_name")
-  expect(result).toHaveProperty("similarity")
+export function validateSearchResultStructure(result: unknown): void {
+  const res = result as Record<string, unknown>
 
-  expect(typeof result.id).toBe("number")
-  expect(typeof result.uri).toBe("string")
-  expect(typeof result.text).toBe("string")
-  expect(typeof result.model_name).toBe("string")
-  expect(typeof result.similarity).toBe("number")
+  expect(res).toHaveProperty("id")
+  expect(res).toHaveProperty("uri")
+  expect(res).toHaveProperty("text")
+  expect(res).toHaveProperty("model_name")
+  expect(res).toHaveProperty("similarity")
+
+  expect(typeof res["id"]).toBe("number")
+  expect(typeof res["uri"]).toBe("string")
+  expect(typeof res["text"]).toBe("string")
+  expect(typeof res["model_name"]).toBe("string")
+  expect(typeof res["similarity"]).toBe("number")
 
   // Similarity should be between 0 and 1 for cosine similarity
-  expect(result.similarity).toBeGreaterThanOrEqual(0)
-  expect(result.similarity).toBeLessThanOrEqual(1)
+  expect(res["similarity"] as number).toBeGreaterThanOrEqual(0)
+  expect(res["similarity"] as number).toBeLessThanOrEqual(1)
 }
 
 /**
  * Helper function to validate error response structure
  */
-export function validateErrorResponse(response: any): void {
-  expect(response).toHaveProperty("error")
-  expect(typeof response.error).toBe("string")
-  expect(response.error.length).toBeGreaterThan(0)
+export function validateErrorResponse(response: unknown): void {
+  const resp = response as Record<string, unknown>
+
+  expect(resp).toHaveProperty("error")
+  expect(typeof resp["error"]).toBe("string")
+  expect((resp["error"] as string).length).toBeGreaterThan(0)
 }
 
 /**
@@ -171,7 +182,7 @@ export function validateHttpResponse(
  * Helper function to clean up test data
  */
 export async function cleanupTestData(
-  app: any,
+  app: { request: (path: string, options: { method: string }) => Promise<Response> },
   createdEmbeddingIds: number[]
 ): Promise<void> {
   for (const id of createdEmbeddingIds) {
@@ -199,40 +210,46 @@ export function generateMockFile(
 /**
  * Helper function to validate model information structure
  */
-export function validateModelStructure(model: any): void {
-  expect(model).toHaveProperty("name")
-  expect(model).toHaveProperty("provider")
-  expect(typeof model.name).toBe("string")
-  expect(typeof model.provider).toBe("string")
-  expect(model.name.length).toBeGreaterThan(0)
-  expect(model.provider.length).toBeGreaterThan(0)
+export function validateModelStructure(model: unknown): void {
+  const mod = model as Record<string, unknown>
+
+  expect(mod).toHaveProperty("name")
+  expect(mod).toHaveProperty("provider")
+  expect(typeof mod["name"]).toBe("string")
+  expect(typeof mod["provider"]).toBe("string")
+  expect((mod["name"] as string).length).toBeGreaterThan(0)
+  expect((mod["provider"] as string).length).toBeGreaterThan(0)
 }
 
 /**
  * Helper function to validate batch create response
  */
-export function validateBatchCreateResponse(response: any): void {
-  expect(response).toHaveProperty("successful")
-  expect(response).toHaveProperty("failed")
-  expect(response).toHaveProperty("total")
-  expect(response).toHaveProperty("results")
+export function validateBatchCreateResponse(response: unknown): void {
+  const resp = response as Record<string, unknown>
 
-  expect(typeof response.successful).toBe("number")
-  expect(typeof response.failed).toBe("number")
-  expect(typeof response.total).toBe("number")
-  expect(Array.isArray(response.results)).toBe(true)
+  expect(resp).toHaveProperty("successful")
+  expect(resp).toHaveProperty("failed")
+  expect(resp).toHaveProperty("total")
+  expect(resp).toHaveProperty("results")
 
-  expect(response.successful).toBeGreaterThanOrEqual(0)
-  expect(response.failed).toBeGreaterThanOrEqual(0)
-  expect(response.total).toBe(response.successful + response.failed)
+  expect(typeof resp["successful"]).toBe("number")
+  expect(typeof resp["failed"]).toBe("number")
+  expect(typeof resp["total"]).toBe("number")
+  expect(Array.isArray(resp["results"])).toBe(true)
+
+  expect(resp["successful"] as number).toBeGreaterThanOrEqual(0)
+  expect(resp["failed"] as number).toBeGreaterThanOrEqual(0)
+  expect(resp["total"]).toBe((resp["successful"] as number) + (resp["failed"] as number))
 
   // Validate each result in the batch
-  response.results.forEach((result: any) => {
-    if (result.success) {
-      validateEmbeddingStructure(result.data)
+  const results = resp["results"] as unknown[]
+  results.forEach((result: unknown) => {
+    const res = result as Record<string, unknown>
+    if (res["success"]) {
+      validateEmbeddingStructure(res["data"])
     } else {
-      expect(result).toHaveProperty("error")
-      expect(typeof result.error).toBe("string")
+      expect(res).toHaveProperty("error")
+      expect(typeof res["error"]).toBe("string")
     }
   })
 }

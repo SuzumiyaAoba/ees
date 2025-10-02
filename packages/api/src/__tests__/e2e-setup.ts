@@ -249,12 +249,12 @@ export async function createTestEmbedding(
 /**
  * Enhanced error handling for tests
  */
-export function handleTestError(error: any, context: string): void {
+export function handleTestError(error: unknown, context: string): void {
   console.error(`Test error in ${context}:`, error)
 
-  if (error.response) {
-    console.error("Response status:", error.response.status)
-    console.error("Response headers:", error.response.headers)
+  if (error && typeof error === 'object' && 'response' in error) {
+    console.error("Response status:", (error as { response: { status: unknown } }).response.status)
+    console.error("Response headers:", (error as { response: { headers: unknown } }).response.headers)
   }
 
   throw error

@@ -20,9 +20,6 @@
       "includes": ["src/__tests__/**/*"],
       "linter": {
         "rules": {
-          "suspicious": {
-            "noExplicitAny": "off"
-          },
           "correctness": {
             "noUnusedVariables": "off"
           }
