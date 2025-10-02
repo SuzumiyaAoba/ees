@@ -133,7 +133,7 @@ app.openapi(createEmbeddingRoute, async (c) => {
         modelName: model_name,
       })
     )
-  ) as any
+  ) as never
 })
 
 /**
@@ -148,7 +148,7 @@ app.openapi(batchCreateEmbeddingRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.createBatchEmbeddings(request)
     )
-  ) as any
+  ) as never
 })
 
 /**
@@ -163,7 +163,7 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.searchEmbeddings(request)
     )
-  ) as any
+  ) as never
 })
 
 /**
@@ -181,7 +181,7 @@ app.openapi(getEmbeddingByUriRoute, async (c) => {
       appService.getEmbeddingByUri(decodedUri, decodedModelName)
     ),
     "Embedding not found"
-  ) as any
+  ) as never
 })
 
 /**
@@ -215,7 +215,7 @@ app.openapi(listEmbeddingsRoute, async (c) => {
     withEmbeddingService(appService =>
       appService.listEmbeddings(filters)
     )
-  ) as any
+  ) as never
 })
 
 /**
@@ -228,7 +228,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
   const validationResult = validateNumericId(idStr, c)
 
   if (typeof validationResult !== "number") {
-    return validationResult // Return early error response
+    return validationResult as never
   }
 
   const id = validationResult
@@ -244,7 +244,7 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
       })
     ),
     "Embedding not found"
-  ) as any
+  ) as never
 })
 
 /**
@@ -268,7 +268,7 @@ app.openapi(listModelsRoute, async (c) => {
         }
       })
     )
-  ) as any
+  ) as never
 })
 
 /**
