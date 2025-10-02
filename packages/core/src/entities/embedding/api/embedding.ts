@@ -3,14 +3,8 @@
  * Supports multiple providers (Ollama, OpenAI, Google AI) via Vercel AI SDK
  */
 
-import { and, eq, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer, Option } from "effect"
 import { getDefaultProvider } from "@/shared/config/providers"
-import {
-  DatabaseService,
-  DatabaseServiceLive,
-} from "@/shared/database/connection"
-import { embeddings } from "@/shared/database/schema"
 import { DatabaseQueryError } from "@/shared/errors/database"
 import {
   EmbeddingProviderService,
@@ -21,8 +15,11 @@ import {
   ProviderRateLimitError,
 } from "@/shared/providers"
 import { createEmbeddingProviderService } from "@/shared/providers/factory"
-import { parseStoredEmbeddingData } from "@/entities/embedding/lib/embedding-data"
 import { MetricsServiceTag } from "@/shared/observability/metrics"
+import {
+  EmbeddingRepository,
+  EmbeddingRepositoryLive,
+} from "@/entities/embedding/repository/embedding-repository"
 import {
   CacheService,
   embeddingCacheKey,
@@ -179,49 +176,6 @@ export const EmbeddingService =
   Context.GenericTag<EmbeddingService>("EmbeddingService")
 
 /**
- * SQL query constants for improved security and maintainability
- */
-const EMBEDDING_QUERIES = {
-  INSERT_OR_UPDATE: `
-    INSERT INTO embeddings (uri, text, model_name, embedding)
-    VALUES (?, ?, ?, vector(?))
-    ON CONFLICT(uri) DO UPDATE SET
-      text = excluded.text,
-      model_name = excluded.model_name,
-      embedding = excluded.embedding,
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING id
-  `,
-  VECTOR_SEARCH_COSINE: `
-    SELECT
-      e.id,
-      e.uri,
-      e.text,
-      e.model_name,
-      (1.0 - vector_distance_cos(e.embedding, vector(?))) as similarity,
-      e.created_at,
-      e.updated_at
-    FROM vector_top_k('idx_embeddings_vector', vector(?), ?) as v
-    INNER JOIN embeddings as e ON v.id = e.rowid
-    WHERE e.model_name = ?
-  `,
-  VECTOR_SEARCH_FALLBACK: `
-    SELECT
-      id,
-      uri,
-      text,
-      model_name,
-      vector_distance_cos(embedding, vector(?)) as distance,
-      created_at,
-      updated_at
-    FROM embeddings
-    WHERE model_name = ?
-    ORDER BY distance ASC
-    LIMIT ?
-  `
-} as const
-
-/**
  * Input validation for embedding operations
  */
 const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, DatabaseQueryError> => {
@@ -253,7 +207,7 @@ const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, 
 // Individual similarity functions are kept for potential future use
 
 const make = Effect.gen(function* () {
-  const { db, client } = yield* DatabaseService
+  const repository = yield* EmbeddingRepository
   const providerService = yield* EmbeddingProviderService
   const metricsService = yield* MetricsServiceTag
   const cacheService = yield* CacheService
@@ -287,24 +241,13 @@ const make = Effect.gen(function* () {
         const embeddingResponse =
           yield* providerService.generateEmbedding(embeddingRequest)
 
-        // Convert embedding array to libSQL F32_BLOB format using vector() function
-        const embeddingVector = JSON.stringify(embeddingResponse.embedding)
-
-        // Insert or update embedding in database using parameterized query
-        const result = yield* Effect.tryPromise({
-          try: async () => {
-            const insertResult = await client.execute({
-              sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
-              args: [uri, text, embeddingResponse.model, embeddingVector]
-            })
-            return insertResult.rows
-          },
-          catch: (error) =>
-            new DatabaseQueryError({
-              message: "Failed to save embedding to database",
-              cause: error,
-            }),
-        })
+        // Save embedding to database using repository
+        const saveResult = yield* repository.save(
+          uri,
+          text,
+          embeddingResponse.model,
+          embeddingResponse.embedding
+        )
 
         // Record successful embedding creation metrics
         const duration = (Date.now() - startTime) / 1000
@@ -319,7 +262,7 @@ const make = Effect.gen(function* () {
         }
 
         return {
-          id: Number(result[0]?.["id"] ?? 0),
+          id: saveResult.id,
           uri,
           model_name: embeddingResponse.model,
         }
@@ -407,46 +350,11 @@ const make = Effect.gen(function* () {
         yield* metricsService.recordCacheMiss("embedding")
       }
 
-      // Cache miss or disabled - fetch from database
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db.select().from(embeddings).where(
-            and(eq(embeddings.uri, uri), eq(embeddings.modelName, modelName))
-          ).limit(1),
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to get embedding from database",
-            cause: error,
-          }),
-      })
+      // Cache miss or disabled - fetch from repository
+      const embeddingResult = yield* repository.findByUri(uri, modelName)
 
-      if (result.length === 0) {
+      if (!embeddingResult) {
         return null
-      }
-
-      const row = result[0]
-      if (!row) {
-        return null
-      }
-
-      const embedding = yield* parseStoredEmbeddingData(row.embedding).pipe(
-        Effect.mapError(
-          (error) =>
-            new DatabaseQueryError({
-              message: `Failed to parse embedding data for URI ${row.uri}`,
-              cause: error,
-            })
-        )
-      )
-
-      const embeddingResult = {
-        id: row.id,
-        uri: row.uri,
-        text: row.text,
-        model_name: row.modelName,
-        embedding,
-        created_at: row.createdAt,
-        updated_at: row.updatedAt,
       }
 
       // Store in cache if enabled (ignore cache errors)
@@ -465,124 +373,9 @@ const make = Effect.gen(function* () {
     model_name?: string
     page?: number
     limit?: number
-  }) =>
-    Effect.gen(function* () {
-      const page = filters?.page ?? 1
-      const limit = Math.min(filters?.limit ?? 10, 100) // Max 100 items per page
-      const offset = (page - 1) * limit
+  }) => repository.findAll(filters)
 
-      // Build where conditions based on filters
-      const whereConditions: SQL<unknown>[] = []
-      if (filters?.uri) {
-        whereConditions.push(eq(embeddings.uri, filters.uri))
-      }
-      if (filters?.model_name) {
-        whereConditions.push(eq(embeddings.modelName, filters.model_name))
-      }
-
-      // Get total count for pagination
-      const totalCountResult = yield* Effect.tryPromise({
-        try: () => {
-          let countQuery = db
-            .select({ count: sql<number>`count(*)` })
-            .from(embeddings)
-
-          if (whereConditions.length > 0) {
-            const condition =
-              whereConditions.length === 1
-                ? whereConditions[0]
-                : and(...whereConditions)
-            if (condition) {
-              countQuery = countQuery.where(condition) as typeof countQuery
-            }
-          }
-
-          return countQuery
-        },
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to count embeddings from database",
-            cause: error,
-          }),
-      })
-
-      const totalCount = totalCountResult[0]?.count ?? 0
-
-      // Get paginated results
-      const result = yield* Effect.tryPromise({
-        try: () => {
-          let query = db.select().from(embeddings)
-
-          if (whereConditions.length > 0) {
-            const condition =
-              whereConditions.length === 1
-                ? whereConditions[0]
-                : and(...whereConditions)
-            if (condition) {
-              query = query.where(condition) as typeof query
-            }
-          }
-
-          return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
-        },
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to get embeddings from database",
-            cause: error,
-          }),
-      })
-
-      const embeddingsData = yield* Effect.all(
-        result.map((row) =>
-          parseStoredEmbeddingData(row.embedding).pipe(
-            Effect.map((embedding) => ({
-              id: row.id,
-              uri: row.uri,
-              text: row.text,
-              model_name: row.modelName,
-              embedding,
-              created_at: row.createdAt,
-              updated_at: row.updatedAt,
-            })),
-            Effect.mapError(
-              (error) =>
-                new DatabaseQueryError({
-                  message: `Failed to parse embedding data for URI ${row.uri}`,
-                  cause: error,
-                })
-            )
-          )
-        )
-      )
-
-      const totalPages = Math.ceil(totalCount / limit)
-      const hasNext = page < totalPages
-      const hasPrev = page > 1
-
-      return {
-        embeddings: embeddingsData,
-        count: embeddingsData.length,
-        page,
-        limit,
-        total_pages: totalPages,
-        has_next: hasNext,
-        has_prev: hasPrev,
-      }
-    })
-
-  const deleteEmbedding = (id: number) =>
-    Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () => db.delete(embeddings).where(eq(embeddings.id, id)),
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to delete embedding from database",
-            cause: error,
-          }),
-      })
-
-      return result.rowsAffected > 0
-    })
+  const deleteEmbedding = (id: number) => repository.deleteById(id)
 
   const searchEmbeddings = (request: SearchEmbeddingRequest) =>
     Effect.gen(function* () {
@@ -605,77 +398,14 @@ const make = Effect.gen(function* () {
       const queryEmbedding = queryEmbeddingResponse.embedding
       const actualModelName = queryEmbeddingResponse.model
 
-      // Use libSQL native vector search for efficient similarity search
-      const queryVector = JSON.stringify(queryEmbedding)
-
-      // Build the search query using libSQL vector functions with predefined constants
-      let vectorSearchQuery: string
-
-      if (metric === "cosine") {
-        // Use cosine distance with vector_top_k for efficient search
-        vectorSearchQuery = threshold
-          ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE + ` AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ? ORDER BY similarity DESC`
-          : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE + ` ORDER BY similarity DESC`
-      } else {
-        // Fallback to regular similarity search for other metrics
-        vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_FALLBACK
-      }
-
-      type VectorSearchRowRaw = {
-        id: number | string | null
-        uri: string | null
-        text: string | null
-        model_name: string | null
-        similarity?: number | string | null
-        distance?: number | string | null
-        created_at?: string | null
-        updated_at?: string | null
-      }
-
-      const searchResults = yield* Effect.tryPromise({
-        try: async () => {
-          // Execute raw SQL for vector search using libSQL client
-          let args: (string | number)[]
-          if (metric === "cosine") {
-            args = threshold
-              ? [queryVector, queryVector, limit, actualModelName, queryVector, threshold]
-              : [queryVector, queryVector, limit, actualModelName]
-          } else {
-            args = [queryVector, actualModelName, limit]
-          }
-
-          const result = await client.execute({
-            sql: vectorSearchQuery,
-            args,
-          })
-          return result.rows as unknown as Array<VectorSearchRowRaw>
-        },
-        catch: (error) =>
-          new DatabaseQueryError({
-            message: "Failed to execute vector search query",
-            cause: error,
-          }),
+      // Search for similar embeddings using repository
+      const results = yield* repository.searchSimilar({
+        queryEmbedding,
+        modelName: actualModelName,
+        limit,
+        threshold,
+        metric,
       })
-
-      // Transform results to expected format
-      const results = searchResults
-        .map((row) => ({
-          id: Number(row["id"] ?? 0),
-          uri: String(row["uri"] ?? ""),
-          text: String(row["text"] ?? ""),
-          model_name: String(row["model_name"] ?? ""),
-          similarity:
-            metric === "cosine"
-              ? Number(row["similarity"] ?? 0)
-              : 1.0 - Number(row["distance"] ?? 0),
-          created_at: row["created_at"] ? String(row["created_at"]) : null,
-          updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
-        }))
-        .filter(
-          (result) =>
-            // Apply threshold filter if specified for non-cosine metrics
-            !threshold || result.similarity >= threshold
-        )
 
       // Record search operation metrics
       const duration = (Date.now() - startTime) / 1000
@@ -814,7 +544,7 @@ export const EmbeddingServiceLive = Layer.suspend(() => {
   }
 
   return Layer.effect(EmbeddingService, make).pipe(
-    Layer.provide(DatabaseServiceLive),
+    Layer.provide(EmbeddingRepositoryLive),
     Layer.provideMerge(createEmbeddingProviderService(factoryConfig))
   )
 })
