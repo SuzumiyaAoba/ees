@@ -3,14 +3,7 @@ import {
   EmbeddingVectorSchema,
   StoredEmbeddingDataSchema,
 } from "@/entities/embedding/model/openapi"
-
-export class EmbeddingDataParseError extends Error {
-  constructor(message: string, cause?: unknown) {
-    super(message)
-    this.name = "EmbeddingDataParseError"
-    this.cause = cause
-  }
-}
+import { EmbeddingDataParseError } from "@/shared/errors/database"
 
 /**
  * Safely parse stored embedding data from database
@@ -47,10 +40,10 @@ export const parseStoredEmbeddingData = (
         const validationResult = StoredEmbeddingDataSchema.safeParse(data)
         if (!validationResult.success) {
           return yield* Effect.fail(
-            new EmbeddingDataParseError(
-              `Invalid stored embedding data format: ${validationResult.error.message}`,
-              validationResult.error
-            )
+            new EmbeddingDataParseError({
+              message: `Invalid stored embedding data format: ${validationResult.error.message}`,
+              cause: validationResult.error,
+            })
           )
         }
 
@@ -65,18 +58,18 @@ export const parseStoredEmbeddingData = (
           parsedData = JSON.parse(storedData)
         } else {
           return yield* Effect.fail(
-            new EmbeddingDataParseError(
-              "Stored data must be ArrayBuffer, Uint8Array, or string"
-            )
+            new EmbeddingDataParseError({
+              message: "Stored data must be ArrayBuffer, Uint8Array, or string",
+            })
           )
         }
       }
     } catch (error) {
       return yield* Effect.fail(
-        new EmbeddingDataParseError(
-          "Failed to parse embedding data from stored format",
-          error
-        )
+        new EmbeddingDataParseError({
+          message: "Failed to parse embedding data from stored format",
+          cause: error,
+        })
       )
     }
 
@@ -84,10 +77,10 @@ export const parseStoredEmbeddingData = (
     const vectorValidation = EmbeddingVectorSchema.safeParse(parsedData)
     if (!vectorValidation.success) {
       return yield* Effect.fail(
-        new EmbeddingDataParseError(
-          `Invalid embedding vector format: ${vectorValidation.error.message}`,
-          vectorValidation.error
-        )
+        new EmbeddingDataParseError({
+          message: `Invalid embedding vector format: ${vectorValidation.error.message}`,
+          cause: vectorValidation.error,
+        })
       )
     }
 
@@ -104,10 +97,10 @@ export const validateEmbeddingVector = (
     const validation = EmbeddingVectorSchema.safeParse(data)
     if (!validation.success) {
       return yield* Effect.fail(
-        new EmbeddingDataParseError(
-          `Invalid embedding vector: ${validation.error.message}`,
-          validation.error
-        )
+        new EmbeddingDataParseError({
+          message: `Invalid embedding vector: ${validation.error.message}`,
+          cause: validation.error,
+        })
       )
     }
     return validation.data

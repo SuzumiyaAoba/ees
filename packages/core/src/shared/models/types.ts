@@ -5,12 +5,12 @@
 
 import type { Effect } from "effect"
 import type {
+  DatabaseQueryError,
   ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderModelError,
-  ProviderRateLimitError
-} from "@/shared/providers/types"
-import type { DatabaseQueryError } from "@/shared/errors/database"
+  ProviderRateLimitError,
+} from "@/shared/errors/database"
 
 /**
  * Comprehensive model information for model management

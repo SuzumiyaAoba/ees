@@ -11,11 +11,13 @@ import type {
   EmbeddingRequest,
   EmbeddingResponse,
   ModelInfo,
+} from "./types"
+import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "./types"
+} from "@/shared/errors/database"
 import { createCohereErrorHandler } from "./error-handler"
 
 export interface CohereProviderService extends EmbeddingProvider {}

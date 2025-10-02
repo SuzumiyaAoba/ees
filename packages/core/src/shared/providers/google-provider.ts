@@ -11,11 +11,13 @@ import type {
   EmbeddingResponse,
   GoogleConfig,
   ModelInfo,
+} from "./types"
+import {
   ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "./types"
+} from "@/shared/errors/database"
 import { createGoogleErrorHandler } from "./error-handler"
 
 export interface GoogleProviderService extends EmbeddingProvider {}

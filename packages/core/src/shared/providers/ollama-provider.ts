@@ -9,11 +9,13 @@ import type {
   EmbeddingResponse,
   ModelInfo,
   OllamaConfig,
+} from "./types"
+import {
+  ProviderConnectionError,
   ProviderModelError,
   ProviderAuthenticationError,
   ProviderRateLimitError,
-} from "./types"
-import { ProviderConnectionError } from "./types"
+} from "@/shared/errors/database"
 import { createOllamaErrorHandler } from "./error-handler"
 
 export interface OllamaProviderService extends EmbeddingProvider {}

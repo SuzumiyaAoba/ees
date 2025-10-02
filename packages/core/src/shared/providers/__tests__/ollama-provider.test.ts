@@ -1,7 +1,7 @@
 import { Effect, Exit } from "effect"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import type { EmbeddingRequest, EmbeddingResponse, OllamaConfig } from "@/shared/providers/types"
-import { ProviderModelError } from "@/shared/providers/types"
+import { ProviderModelError } from "@/shared/errors/database"
 import {
   createMockEmbeddingResponse,
   setupMockFetch,

@@ -16,13 +16,13 @@ import type {
   SearchEmbeddingRequest,
   SearchEmbeddingResponse,
 } from "@/entities/embedding/model/embedding"
-import type { DatabaseQueryError } from "@/shared/errors/database"
 import type {
+  DatabaseQueryError,
   ProviderAuthenticationError,
   ProviderConnectionError,
   ProviderModelError,
   ProviderRateLimitError,
-} from "@/shared/providers/types"
+} from "@/shared/errors/database"
 
 /**
  * Application-level embedding operations interface
