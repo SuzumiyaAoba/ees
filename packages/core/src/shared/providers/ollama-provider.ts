@@ -17,6 +17,12 @@ import {
   ProviderRateLimitError,
 } from "@/shared/errors/database"
 import { createOllamaErrorHandler } from "./error-handler"
+import {
+  createIsModelAvailable,
+  createGetModelInfo,
+  normalizeModelName,
+  resolveModelName,
+} from "./provider-utils"
 
 export interface OllamaProviderService extends EmbeddingProvider {}
 
@@ -32,14 +38,6 @@ interface OllamaEmbedResponse {
   prompt_eval_count?: number
 }
 
-/**
- * Normalize model name by removing version suffixes like :latest
- */
-const normalizeModelName = (modelName: string): string => {
-  return modelName.replace(/:latest$/, '').replace(/:[\w\-\.]+$/, '')
-}
-
-
 const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
     const baseUrl = config.baseUrl ?? "http://localhost:11434"
@@ -47,8 +45,11 @@ const make = (config: OllamaConfig) =>
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
-          const modelName =
-            request.modelName ?? config.defaultModel ?? "embeddinggemma"
+          const modelName = resolveModelName(
+            request.modelName,
+            config.defaultModel,
+            "embeddinggemma"
+          )
 
           const response = await fetch(`${baseUrl}/api/embed`, {
             method: "POST",
@@ -137,28 +138,9 @@ const make = (config: OllamaConfig) =>
         },
       })
 
-    const isModelAvailable = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        const normalizedSearchName = normalizeModelName(modelName)
-        return models.some((model) =>
-          model.name === normalizedSearchName ||
-          model.name.includes(normalizedSearchName) ||
-          normalizedSearchName.includes(model.name)
-        )
-      })
-
-    const getModelInfo = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        const normalizedSearchName = normalizeModelName(modelName)
-        const model = models.find((m) =>
-          m.name === normalizedSearchName ||
-          m.name.includes(normalizedSearchName) ||
-          normalizedSearchName.includes(m.name)
-        )
-        return model ?? null
-      })
+    // Use shared utilities with model name normalization for Ollama
+    const isModelAvailable = createIsModelAvailable(listModels, normalizeModelName)
+    const getModelInfo = createGetModelInfo(listModels, normalizeModelName)
 
     return {
       generateEmbedding,

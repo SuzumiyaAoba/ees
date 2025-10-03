@@ -19,6 +19,7 @@ import {
   ProviderRateLimitError,
 } from "@/shared/errors/database"
 import { createAzureOpenAIErrorHandler } from "./error-handler"
+import { createIsModelAvailable, createGetModelInfo, resolveModelName } from "./provider-utils"
 
 export interface AzureProviderService extends EmbeddingProvider {}
 
@@ -37,8 +38,7 @@ const make = (config: AzureConfig) =>
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
-          const modelName =
-            request.modelName ?? config.defaultModel ?? "text-embedding-ada-002"
+          const modelName = resolveModelName(request.modelName, config.defaultModel, "text-embedding-ada-002")
 
           const result = await embed({
             model: client.textEmbedding(modelName),
@@ -84,18 +84,9 @@ const make = (config: AzureConfig) =>
         },
       ] satisfies ModelInfo[])
 
-    const isModelAvailable = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        return models.some((model) => model.name === modelName)
-      })
+    const isModelAvailable = createIsModelAvailable(listModels)
 
-    const getModelInfo = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        const model = models.find((m) => m.name === modelName)
-        return model ?? null
-      })
+    const getModelInfo = createGetModelInfo(listModels)
 
     return {
       generateEmbedding,
