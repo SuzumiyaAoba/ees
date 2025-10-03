@@ -1,12 +1,69 @@
 import type { Context } from "hono"
 
 /**
+ * Type guard to check if error has a _tag property (Effect tagged error)
+ */
+function hasTag(error: unknown): error is { _tag: string; message: string } {
+  return typeof error === "object" && error !== null && "_tag" in error && "message" in error
+}
+
+/**
  * Centralized error response handler for API endpoints
- * Maps different error types to appropriate HTTP status codes and responses
+ * Uses type-based error detection with Effect's tagged errors for type safety
  */
 export function handleErrorResponse(c: Context, error: unknown, operation: string) {
   console.error(`Error in ${operation}:`, error)
 
+  // Type-safe error handling using Effect's tagged errors
+  if (hasTag(error)) {
+    switch (error._tag) {
+      // Provider authentication errors (401 Unauthorized)
+      case "ProviderAuthenticationError":
+        return c.json({
+          error: "Authentication failed",
+          details: error.message
+        }, 401)
+
+      // Provider rate limiting errors (429 Too Many Requests)
+      case "ProviderRateLimitError":
+        return c.json({
+          error: "Rate limit exceeded",
+          details: error.message
+        }, 429)
+
+      // Provider model errors (404 Not Found or 400 Bad Request)
+      case "ProviderModelError":
+        return c.json({
+          error: "Model error",
+          details: error.message
+        }, 404)
+
+      // Provider connection errors (503 Service Unavailable)
+      case "ProviderConnectionError":
+        return c.json({
+          error: "Service connection error",
+          details: error.message
+        }, 503)
+
+      // Database errors (500 Internal Server Error)
+      case "DatabaseError":
+      case "DatabaseConnectionError":
+      case "DatabaseQueryError":
+        return c.json({
+          error: "Database error",
+          details: error.message
+        }, 500)
+
+      // Embedding data parsing errors (400 Bad Request)
+      case "EmbeddingDataParseError":
+        return c.json({
+          error: "Invalid embedding data",
+          details: error.message
+        }, 400)
+    }
+  }
+
+  // Fallback to string-based detection for non-Effect errors (Zod, etc.)
   const errorString = String(error)
 
   // Validation errors (400 Bad Request)
@@ -20,18 +77,6 @@ export function handleErrorResponse(c: Context, error: unknown, operation: strin
   if (errorString.includes("NotFound") ||
       errorString.includes("not found")) {
     return c.json({ error: "Resource not found", details: errorString }, 404)
-  }
-
-  // Authentication errors (401 Unauthorized)
-  if (errorString.includes("Unauthorized") ||
-      errorString.includes("authentication")) {
-    return c.json({ error: "Unauthorized", details: errorString }, 401)
-  }
-
-  // Rate limiting errors (429 Too Many Requests)
-  if (errorString.includes("RateLimit") ||
-      errorString.includes("rate limit")) {
-    return c.json({ error: "Rate limit exceeded", details: errorString }, 429)
   }
 
   // Default to internal server error (500)

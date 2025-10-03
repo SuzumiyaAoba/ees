@@ -76,14 +76,14 @@ app.onError((err, c) => {
     method: c.req.method
   }, "Global error handler triggered")
 
+  // Handle JSON parsing errors (SyntaxError from body parser)
+  if (err.name === "SyntaxError" || err.message.includes("JSON") || err.message.includes("parse")) {
+    return c.json({ error: "Malformed JSON in request body", details: err.message }, 400)
+  }
+
   // Handle validation errors (usually from Zod/OpenAPI validation)
   if (err.message.includes("validation") || err.message.includes("required") || err.message.includes("invalid")) {
     return c.json({ error: "Validation error", details: err.message }, 400)
-  }
-
-  // Handle JSON parsing errors
-  if (err.message.includes("JSON") || err.message.includes("parse") || err.name === "SyntaxError") {
-    return c.json({ error: "Malformed JSON in request body", details: err.message }, 400)
   }
 
   // Handle not found errors
