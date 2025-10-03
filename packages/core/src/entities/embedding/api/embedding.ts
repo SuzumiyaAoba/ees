@@ -3,12 +3,11 @@
  * Supports multiple providers (Ollama, OpenAI, Google AI) via Vercel AI SDK
  */
 
-import { Context, Effect, Layer, Option } from "effect"
+import { Context, Effect, Layer, Option, pipe } from "effect"
 import { getDefaultProvider } from "@/shared/config/providers"
 import { DatabaseQueryError } from "@/shared/errors/database"
 import {
   EmbeddingProviderService,
-  type EmbeddingRequest,
   ProviderConnectionError,
   ProviderAuthenticationError,
   ProviderModelError,
@@ -26,6 +25,7 @@ import {
   CacheTTL,
   getCacheConfig,
 } from "@/shared/cache"
+import { tryPromiseWithError } from "@/shared/lib/effect-utils"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -206,6 +206,64 @@ const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, 
 // Note: _calculateSimilarity function was removed as it's unused
 // Individual similarity functions are kept for potential future use
 
+/**
+ * Helper function to switch to a different provider with proper error handling
+ * Extracted to reduce nesting depth in main service implementation
+ */
+const switchToProvider = (
+  providerType: string,
+  currentProvider: string,
+  providerService: typeof EmbeddingProviderService.Service
+) =>
+  pipe(
+    tryPromiseWithError(
+      () => import("@/shared/config/providers"),
+      (error: unknown) =>
+        new ProviderConnectionError({
+          provider: currentProvider,
+          message: `Failed to load provider configurations: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          errorCode: "PROVIDER_CONFIG_LOAD_FAILED",
+          cause: error instanceof Error ? error : new Error(String(error)),
+        })
+    ),
+    Effect.flatMap((providersModule) => {
+      const availableProviders = providersModule.getAvailableProviders()
+      const targetProviderConfig = availableProviders.find(
+        (provider: { type: string }) => provider.type === providerType
+      )
+
+      if (!targetProviderConfig) {
+        return Effect.fail(
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Provider '${providerType}' is not available or not configured. Available providers: ${availableProviders.map((p: { type: string }) => p.type).join(', ')}`,
+            errorCode: "PROVIDER_NOT_AVAILABLE",
+            cause: new Error(
+              `Provider '${providerType}' not found in available providers`
+            ),
+          })
+        )
+      }
+
+      return pipe(
+        providerService.switchProvider(targetProviderConfig),
+        Effect.mapError((error) =>
+          new ProviderConnectionError({
+            provider: currentProvider,
+            message: `Failed to switch to provider '${providerType}': ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            errorCode: "PROVIDER_SWITCH_FAILED",
+            cause: error instanceof Error ? error : new Error(String(error)),
+          })
+        ),
+        Effect.asVoid
+      )
+    })
+  )
+
 const make = Effect.gen(function* () {
   const repository = yield* EmbeddingRepository
   const providerService = yield* EmbeddingProviderService
@@ -216,6 +274,7 @@ const make = Effect.gen(function* () {
   /**
    * Helper function to create a single embedding with input validation
    * Eliminates code duplication between regular and batch operations
+   * Refactored to use Effect combinators instead of nested Effect.gen
    */
   const createSingleEmbedding = (
     uri: string,
@@ -224,70 +283,72 @@ const make = Effect.gen(function* () {
   ): Effect.Effect<
     { id: number; uri: string; model_name: string },
     ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError | DatabaseQueryError
-  > =>
-    Effect.gen(function* () {
-      const startTime = Date.now()
-      const provider = getDefaultProvider()
+  > => {
+    const startTime = Date.now()
+    const provider = getDefaultProvider()
 
-      try {
-        // Validate input parameters
-        yield* validateEmbeddingInput(uri, text)
+    const determineErrorType = (error: unknown): string =>
+      error instanceof ProviderConnectionError ? "connection_error" :
+      error instanceof ProviderModelError ? "model_error" :
+      error instanceof ProviderAuthenticationError ? "auth_error" :
+      error instanceof ProviderRateLimitError ? "rate_limit" :
+      error instanceof DatabaseQueryError ? "database_error" : "unknown_error"
 
-        // Generate embedding using the current provider
-        const embeddingRequest: EmbeddingRequest = {
-          text,
-          modelName,
-        }
-        const embeddingResponse =
-          yield* providerService.generateEmbedding(embeddingRequest)
-
-        // Save embedding to database using repository
-        const saveResult = yield* repository.save(
-          uri,
-          text,
-          embeddingResponse.model,
-          embeddingResponse.embedding
-        )
-
-        // Record successful embedding creation metrics
-        const duration = (Date.now() - startTime) / 1000
-        yield* metricsService.recordEmbeddingCreated(provider.type, embeddingResponse.model, duration)
-
-        // Invalidate cache for this embedding (ignore cache errors)
-        if (cacheConfig.enabled) {
-          const cacheKey = embeddingCacheKey(embeddingResponse.model, uri)
-          yield* cacheService.delete(cacheKey).pipe(
+    const invalidateCache = (modelName: string, uri: string) =>
+      cacheConfig.enabled
+        ? pipe(
+            cacheService.delete(embeddingCacheKey(modelName, uri)),
             Effect.catchAll(() => Effect.void)
           )
-        }
+        : Effect.void
 
-        return {
-          id: saveResult.id,
-          uri,
-          model_name: embeddingResponse.model,
-        }
-      } catch (error) {
-        // Record embedding error metrics
-        const errorType = error instanceof ProviderConnectionError ? "connection_error" :
-                         error instanceof ProviderModelError ? "model_error" :
-                         error instanceof ProviderAuthenticationError ? "auth_error" :
-                         error instanceof ProviderRateLimitError ? "rate_limit" :
-                         error instanceof DatabaseQueryError ? "database_error" : "unknown_error"
-
-        yield* metricsService.recordEmbeddingError(provider.type, modelName ?? "unknown", errorType)
-        throw error
-      }
-    })
+    return pipe(
+      // Validate input parameters
+      validateEmbeddingInput(uri, text),
+      // Generate embedding using the current provider
+      Effect.flatMap(() =>
+        providerService.generateEmbedding({ text, modelName })
+      ),
+      // Save embedding to database and record metrics
+      Effect.flatMap((embeddingResponse) =>
+        pipe(
+          repository.save(uri, text, embeddingResponse.model, embeddingResponse.embedding),
+          Effect.flatMap((saveResult) =>
+            pipe(
+              metricsService.recordEmbeddingCreated(
+                provider.type,
+                embeddingResponse.model,
+                (Date.now() - startTime) / 1000
+              ),
+              Effect.flatMap(() => invalidateCache(embeddingResponse.model, uri)),
+              Effect.map(() => ({
+                id: saveResult.id,
+                uri,
+                model_name: embeddingResponse.model,
+              }))
+            )
+          )
+        )
+      ),
+      // Record error metrics on failure
+      Effect.tapError((error) =>
+        metricsService.recordEmbeddingError(
+          provider.type,
+          modelName ?? "unknown",
+          determineErrorType(error)
+        )
+      )
+    )
+  }
 
   const createEmbedding = (uri: string, text: string, modelName?: string) =>
-    Effect.gen(function* () {
-      const result = yield* createSingleEmbedding(uri, text, modelName)
-
-      return {
+    pipe(
+      createSingleEmbedding(uri, text, modelName),
+      Effect.map((result) => ({
         ...result,
         message: "Embedding created successfully",
-      }
-    })
+      }))
+    )
 
   const createBatchEmbedding = (request: BatchCreateEmbeddingRequest) =>
     Effect.gen(function* () {
@@ -332,41 +393,48 @@ const make = Effect.gen(function* () {
       }
     })
 
-  const getEmbedding = (uri: string, modelName: string) =>
-    Effect.gen(function* () {
-      // Check cache first if enabled
-      if (cacheConfig.enabled) {
-        const cacheKey = embeddingCacheKey(modelName, uri)
-        // Catch cache errors and treat as cache miss
-        const cached = yield* cacheService.get<Embedding>(cacheKey).pipe(
-          Effect.catchAll(() => Effect.succeed(Option.none()))
-        )
+  const getEmbedding = (uri: string, modelName: string) => {
+    const cacheKey = embeddingCacheKey(modelName, uri)
 
-        if (Option.isSome(cached)) {
-          yield* metricsService.recordCacheHit("embedding")
-          return cached.value
-        }
+    const tryCache = () =>
+      cacheConfig.enabled
+        ? pipe(
+            cacheService.get<Embedding>(cacheKey),
+            Effect.catchAll(() => Effect.succeed(Option.none()))
+          )
+        : Effect.succeed(Option.none())
 
-        yield* metricsService.recordCacheMiss("embedding")
-      }
+    const updateCache = (embedding: Embedding | null) =>
+      cacheConfig.enabled && embedding !== null
+        ? pipe(
+            cacheService.set(cacheKey, embedding, CacheTTL.EMBEDDING),
+            Effect.catchAll(() => Effect.void)
+          )
+        : Effect.void
 
-      // Cache miss or disabled - fetch from repository
-      const embeddingResult = yield* repository.findByUri(uri, modelName)
-
-      if (!embeddingResult) {
-        return null
-      }
-
-      // Store in cache if enabled (ignore cache errors)
-      if (cacheConfig.enabled) {
-        const cacheKey = embeddingCacheKey(modelName, uri)
-        yield* cacheService.set(cacheKey, embeddingResult, CacheTTL.EMBEDDING).pipe(
-          Effect.catchAll(() => Effect.void)
-        )
-      }
-
-      return embeddingResult
-    })
+    return pipe(
+      tryCache(),
+      Effect.flatMap((cached) =>
+        Option.isSome(cached)
+          ? pipe(
+              metricsService.recordCacheHit("embedding"),
+              Effect.map(() => cached.value)
+            )
+          : pipe(
+              cacheConfig.enabled
+                ? metricsService.recordCacheMiss("embedding")
+                : Effect.void,
+              Effect.flatMap(() => repository.findByUri(uri, modelName)),
+              Effect.flatMap((embeddingResult) =>
+                pipe(
+                  updateCache(embeddingResult),
+                  Effect.map(() => embeddingResult)
+                )
+              )
+            )
+      )
+    )
+  }
 
   const getAllEmbeddings = (filters?: {
     uri?: string
@@ -377,123 +445,64 @@ const make = Effect.gen(function* () {
 
   const deleteEmbedding = (id: number) => repository.deleteById(id)
 
-  const searchEmbeddings = (request: SearchEmbeddingRequest) =>
-    Effect.gen(function* () {
-      const startTime = Date.now()
-      const {
-        query,
-        model_name,
-        limit = 10,
-        threshold,
-        metric = "cosine",
-      } = request
+  const searchEmbeddings = (request: SearchEmbeddingRequest) => {
+    const startTime = Date.now()
+    const {
+      query,
+      model_name,
+      limit = 10,
+      threshold,
+      metric = "cosine",
+    } = request
 
+    return pipe(
       // Generate embedding for the query text using the current provider
-      const embeddingRequest: EmbeddingRequest = {
-        text: query,
-        modelName: model_name,
-      }
-      const queryEmbeddingResponse =
-        yield* providerService.generateEmbedding(embeddingRequest)
-      const queryEmbedding = queryEmbeddingResponse.embedding
-      const actualModelName = queryEmbeddingResponse.model
-
+      providerService.generateEmbedding({ text: query, modelName: model_name }),
       // Search for similar embeddings using repository
-      const results = yield* repository.searchSimilar({
-        queryEmbedding,
-        modelName: actualModelName,
-        limit,
-        threshold,
-        metric,
-      })
-
-      // Record search operation metrics
-      const duration = (Date.now() - startTime) / 1000
-      yield* metricsService.recordSearchOperation(metric, duration)
-
-      return {
-        results,
-        query,
-        model_name: actualModelName,
-        metric,
-        count: results.length,
-        threshold,
-      }
-    })
+      Effect.flatMap((queryEmbeddingResponse) =>
+        pipe(
+          repository.searchSimilar({
+            queryEmbedding: queryEmbeddingResponse.embedding,
+            modelName: queryEmbeddingResponse.model,
+            limit,
+            threshold,
+            metric,
+          }),
+          // Record search operation metrics
+          Effect.flatMap((results) =>
+            pipe(
+              metricsService.recordSearchOperation(
+                metric,
+                (Date.now() - startTime) / 1000
+              ),
+              Effect.map(() => ({
+                results,
+                query,
+                model_name: queryEmbeddingResponse.model,
+                metric,
+                count: results.length,
+                threshold,
+              }))
+            )
+          )
+        )
+      )
+    )
+  }
 
   const listProviders = () => providerService.listAllProviders()
 
   const getCurrentProvider = () => providerService.getCurrentProvider()
 
   const getProviderModels = (providerType?: string) =>
-    Effect.gen(function* () {
-      if (providerType) {
-        // Get models for specific provider
-        const allModels = yield* providerService.listModels()
-        return allModels.filter((model) => model.provider === providerType)
-      }
-      // Get models for current provider
-      return yield* providerService.listModels()
-    })
-
-  /**
-   * Helper function to switch to a different provider with proper error handling
-   * Improves maintainability and reduces code duplication
-   */
-  const switchToProvider = (providerType: string, currentProvider: string) =>
-    Effect.gen(function* () {
-      // Import available providers function dynamically
-      const providersModule = yield* Effect.promise(
-        () => import("@/shared/config/providers")
-      ).pipe(
-        Effect.mapError((error: unknown) =>
-          new ProviderConnectionError({
-            provider: currentProvider,
-            message: `Failed to load provider configurations: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-            errorCode: "PROVIDER_CONFIG_LOAD_FAILED",
-            cause: error instanceof Error ? error : new Error(String(error)),
-          })
+    providerType
+      ? pipe(
+          providerService.listModels(),
+          Effect.map((allModels) =>
+            allModels.filter((model) => model.provider === providerType)
+          )
         )
-      )
-
-      const availableProviders = providersModule.getAvailableProviders()
-
-      // Find the requested provider configuration
-      const targetProviderConfig = availableProviders.find(
-        (provider: { type: string }) => provider.type === providerType
-      )
-
-      if (!targetProviderConfig) {
-        return yield* Effect.fail(
-          new ProviderConnectionError({
-            provider: currentProvider,
-            message: `Provider '${providerType}' is not available or not configured. Available providers: ${availableProviders.map((p: { type: string }) => p.type).join(', ')}`,
-            errorCode: "PROVIDER_NOT_AVAILABLE",
-            cause: new Error(
-              `Provider '${providerType}' not found in available providers`
-            ),
-          })
-        )
-      }
-
-      // Switch to the requested provider
-      yield* providerService.switchProvider(targetProviderConfig).pipe(
-        Effect.mapError((error) =>
-          new ProviderConnectionError({
-            provider: currentProvider,
-            message: `Failed to switch to provider '${providerType}': ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-            errorCode: "PROVIDER_SWITCH_FAILED",
-            cause: error instanceof Error ? error : new Error(String(error)),
-          })
-        )
-      )
-
-      return Effect.void
-    })
+      : providerService.listModels()
 
   const createEmbeddingWithProvider = (
     providerType: string,
@@ -509,16 +518,17 @@ const make = Effect.gen(function* () {
     | DatabaseQueryError,
     never
   > =>
-    Effect.gen(function* () {
-      // Get current provider and switch if necessary
-      const currentProvider = yield* getCurrentProvider()
-      if (currentProvider !== providerType) {
-        yield* switchToProvider(providerType, currentProvider)
-      }
-
-      // Use the regular createEmbedding method
-      return yield* createEmbedding(uri, text, modelName)
-    })
+    pipe(
+      getCurrentProvider(),
+      Effect.flatMap((currentProvider) =>
+        currentProvider !== providerType
+          ? pipe(
+              switchToProvider(providerType, currentProvider, providerService),
+              Effect.flatMap(() => createEmbedding(uri, text, modelName))
+            )
+          : createEmbedding(uri, text, modelName)
+      )
+    )
 
   const service = {
     createEmbedding,
