@@ -403,30 +403,44 @@ const make = Effect.gen(function* () {
     Effect.gen(function* () {
       const { queryEmbedding, modelName, limit, threshold, metric } = options
 
-      // Use libSQL native vector search for efficient similarity search
+      // Convert embedding vector to JSON string for libSQL vector functions
+      // libSQL expects vectors in JSON array format for vector operations
       const queryVector = JSON.stringify(queryEmbedding)
 
-      // Build the search query using libSQL vector functions with predefined constants
+      // Build the search query based on similarity metric
+      // Different metrics require different libSQL vector functions and query structures
       let vectorSearchQuery: string
 
       if (metric === "cosine") {
-        // Use cosine distance with vector_top_k for efficient search
+        // Cosine similarity: measures angular distance between vectors (0 to 1)
+        // Uses libSQL's native vector_distance_cos() for efficient computation
+        // Formula: similarity = 1.0 - cosine_distance
+        // Higher similarity = more similar (1.0 = identical, 0.0 = orthogonal)
         vectorSearchQuery = threshold
+          // With threshold: filter results to only include embeddings above similarity threshold
           ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE +
             ` AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ? ORDER BY similarity DESC`
+          // Without threshold: return top K most similar results
           : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE +
             ` ORDER BY similarity DESC`
       } else {
-        // Fallback to regular similarity search for other metrics
+        // Euclidean and dot product metrics use fallback query
+        // These are computed in application layer rather than using libSQL vector functions
+        // This provides flexibility for metrics not natively supported by libSQL
         vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_FALLBACK
       }
 
       const searchResults = yield* Effect.tryPromise({
         try: async () => {
-          // Execute raw SQL for vector search using libSQL client
+          // Build query parameters array based on metric and threshold
+          // Parameter order must match placeholders (?) in the SQL query
           let args: (string | number)[]
           if (metric === "cosine") {
             args = threshold
+              // With threshold: [queryVector, queryVector, limit, modelName, queryVector, threshold]
+              // First queryVector: for vector_top_k function (K-nearest neighbors)
+              // Second queryVector: for similarity calculation in SELECT
+              // Third queryVector: for threshold comparison filter
               ? [
                   queryVector,
                   queryVector,
@@ -435,11 +449,17 @@ const make = Effect.gen(function* () {
                   queryVector,
                   threshold,
                 ]
+              // Without threshold: [queryVector, queryVector, limit, modelName]
+              // Simpler query with fewer parameters when no threshold filtering needed
               : [queryVector, queryVector, limit, modelName]
           } else {
+            // Fallback query parameters: [queryVector, modelName, limit]
+            // Simpler structure for non-cosine metrics computed in application layer
             args = [queryVector, modelName, limit]
           }
 
+          // Execute the vector search query using libSQL client
+          // Using raw SQL execute for better control over vector operations
           const result = await client.execute({
             sql: vectorSearchQuery,
             args,
@@ -453,13 +473,17 @@ const make = Effect.gen(function* () {
           }),
       })
 
-      // Transform results to expected format
+      // Transform raw database rows into typed SimilarEmbedding objects
+      // Handles type conversion and similarity score normalization
       const results = searchResults
         .map((row) => ({
           id: Number(row["id"] ?? 0),
           uri: String(row["uri"] ?? ""),
           text: String(row["text"] ?? ""),
           model_name: String(row["model_name"] ?? ""),
+          // Similarity score calculation varies by metric:
+          // - Cosine: pre-calculated in SQL (already 0-1 range where higher = more similar)
+          // - Others: convert distance to similarity (similarity = 1 - distance)
           similarity:
             metric === "cosine"
               ? Number(row["similarity"] ?? 0)
@@ -469,7 +493,9 @@ const make = Effect.gen(function* () {
         }))
         .filter(
           (result) =>
-            // Apply threshold filter if specified for non-cosine metrics
+            // Apply threshold filter for non-cosine metrics
+            // Cosine metric filters in SQL for better performance
+            // Other metrics filter here after distance-to-similarity conversion
             !threshold || result.similarity >= threshold
         )
 
