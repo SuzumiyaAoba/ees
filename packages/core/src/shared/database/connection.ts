@@ -55,15 +55,59 @@ const make = Effect.gen(function* () {
 
   const db = drizzle(client, { schema })
 
-  // Initialize database schema with migration support
+  /**
+   * Initialize database schema with automatic migration support
+   *
+   * Algorithm Flow:
+   * 1. Query sqlite_master to check if embeddings table exists
+   * 2. Detect format by checking CREATE TABLE statement:
+   *    - Old format: Uses generic BLOB type for embeddings
+   *    - New format: Uses F32_BLOB(768) for optimized vector storage
+   * 3. If migration needed: Drop old table and indices (destructive migration)
+   * 4. Create new table with F32_BLOB format and all indices
+   *
+   * Business Rules:
+   * - Migration is destructive: existing embeddings cannot be preserved
+   * - F32_BLOB format is incompatible with legacy BLOB format (different binary encoding)
+   * - Users must recreate embeddings after migration
+   * - Migration only runs once (on first startup with old schema)
+   *
+   * Format Detection Logic:
+   * - Checks CREATE TABLE SQL for "BLOB" keyword (legacy format)
+   * - Excludes "F32_BLOB" to avoid false positives (new format)
+   * - Table existence check prevents errors on fresh installations
+   *
+   * Performance Considerations:
+   * - F32_BLOB provides native vector operations (similarity search)
+   * - Vector index uses libsql_vector_idx for fast similarity queries
+   * - Cosine similarity metric is optimal for text embeddings
+   * - Indices created on uri, model_name, created_at for query performance
+   *
+   * Edge Cases Handled:
+   * - Fresh install: Table doesn't exist, create new schema
+   * - Already migrated: F32_BLOB detected, skip migration
+   * - Multiple indices: All old indices dropped to avoid conflicts
+   *
+   * Migration is Destructive Because:
+   * - BLOB stores JSON array: "[0.1, 0.2, ...]" as UTF-8 text
+   * - F32_BLOB stores binary: 4 bytes per float32 value
+   * - No conversion path: would need to re-generate embeddings anyway
+   * - Clean break ensures consistency (no mixed formats)
+   */
   yield* Effect.tryPromise({
     try: async () => {
-      // Check if table exists and get schema info
+      // Step 1: Query sqlite_master for existing table schema
+      // sqlite_master contains CREATE TABLE statements for all tables
       const tableInfo = await client.execute(`
         SELECT sql FROM sqlite_master
         WHERE type='table' AND name='embeddings'
       `)
 
+      // Step 2: Detect if migration is needed using format heuristic
+      // Migration needed when:
+      // - Table exists (rows.length > 0)
+      // - Schema contains "BLOB" (old format marker)
+      // - Schema does NOT contain "F32_BLOB" (avoid false positive on new format)
       const needsMigration = tableInfo.rows.length > 0 &&
         tableInfo.rows[0]?.["sql"]?.toString().includes("BLOB") &&
         !tableInfo.rows[0]?.["sql"]?.toString().includes("F32_BLOB")
@@ -71,23 +115,29 @@ const make = Effect.gen(function* () {
       if (needsMigration) {
         console.log("🔄 Migrating database schema from BLOB to F32_BLOB format...")
 
-        // Back up existing data if any
+        // Step 3a: Count existing embeddings for user feedback
+        // Note: We don't migrate data because BLOB→F32_BLOB conversion is not possible
+        // Users need to re-generate embeddings with the new format
         const existingData = await client.execute(`
           SELECT uri, text, model_name, created_at, updated_at FROM embeddings
         `)
 
-        // Drop old table and indices
+        // Step 3b: Drop old table and all associated indices
+        // Dropping indices first is cleaner but SQLite allows dropping table with indices
         await client.execute(`DROP TABLE IF EXISTS embeddings`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_uri`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_created_at`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_model_name`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_vector`)
 
+        // Inform user about data loss and next steps
         console.log(`⚠️  Migration removed ${existingData.rows.length} existing embeddings (BLOB format not compatible with F32_BLOB)`)
         console.log("💡 Embeddings will need to be recreated with the new vector format")
       }
 
-      // Create new table with F32_BLOB format
+      // Step 4: Create new table with F32_BLOB format
+      // F32_BLOB(768): Binary format for 768-dimensional float32 vectors
+      // 768 dimensions is standard for nomic-embed-text model
       await client.execute(`
         CREATE TABLE IF NOT EXISTS embeddings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,19 +150,26 @@ const make = Effect.gen(function* () {
         )
       `)
 
+      // Create indices for common query patterns
+
+      // Index on uri: Enables fast lookups by document identifier
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_uri ON embeddings(uri)
       `)
 
+      // Index on created_at: Supports time-based queries and sorting
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_created_at ON embeddings(created_at)
       `)
 
+      // Index on model_name: Enables filtering by embedding model
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_model_name ON embeddings(model_name)
       `)
 
-      // Create vector index for efficient similarity search
+      // Vector index: Enables fast similarity search using cosine metric
+      // libsql_vector_idx creates specialized index for vector operations
+      // metric=cosine: Most appropriate for text embedding similarity
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding, 'metric=cosine'))
       `)
