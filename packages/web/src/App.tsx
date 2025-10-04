@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Search, List, Upload, Settings, Database, ArrowLeftRight } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
@@ -35,10 +35,37 @@ const tabs: TabItem[] = [
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
+const VALID_TABS: TabType[] = ['search', 'list', 'upload', 'config', 'migration']
+
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<TabType>('search')
+  // Get initial tab from URL hash or default to 'search'
+  const getInitialTab = (): TabType => {
+    const hash = window.location.hash.slice(1) as TabType
+    return VALID_TABS.includes(hash) ? hash : 'search'
+  }
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab)
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+
+  // Sync tab with URL hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1) as TabType
+      if (VALID_TABS.includes(hash)) {
+        setActiveTab(hash)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    window.location.hash = tab
+  }
 
   const handleSearchResultSelect = (result: SearchResult) => {
     console.log('Selected search result:', result)
@@ -104,7 +131,7 @@ function AppContent() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === tab.id
                       ? 'border-primary text-primary'
