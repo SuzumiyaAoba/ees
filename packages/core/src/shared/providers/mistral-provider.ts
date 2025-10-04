@@ -19,6 +19,7 @@ import {
   ProviderRateLimitError,
 } from "@/shared/errors/database"
 import { createMistralErrorHandler } from "./error-handler"
+import { createIsModelAvailable, createGetModelInfo, resolveModelName } from "./provider-utils"
 
 export interface MistralProviderService extends EmbeddingProvider {}
 
@@ -35,8 +36,7 @@ const make = (config: MistralConfig) =>
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
-          const modelName =
-            request.modelName ?? config.defaultModel ?? "mistral-embed"
+          const modelName = resolveModelName(request.modelName, config.defaultModel, "mistral-embed")
 
           const result = await embed({
             model: provider.textEmbedding(modelName),
@@ -68,18 +68,9 @@ const make = (config: MistralConfig) =>
         },
       ] satisfies ModelInfo[])
 
-    const isModelAvailable = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        return models.some((model) => model.name === modelName)
-      })
+    const isModelAvailable = createIsModelAvailable(listModels)
 
-    const getModelInfo = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        const model = models.find((m) => m.name === modelName)
-        return model ?? null
-      })
+    const getModelInfo = createGetModelInfo(listModels)
 
     return {
       generateEmbedding,

@@ -19,6 +19,7 @@ import {
   ProviderRateLimitError,
 } from "@/shared/errors/database"
 import { createGoogleErrorHandler } from "./error-handler"
+import { createIsModelAvailable, createGetModelInfo, resolveModelName } from "./provider-utils"
 
 export interface GoogleProviderService extends EmbeddingProvider {}
 
@@ -36,8 +37,11 @@ const make = (config: GoogleConfig) =>
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
-          const modelName =
-            request.modelName ?? config.defaultModel ?? "embedding-001"
+          const modelName = resolveModelName(
+            request.modelName,
+            config.defaultModel,
+            "embedding-001"
+          )
 
           const result = await embed({
             model: provider.textEmbedding(modelName),
@@ -76,18 +80,9 @@ const make = (config: GoogleConfig) =>
         },
       ] satisfies ModelInfo[])
 
-    const isModelAvailable = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        return models.some((model) => model.name === modelName)
-      })
-
-    const getModelInfo = (modelName: string) =>
-      Effect.gen(function* () {
-        const models = yield* listModels()
-        const model = models.find((m) => m.name === modelName)
-        return model ?? null
-      })
+    // Use shared utilities for standard model operations
+    const isModelAvailable = createIsModelAvailable(listModels)
+    const getModelInfo = createGetModelInfo(listModels)
 
     return {
       generateEmbedding,
