@@ -49,6 +49,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab)
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [editingEmbedding, setEditingEmbedding] = useState<Embedding | null>(null)
 
   // Sync tab with URL hash
   useEffect(() => {
@@ -85,14 +86,23 @@ function AppContent() {
     setTimeout(() => setSelectedEmbedding(null), 200)
   }
 
+  const handleEmbeddingEdit = (embedding: Embedding) => {
+    setEditingEmbedding(embedding)
+    handleTabChange('create')
+  }
+
+  const handleEditComplete = () => {
+    setEditingEmbedding(null)
+  }
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'search':
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
       case 'list':
-        return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} />
+        return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} onEmbeddingEdit={handleEmbeddingEdit} />
       case 'create':
-        return <CreateEditEmbedding />
+        return <CreateEditEmbedding editingEmbedding={editingEmbedding} onEditComplete={handleEditComplete} />
       case 'upload':
         return <FileUpload />
       case 'migration':

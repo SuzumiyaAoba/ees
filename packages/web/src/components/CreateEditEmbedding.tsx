@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { FileText, Loader2, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { FileText, Loader2, Plus, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useCreateEmbedding, useUpdateEmbedding, useModels } from '@/hooks/useEmbeddings'
 import { ErrorCard } from '@/components/shared/ErrorCard'
+import type { Embedding } from '@/types/api'
 
-export function CreateEditEmbedding() {
+interface CreateEditEmbeddingProps {
+  editingEmbedding?: Embedding | null
+  onEditComplete?: () => void
+}
+
+export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: CreateEditEmbeddingProps) {
   const [uri, setUri] = useState('')
   const [text, setText] = useState('')
   const [modelName, setModelName] = useState('')
-  const [editId, setEditId] = useState<number | null>(null)
 
   const { mutate: createEmbedding, isPending: isCreating, error: createError } = useCreateEmbedding()
   const { mutate: updateEmbedding, isPending: isUpdating, error: updateError } = useUpdateEmbedding()
@@ -18,19 +23,33 @@ export function CreateEditEmbedding() {
 
   const isSubmitting = isCreating || isUpdating
   const error = createError || updateError
+  const isEditMode = !!editingEmbedding
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingEmbedding) {
+      setUri(editingEmbedding.uri)
+      setText(editingEmbedding.text)
+      setModelName(editingEmbedding.model_name)
+    } else {
+      // Clear form when switching back to create mode
+      setUri('')
+      setText('')
+      setModelName('')
+    }
+  }, [editingEmbedding])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (editId !== null) {
+    if (isEditMode && editingEmbedding) {
       // Update existing embedding
       updateEmbedding(
-        { id: editId, data: { text, model_name: modelName || undefined } },
+        { id: editingEmbedding.id, data: { text, model_name: modelName || undefined } },
         {
           onSuccess: () => {
-            setText('')
-            setEditId(null)
-            setModelName('')
+            handleReset()
+            onEditComplete?.()
           },
         }
       )
@@ -42,9 +61,7 @@ export function CreateEditEmbedding() {
         { uri, text, model_name: modelName || undefined },
         {
           onSuccess: () => {
-            setUri('')
-            setText('')
-            setModelName('')
+            handleReset()
           },
         }
       )
@@ -55,7 +72,7 @@ export function CreateEditEmbedding() {
     setUri('')
     setText('')
     setModelName('')
-    setEditId(null)
+    onEditComplete?.()
   }
 
   return (
@@ -64,32 +81,31 @@ export function CreateEditEmbedding() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {editId !== null ? 'Edit Embedding' : 'Create New Embedding'}
+            {isEditMode ? <Save className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+            {isEditMode ? 'Edit Embedding' : 'Create New Embedding'}
           </CardTitle>
           <CardDescription>
-            {editId !== null
-              ? 'Update the text content of an existing embedding'
+            {isEditMode
+              ? 'Update the text content and regenerate the embedding vector'
               : 'Generate an embedding for text content'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {editId === null && (
-              <div>
-                <label className="text-sm font-medium">URI</label>
-                <Input
-                  placeholder="e.g., file://document.txt or doc:12345"
-                  value={uri}
-                  onChange={(e) => setUri(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Unique identifier for the embedding
-                </p>
-              </div>
-            )}
+            <div>
+              <label className="text-sm font-medium">URI</label>
+              <Input
+                placeholder="e.g., file://document.txt or doc:12345"
+                value={uri}
+                onChange={(e) => setUri(e.target.value)}
+                required
+                disabled={isSubmitting || isEditMode}
+                className={isEditMode ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {isEditMode ? 'URI cannot be changed when editing' : 'Unique identifier for the embedding'}
+              </p>
+            </div>
 
             <div>
               <label className="text-sm font-medium">Text Content</label>
@@ -123,22 +139,22 @@ export function CreateEditEmbedding() {
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={isSubmitting || !text.trim() || (editId === null && !uri.trim())}>
+              <Button type="submit" disabled={isSubmitting || !text.trim() || (!isEditMode && !uri.trim())}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    {editId !== null ? 'Updating...' : 'Creating...'}
+                    {isEditMode ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {editId !== null ? 'Update Embedding' : 'Create Embedding'}
+                    {isEditMode ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                    {isEditMode ? 'Update Embedding' : 'Create Embedding'}
                   </>
                 )}
               </Button>
-              {(uri || text || modelName || editId !== null) && (
+              {(uri || text || modelName || isEditMode) && (
                 <Button type="button" variant="outline" onClick={handleReset} disabled={isSubmitting}>
-                  Reset
+                  {isEditMode ? 'Cancel' : 'Reset'}
                 </Button>
               )}
             </div>

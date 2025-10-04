@@ -1,4 +1,4 @@
-import { List, Trash2, Eye } from 'lucide-react'
+import { List, Trash2, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -12,9 +12,10 @@ import type { Embedding } from '@/types/api'
 
 interface EmbeddingListProps {
   onEmbeddingSelect?: (embedding: Embedding) => void
+  onEmbeddingEdit?: (embedding: Embedding) => void
 }
 
-export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
+export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingListProps) {
   // Use shared hooks
   const pagination = usePagination({ initialPage: 1, initialLimit: 20 })
   const { filters, updateFilter } = useFilters({
@@ -155,14 +156,24 @@ export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
                         size="sm"
                         variant="outline"
                         onClick={() => onEmbeddingSelect?.(embedding)}
+                        title="View details"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => onEmbeddingEdit?.(embedding)}
+                        title="Edit embedding"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => handleDelete(embedding.id)}
                         disabled={deleteMutation.isPending}
+                        title="Delete embedding"
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
