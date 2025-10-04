@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useSearchEmbeddings } from '@/hooks/useEmbeddings'
+import { useFilters } from '@/hooks/useFilters'
+import { ErrorCard } from '@/components/shared/ErrorCard'
 import type { SearchResult } from '@/types/api'
 
 interface SearchInterfaceProps {
@@ -12,38 +14,36 @@ interface SearchInterfaceProps {
 
 export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [query, setQuery] = useState('')
-  const [searchParams, setSearchParams] = useState<{
-    query: string
-    limit: number
-    threshold: number
-    metric: 'cosine' | 'euclidean' | 'dot_product'
-  }>({
-    query: '',
-    limit: 10,
-    threshold: 0.7,
-    metric: 'cosine',
+
+  // Use shared filters hook
+  const { filters: searchParams, updateFilter } = useFilters({
+    initialFilters: {
+      query: '',
+      limit: 10,
+      threshold: 0.7,
+      metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
+    }
   })
 
-  // const { data: models } = useProviderModels()
   const { data: searchResults, isLoading: isSearching, error } = useSearchEmbeddings(searchParams)
 
   // Debounced search
   useEffect(() => {
     if (!query.trim()) {
-      setSearchParams(prev => ({ ...prev, query: '' }))
+      updateFilter('query', '')
       return
     }
 
     const timer = setTimeout(() => {
-      setSearchParams(prev => ({ ...prev, query }))
+      updateFilter('query', query)
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, updateFilter])
 
   const handleSearch = () => {
     if (query.trim()) {
-      setSearchParams(prev => ({ ...prev, query }))
+      updateFilter('query', query)
     }
   }
 
@@ -92,10 +92,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 min="1"
                 max="100"
                 value={searchParams.limit}
-                onChange={(e) => setSearchParams(prev => ({
-                  ...prev,
-                  limit: parseInt(e.target.value) || 10
-                }))}
+                onChange={(e) => updateFilter('limit', parseInt(e.target.value) || 10)}
               />
             </div>
             <div>
@@ -106,10 +103,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 max="1"
                 step="0.1"
                 value={searchParams.threshold}
-                onChange={(e) => setSearchParams(prev => ({
-                  ...prev,
-                  threshold: parseFloat(e.target.value) || 0.7
-                }))}
+                onChange={(e) => updateFilter('threshold', parseFloat(e.target.value) || 0.7)}
               />
             </div>
             <div>
@@ -117,10 +111,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={searchParams.metric}
-                onChange={(e) => setSearchParams(prev => ({
-                  ...prev,
-                  metric: e.target.value as 'cosine' | 'euclidean' | 'dot_product'
-                }))}
+                onChange={(e) => updateFilter('metric', e.target.value as 'cosine' | 'euclidean' | 'dot_product')}
               >
                 <option value="cosine">Cosine</option>
                 <option value="euclidean">Euclidean</option>
@@ -132,13 +123,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       </Card>
 
       {/* Search Results */}
-      {error && (
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <p className="text-destructive">Error: {error.message}</p>
-          </CardContent>
-        </Card>
-      )}
+      {error && <ErrorCard error={error} />}
 
       {searchResults && searchResults.results.length > 0 && (
         <Card>

@@ -1,9 +1,13 @@
-import { useState } from 'react'
 import { List, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useEmbeddings, useDeleteEmbedding } from '@/hooks/useEmbeddings'
+import { usePagination } from '@/hooks/usePagination'
+import { useFilters } from '@/hooks/useFilters'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorCard } from '@/components/shared/ErrorCard'
+import { PaginationControls } from '@/components/shared/PaginationControls'
 import type { Embedding } from '@/types/api'
 
 interface EmbeddingListProps {
@@ -11,16 +15,20 @@ interface EmbeddingListProps {
 }
 
 export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(20)
-  const [uriFilter, setUriFilter] = useState('')
-  const [modelFilter, setModelFilter] = useState('')
+  // Use shared hooks
+  const pagination = usePagination({ initialPage: 1, initialLimit: 20 })
+  const { filters, updateFilter } = useFilters({
+    initialFilters: {
+      uri: '',
+      modelName: '',
+    }
+  })
 
   const { data, isLoading, error } = useEmbeddings({
-    page,
-    limit,
-    uri: uriFilter || undefined,
-    model_name: modelFilter || undefined,
+    page: pagination.page,
+    limit: pagination.limit,
+    uri: filters.uri || undefined,
+    model_name: filters.modelName || undefined,
   })
 
   const deleteMutation = useDeleteEmbedding()
@@ -59,13 +67,7 @@ export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
   }
 
   if (error) {
-    return (
-      <Card className="border-destructive">
-        <CardContent className="pt-6">
-          <p className="text-destructive">Error: {error.message}</p>
-        </CardContent>
-      </Card>
-    )
+    return <ErrorCard error={error} />
   }
 
   return (
@@ -87,24 +89,24 @@ export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
               <label className="text-sm font-medium">Filter by URI</label>
               <Input
                 placeholder="Enter URI to filter..."
-                value={uriFilter}
-                onChange={(e) => setUriFilter(e.target.value)}
+                value={filters.uri}
+                onChange={(e) => updateFilter('uri', e.target.value)}
               />
             </div>
             <div>
               <label className="text-sm font-medium">Filter by Model</label>
               <Input
                 placeholder="Enter model name..."
-                value={modelFilter}
-                onChange={(e) => setModelFilter(e.target.value)}
+                value={filters.modelName}
+                onChange={(e) => updateFilter('modelName', e.target.value)}
               />
             </div>
             <div>
               <label className="text-sm font-medium">Items per page</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={limit}
-                onChange={(e) => setLimit(parseInt(e.target.value))}
+                value={pagination.limit}
+                onChange={(e) => pagination.setLimit(parseInt(e.target.value))}
               >
                 <option value="10">10</option>
                 <option value="20">20</option>
@@ -119,46 +121,17 @@ export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
       {/* Embedding List */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Embeddings</CardTitle>
-              {data && (
-                <CardDescription>
-                  Showing {((page - 1) * limit) + 1}-{Math.min(page * limit, data.total)} of {data.total} embeddings
-                </CardDescription>
-              )}
-            </div>
-            {data && data.total > limit && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm">
-                  Page {page} of {Math.ceil(data.total / limit)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={page >= Math.ceil(data.total / limit)}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </div>
+          <CardTitle>Embeddings</CardTitle>
+          {data && (
+            <PaginationControls
+              pagination={pagination}
+              total={data.total}
+            />
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="ml-2">Loading embeddings...</span>
-            </div>
+            <LoadingState message="Loading embeddings..." />
           ) : data && data.embeddings.length > 0 ? (
             <div className="space-y-4">
               {data.embeddings.map((embedding) => (
@@ -212,7 +185,7 @@ export function EmbeddingList({ onEmbeddingSelect }: EmbeddingListProps) {
               <List className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No embeddings found</p>
               <p className="text-sm">
-                {uriFilter || modelFilter
+                {filters.uri || filters.modelName
                   ? 'Try adjusting your filters'
                   : 'Upload files or create embeddings to get started'
                 }
