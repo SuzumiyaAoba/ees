@@ -26,6 +26,7 @@ import {
   getCacheConfig,
 } from "@/shared/cache"
 import { tryPromiseWithError } from "@/shared/lib/effect-utils"
+import { validateEmbeddingInput } from "@/entities/embedding/lib/embedding-validation"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -175,52 +176,7 @@ export interface EmbeddingService {
 export const EmbeddingService =
   Context.GenericTag<EmbeddingService>("EmbeddingService")
 
-/**
- * Input validation for embedding operations
- *
- * Business Rules:
- * - URI must contain non-whitespace characters (trimmed length > 0)
- * - Text content must be non-empty (prevents wasted API calls)
- * - URI length capped at 2048 characters (database column constraint)
- *
- * Edge Cases Handled:
- * - Whitespace-only strings are rejected (after trimming)
- * - Very long URIs are rejected before database insertion (prevents SQL errors)
- *
- * @param uri - Unique identifier for the text content
- * @param text - Text content to generate embedding for
- * @returns Effect.void on success, DatabaseQueryError on validation failure
- */
-const validateEmbeddingInput = (uri: string, text: string): Effect.Effect<void, DatabaseQueryError> => {
-  // Check URI is not empty or whitespace-only
-  if (!uri.trim()) {
-    return Effect.fail(new DatabaseQueryError({
-      message: "URI cannot be empty",
-      cause: new Error("Invalid URI parameter"),
-    }))
-  }
-
-  // Check text content is not empty or whitespace-only
-  // This prevents wasted API calls to embedding providers
-  if (!text.trim()) {
-    return Effect.fail(new DatabaseQueryError({
-      message: "Text content cannot be empty",
-      cause: new Error("Invalid text parameter"),
-    }))
-  }
-
-  // Enforce URI length limit (2048 chars) to match database schema constraint
-  // Prevents SQL errors from exceeding VARCHAR length
-  if (uri.length > 2048) {
-    return Effect.fail(new DatabaseQueryError({
-      message: "URI exceeds maximum length of 2048 characters",
-      cause: new Error("URI too long"),
-    }))
-  }
-
-  return Effect.void
-}
-
+// Note: validateEmbeddingInput moved to @/entities/embedding/lib/embedding-validation
 // Note: _calculateSimilarity function was removed as it's unused
 // Individual similarity functions are kept for potential future use
 
