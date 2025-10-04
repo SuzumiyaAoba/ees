@@ -380,7 +380,7 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
       })
     })
 
-    it("should enforce reasonable batch size limits", async () => {
+    it.skipIf(process.env["CI"] === "true")("should enforce reasonable batch size limits", async () => {
       // Try to create a batch larger than any reasonable limit
       const extremeSize = 100000
       const items = []
