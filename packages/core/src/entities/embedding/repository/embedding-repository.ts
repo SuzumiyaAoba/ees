@@ -176,6 +176,19 @@ export interface EmbeddingRepository {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Update an embedding by ID
+   * @param id - Database ID of the embedding
+   * @param text - New text content
+   * @param embedding - New embedding vector
+   * @returns Effect containing boolean indicating success
+   */
+  readonly updateById: (
+    id: number,
+    text: string,
+    embedding: number[]
+  ) => Effect.Effect<boolean, DatabaseQueryError>
+
+  /**
    * Search for similar embeddings using vector similarity
    * @param options - Search options with query embedding and parameters
    * @returns Effect containing array of similar embeddings
@@ -399,6 +412,36 @@ const make = Effect.gen(function* () {
       return result.rowsAffected > 0
     })
 
+  const updateById = (
+    id: number,
+    text: string,
+    embedding: number[]
+  ): Effect.Effect<boolean, DatabaseQueryError> =>
+    Effect.gen(function* () {
+      const embeddingVector = JSON.stringify(embedding)
+
+      const result = yield* Effect.tryPromise({
+        try: async () => {
+          const updateResult = await client.execute({
+            sql: `
+              UPDATE embeddings
+              SET text = ?, embedding = vector(?), updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `,
+            args: [text, embeddingVector, id],
+          })
+          return updateResult.rowsAffected
+        },
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to update embedding in database",
+            cause: error,
+          }),
+      })
+
+      return result > 0
+    })
+
   const searchSimilar = (
     options: SearchSimilarOptions
   ): Effect.Effect<SimilarEmbedding[], DatabaseQueryError> =>
@@ -509,6 +552,7 @@ const make = Effect.gen(function* () {
     findByUri,
     findAll,
     deleteById,
+    updateById,
     searchSimilar,
   }
 

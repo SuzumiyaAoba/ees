@@ -7,9 +7,11 @@ export * from './shared/index'
 export { EmbeddingService } from './entities/embedding/index'
 export type {
   CreateEmbeddingRequest,
+  UpdateEmbeddingRequest,
   BatchCreateEmbeddingRequest,
   SearchEmbeddingRequest,
   CreateEmbeddingResponse,
+  UpdateEmbeddingResponse,
   BatchCreateEmbeddingResponse,
   SearchEmbeddingResponse,
   EmbeddingsListResponse,
@@ -19,12 +21,14 @@ export type {
 // Export OpenAPI schemas for API package consumption
 export {
   CreateEmbeddingRequestSchema,
+  UpdateEmbeddingRequestSchema,
   BatchCreateEmbeddingRequestSchema,
   UriParamSchema,
   UriModelParamSchema,
   IdParamSchema,
   EmbeddingQuerySchema,
   CreateEmbeddingResponseSchema,
+  UpdateEmbeddingResponseSchema,
   BatchCreateEmbeddingResponseSchema,
   SearchEmbeddingRequestSchema,
   SearchEmbeddingResultSchema,

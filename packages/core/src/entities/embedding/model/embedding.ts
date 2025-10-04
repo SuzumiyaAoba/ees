@@ -44,6 +44,16 @@ export interface CreateEmbeddingResponse {
   message: string
 }
 
+export interface UpdateEmbeddingRequest {
+  text: string
+  model_name?: string
+}
+
+export interface UpdateEmbeddingResponse {
+  success: boolean
+  message: string
+}
+
 export interface EmbeddingSearchResult {
   uri: string
   similarity: number

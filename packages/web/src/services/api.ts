@@ -2,6 +2,8 @@ import type {
   Embedding,
   CreateEmbeddingRequest,
   CreateEmbeddingResponse,
+  UpdateEmbeddingRequest,
+  UpdateEmbeddingResponse,
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
   SearchEmbeddingRequest,
@@ -81,6 +83,13 @@ class ApiClient {
   async deleteEmbedding(id: number): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/embeddings/${id}`, {
       method: 'DELETE',
+    })
+  }
+
+  async updateEmbedding(id: number, data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> {
+    return this.request<UpdateEmbeddingResponse>(`/embeddings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     })
   }
 

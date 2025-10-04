@@ -111,6 +111,26 @@ export interface EmbeddingService {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Update an embedding's text content by ID
+   * @param id - Database ID of the embedding to update
+   * @param text - New text content
+   * @param modelName - Optional model name (defaults to current provider's default)
+   * @returns Effect containing boolean indicating success
+   */
+  readonly updateEmbedding: (
+    id: number,
+    text: string,
+    modelName?: string
+  ) => Effect.Effect<
+    boolean,
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
+  >
+
+  /**
    * Search for similar embeddings using vector similarity
    * @param request - Search request with query text and similarity parameters
    * @returns Effect containing search results ranked by similarity
@@ -571,6 +591,52 @@ const make = Effect.gen(function* () {
   const deleteEmbedding = (id: number) => repository.deleteById(id)
 
   /**
+   * Update an embedding's text content
+   * Generates a new embedding vector for the updated text and saves it
+   */
+  const updateEmbedding = (
+    id: number,
+    text: string,
+    modelName?: string
+  ): Effect.Effect<
+    boolean,
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
+  > => {
+    const startTime = Date.now()
+    const provider = getDefaultProvider()
+
+    return pipe(
+      // Step 1: Validate input text
+      validateEmbeddingInput("temp-uri", text),
+      // Step 2: Generate new embedding vector using current provider
+      Effect.flatMap(() =>
+        providerService.generateEmbedding({ text, modelName })
+      ),
+      // Step 3: Update embedding in database
+      Effect.flatMap((embeddingResponse) =>
+        pipe(
+          repository.updateById(id, text, embeddingResponse.embedding),
+          // Step 4: Record success metrics
+          Effect.flatMap((updated) =>
+            pipe(
+              metricsService.recordEmbeddingCreated(
+                provider.type,
+                embeddingResponse.model,
+                (Date.now() - startTime) / 1000
+              ),
+              Effect.map(() => updated)
+            )
+          )
+        )
+      )
+    )
+  }
+
+  /**
    * Search for similar embeddings using vector similarity
    *
    * Algorithm Flow:
@@ -698,6 +764,7 @@ const make = Effect.gen(function* () {
     getEmbedding,
     getAllEmbeddings,
     deleteEmbedding,
+    updateEmbedding,
     searchEmbeddings,
     listProviders,
     getCurrentProvider,

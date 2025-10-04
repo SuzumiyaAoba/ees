@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, Database, ArrowLeftRight } from 'lucide-react'
+import { Search, List, Upload, Settings, Database, ArrowLeftRight, Plus } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
+import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
 import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
@@ -19,7 +20,7 @@ const queryClient = new QueryClient({
   },
 })
 
-type TabType = 'search' | 'list' | 'upload' | 'config' | 'migration'
+type TabType = 'search' | 'list' | 'create' | 'upload' | 'config' | 'migration'
 
 interface TabItem {
   id: TabType
@@ -30,12 +31,13 @@ interface TabItem {
 const tabs: TabItem[] = [
   { id: 'search', label: 'Search', icon: Search },
   { id: 'list', label: 'Browse', icon: List },
+  { id: 'create', label: 'Create', icon: Plus },
   { id: 'upload', label: 'Upload', icon: Upload },
   { id: 'migration', label: 'Migration', icon: ArrowLeftRight },
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
-const VALID_TABS: TabType[] = ['search', 'list', 'upload', 'config', 'migration']
+const VALID_TABS: TabType[] = ['search', 'list', 'create', 'upload', 'config', 'migration']
 
 function AppContent() {
   // Get initial tab from URL hash or default to 'search'
@@ -89,6 +91,8 @@ function AppContent() {
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
       case 'list':
         return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} />
+      case 'create':
+        return <CreateEditEmbedding />
       case 'upload':
         return <FileUpload />
       case 'migration':
