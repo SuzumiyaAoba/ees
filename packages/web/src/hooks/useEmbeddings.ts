@@ -131,3 +131,12 @@ export function useCurrentProvider() {
     queryFn: () => apiClient.getCurrentProvider(),
   })
 }
+
+// Models hook
+export function useModels() {
+  return useQuery({
+    queryKey: ['models'],
+    queryFn: () => apiClient.getModels(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}

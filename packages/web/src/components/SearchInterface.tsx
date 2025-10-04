@@ -3,7 +3,7 @@ import { Search, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useSearchEmbeddings } from '@/hooks/useEmbeddings'
+import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import type { SearchResult } from '@/types/api'
@@ -22,10 +22,12 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       limit: 10,
       threshold: 0.7,
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
+      model_name: undefined as string | undefined,
     }
   })
 
   const { data: searchResults, isLoading: isSearching, error } = useSearchEmbeddings(searchParams)
+  const { data: modelsData } = useModels()
 
   // Debounced search
   useEffect(() => {
@@ -84,7 +86,24 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           </div>
 
           {/* Search Options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="text-sm font-medium">Model</label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={searchParams.model_name || ''}
+                onChange={(e) => updateFilter('model_name', e.target.value || undefined)}
+              >
+                <option value="">All Models</option>
+                {modelsData?.models
+                  .filter((model) => model.available)
+                  .map((model) => (
+                    <option key={model.name} value={model.name}>
+                      {model.displayName || model.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <div>
               <label className="text-sm font-medium">Limit</label>
               <Input
