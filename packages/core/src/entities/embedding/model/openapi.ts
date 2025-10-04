@@ -326,7 +326,7 @@ export const EmbeddingsListResponseSchema = z
       description: "List of embeddings",
     }),
     count: z.number().openapi({
-      description: "Total count of embeddings",
+      description: "Number of embeddings in current page",
       example: 5,
     }),
     page: z.number().openapi({
@@ -336,6 +336,10 @@ export const EmbeddingsListResponseSchema = z
     limit: z.number().openapi({
       description: "Number of items per page",
       example: 10,
+    }),
+    total: z.number().openapi({
+      description: "Total count of all embeddings across all pages",
+      example: 25,
     }),
     total_pages: z.number().openapi({
       description: "Total number of pages",

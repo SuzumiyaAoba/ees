@@ -6,6 +6,7 @@ import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
+import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import type { Embedding, SearchResult } from '@/types/api'
 
 // Create a client
@@ -36,7 +37,8 @@ const tabs: TabItem[] = [
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('search')
-  // const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   const handleSearchResultSelect = (result: SearchResult) => {
     console.log('Selected search result:', result)
@@ -44,9 +46,14 @@ function AppContent() {
   }
 
   const handleEmbeddingSelect = (embedding: Embedding) => {
-    // setSelectedEmbedding(embedding)
-    console.log('Selected embedding:', embedding)
-    // You could open a modal or navigate to a detail view here
+    setSelectedEmbedding(embedding)
+    setIsDetailModalOpen(true)
+  }
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false)
+    // Keep embedding data for a moment to allow smooth close animation
+    setTimeout(() => setSelectedEmbedding(null), 200)
   }
 
   const renderActiveTab = () => {
@@ -127,6 +134,13 @@ function AppContent() {
           </div>
         </div>
       </footer>
+
+      {/* Embedding Detail Modal */}
+      <EmbeddingDetailModal
+        embedding={selectedEmbedding}
+        open={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
     </div>
   )
 }

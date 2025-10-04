@@ -82,6 +82,7 @@ export interface ListEmbeddingsResult {
   count: number
   page: number
   limit: number
+  total: number
   total_pages: number
   has_next: boolean
   has_prev: boolean
@@ -377,6 +378,7 @@ const make = Effect.gen(function* () {
         count: embeddingsData.length,
         page,
         limit,
+        total: totalCount,
         total_pages: totalPages,
         has_next: hasNext,
         has_prev: hasPrev,
