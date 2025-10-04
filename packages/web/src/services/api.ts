@@ -131,7 +131,7 @@ class ApiClient {
     version?: string
     models?: string[]
   }> {
-    return this.request('/ollama/status')
+    return this.request('/providers/ollama/status')
   }
 
   // File upload helper
