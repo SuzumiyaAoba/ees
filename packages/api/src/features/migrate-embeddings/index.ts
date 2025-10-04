@@ -6,10 +6,16 @@
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
 import { ModelManagerTag } from "@ees/core"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import {
   migrateEmbeddingsRoute,
   checkCompatibilityRoute,
 } from "./api/route"
+
+/**
+ * Logger instance for migration feature
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 interface TaggedError {
   _tag: string
@@ -88,7 +94,7 @@ migrationApp.openapi(migrateEmbeddingsRoute, async (c) => {
       }
     }
 
-    console.error("Unexpected migration error:", error)
+    logger.error({ error: String(error) }, "Unexpected migration error")
     return c.json(
       { error: "Internal server error during migration" },
       500
@@ -142,7 +148,7 @@ migrationApp.openapi(checkCompatibilityRoute, async (c) => {
       }
     }
 
-    console.error("Unexpected compatibility check error:", error)
+    logger.error({ error: String(error) }, "Unexpected compatibility check error")
     return c.json(
       { error: "Internal server error during compatibility check" },
       500

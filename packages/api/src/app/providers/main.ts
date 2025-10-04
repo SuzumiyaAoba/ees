@@ -1,5 +1,11 @@
 import { ApplicationLayer } from "@ees/core"
 import { Layer } from "effect"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
+
+/**
+ * Logger instance for application layer initialization
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 /**
  * Create application layer with environment-specific configuration
@@ -7,11 +13,11 @@ import { Layer } from "effect"
 function createAppLayer() {
   // In test environment, ensure all services are properly initialized
   if (process.env["NODE_ENV"] === "test") {
-    console.log("Initializing test environment app layer...")
+    logger.debug("Initializing test environment app layer...")
 
     // For test environment, create a suspended layer to ensure proper initialization timing
     return Layer.suspend(() => {
-      console.log("Creating ApplicationLayer for test environment")
+      logger.debug("Creating ApplicationLayer for test environment")
       return ApplicationLayer
     })
   }

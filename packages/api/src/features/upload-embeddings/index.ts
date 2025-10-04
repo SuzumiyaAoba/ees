@@ -9,12 +9,19 @@ import {
   EmbeddingApplicationService,
   processFiles,
   type FileProcessorError,
+  createPinoLogger,
+  createLoggerConfig,
 } from "@ees/core"
 import {
   uploadFilesRoute,
   type UploadResponse,
   type UploadResultItem,
 } from "./api/route"
+
+/**
+ * Logger instance for upload feature
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 /**
  * File upload feature app with handlers
@@ -69,7 +76,10 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
       }).pipe(
         Effect.catchAll((errors: FileProcessorError[]) => {
           // Log errors but continue with successful files
-          console.warn("Some files failed to process:", errors)
+          logger.warn({
+            errorCount: errors.length,
+            errors: errors.map(e => ({ filename: e.filename, message: e.message }))
+          }, "Some files failed to process")
           return Effect.succeed([])
         })
       )
@@ -149,7 +159,7 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Unexpected upload error:", error)
+    logger.error({ error: String(error) }, "Unexpected upload error")
     return c.json(
       { error: "Internal server error during file upload" },
       500

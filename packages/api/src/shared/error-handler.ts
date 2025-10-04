@@ -1,4 +1,10 @@
 import type { Context } from "hono"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
+
+/**
+ * Logger instance for error handling
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 /**
  * Type guard to check if error has a _tag property (Effect tagged error)
@@ -12,7 +18,7 @@ function hasTag(error: unknown): error is { _tag: string; message: string } {
  * Uses type-based error detection with Effect's tagged errors for type safety
  */
 export function handleErrorResponse(c: Context, error: unknown, operation: string) {
-  console.error(`Error in ${operation}:`, error)
+  logger.error({ operation, error: String(error) }, `Error in ${operation}`)
 
   // Type-safe error handling using Effect's tagged errors
   if (hasTag(error)) {
