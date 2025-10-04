@@ -5,6 +5,7 @@
 
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import {
   listProvidersRoute,
   getCurrentProviderRoute,
@@ -15,6 +16,11 @@ import {
   type OllamaStatus,
   type CurrentProvider,
 } from "./api/route"
+
+/**
+ * Logger instance for provider management
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 /**
  * Provider management feature app with handlers
@@ -76,7 +82,7 @@ providerApp.openapi(listProvidersRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error listing providers:", error)
+    logger.error({ error: String(error) }, "Error listing providers")
     return c.json(
       { error: "Failed to list providers" },
       500
@@ -115,7 +121,7 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error getting current provider:", error)
+    logger.error({ error: String(error) }, "Error getting current provider")
     return c.json(
       { error: "Failed to get current provider" },
       500
@@ -200,7 +206,7 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
 
     return c.json(result, 200)
   } catch (error) {
-    console.error("Error listing provider models:", error)
+    logger.error({ error: String(error) }, "Error listing provider models")
     if (error instanceof Error && error.message === "Provider not found") {
       return c.json(
         { error: "Provider not found" },
@@ -284,7 +290,7 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
     return c.json(result, 200)
   } catch (error) {
     const responseTime = Date.now() - startTime
-    console.error("Error getting Ollama status:", error)
+    logger.error({ error: String(error) }, "Error getting Ollama status")
     return c.json(
       {
         status: "offline" as const,

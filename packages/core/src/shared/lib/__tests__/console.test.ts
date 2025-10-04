@@ -66,14 +66,18 @@ describe("Console Utilities", () => {
       Console.error(message)
 
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect(errorSpy).toHaveBeenCalledWith(message)
+      // Error messages are formatted with ✗ prefix and color codes
+      expect(errorSpy).toHaveBeenCalled()
+      const call = errorSpy.mock.calls[0]?.[0] as string
+      expect(call).toContain(message)
     })
 
     it("should handle empty error messages", () => {
       Console.error("")
 
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect(errorSpy).toHaveBeenCalledWith("")
+      // Even empty messages get the ✗ prefix
+      expect(errorSpy).toHaveBeenCalled()
     })
 
     it("should handle error messages with special characters", () => {
@@ -82,7 +86,9 @@ describe("Console Utilities", () => {
       Console.error(message)
 
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect(errorSpy).toHaveBeenCalledWith(message)
+      // Error messages are formatted with ✗ prefix
+      const call = errorSpy.mock.calls[0]?.[0] as string
+      expect(call).toContain(message)
     })
   })
 
@@ -94,7 +100,9 @@ describe("Console Utilities", () => {
       expect(logSpy).toHaveBeenCalledTimes(1)
       expect(logSpy).toHaveBeenCalledWith("Log message")
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect(errorSpy).toHaveBeenCalledWith("Error message")
+      // Error is formatted with ✗ prefix
+      const errorCall = errorSpy.mock.calls[0]?.[0] as string
+      expect(errorCall).toContain("Error message")
     })
 
     it("should maintain separate call counts", () => {
@@ -115,7 +123,9 @@ describe("Console Utilities", () => {
 
       // TypeScript should prevent non-string types (compile-time check)
       expect(logSpy).toHaveBeenCalledWith("string message")
-      expect(errorSpy).toHaveBeenCalledWith("string error")
+      // Error is formatted with ✗ prefix
+      const errorCall = errorSpy.mock.calls[0]?.[0] as string
+      expect(errorCall).toContain("string error")
     })
   })
 })

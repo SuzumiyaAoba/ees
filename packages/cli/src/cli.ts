@@ -306,7 +306,8 @@ const providersCommand = defineCommand({
   async run({ args }) {
     const validActions = ["list", "current", "models", "ollama-status"]
     if (!validActions.includes(args.action)) {
-      console.error(`Invalid action: ${args.action}. Valid actions: ${validActions.join(", ")}`)
+      const { error } = await import("@ees/core")
+      error(`Invalid action: ${args.action}. Valid actions: ${validActions.join(", ")}`)
       process.exit(1)
     }
 

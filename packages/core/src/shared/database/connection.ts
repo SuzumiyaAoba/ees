@@ -5,7 +5,13 @@ import { drizzle } from "drizzle-orm/libsql"
 import { Context, Effect, Layer } from "effect"
 import { DatabaseConnectionError } from "@/shared/errors/database"
 import { getEnvWithDefault, isTestEnv } from "@/shared/lib/env"
+import { createPinoLogger, createLoggerConfig } from "@/shared/observability/logger"
 import * as schema from "./schema"
+
+/**
+ * Logger instance for database operations
+ */
+const logger = createPinoLogger(createLoggerConfig())
 
 export interface DatabaseService {
   readonly db: ReturnType<typeof drizzle>
@@ -113,7 +119,7 @@ const make = Effect.gen(function* () {
         !tableInfo.rows[0]?.["sql"]?.toString().includes("F32_BLOB")
 
       if (needsMigration) {
-        console.log("🔄 Migrating database schema from BLOB to F32_BLOB format...")
+        logger.info("🔄 Migrating database schema from BLOB to F32_BLOB format...")
 
         // Step 3a: Count existing embeddings for user feedback
         // Note: We don't migrate data because BLOB→F32_BLOB conversion is not possible
@@ -131,8 +137,8 @@ const make = Effect.gen(function* () {
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_vector`)
 
         // Inform user about data loss and next steps
-        console.log(`⚠️  Migration removed ${existingData.rows.length} existing embeddings (BLOB format not compatible with F32_BLOB)`)
-        console.log("💡 Embeddings will need to be recreated with the new vector format")
+        logger.warn(`Migration removed ${existingData.rows.length} existing embeddings (BLOB format not compatible with F32_BLOB)`)
+        logger.info("💡 Embeddings will need to be recreated with the new vector format")
       }
 
       // Step 4: Create new table with F32_BLOB format
@@ -175,7 +181,7 @@ const make = Effect.gen(function* () {
       `)
 
       if (needsMigration) {
-        console.log("✅ Database migration completed successfully")
+        logger.info("✅ Database migration completed successfully")
       }
     },
     catch: (error) =>

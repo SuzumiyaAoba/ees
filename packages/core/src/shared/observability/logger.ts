@@ -24,6 +24,56 @@ export interface LogContext {
 }
 
 /**
+ * Sensitive field patterns that should be redacted from logs
+ */
+const SENSITIVE_PATTERNS = [
+  /api[_-]?key/i,
+  /auth/i,
+  /token/i,
+  /password/i,
+  /secret/i,
+  /credential/i,
+  /private[_-]?key/i,
+] as const
+
+/**
+ * Check if a key name suggests sensitive data
+ */
+function isSensitiveKey(key: string): boolean {
+  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(key))
+}
+
+/**
+ * Sanitize sensitive data from log context
+ * Recursively redacts values for keys that match sensitive patterns
+ */
+function sanitizeContext(context: LogContext): LogContext {
+  const sanitized: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(context)) {
+    if (isSensitiveKey(key)) {
+      // Redact sensitive values
+      sanitized[key] = "[REDACTED]"
+    } else if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      // Recursively sanitize nested objects
+      sanitized[key] = sanitizeContext(value as LogContext)
+    } else if (Array.isArray(value)) {
+      // Sanitize arrays of objects
+      sanitized[key] = value.map((item) =>
+        item !== null && typeof item === "object" && !Array.isArray(item)
+          ? sanitizeContext(item as LogContext)
+          : item
+      )
+    } else {
+      // Keep non-sensitive primitive values
+      sanitized[key] = value
+    }
+  }
+
+  return sanitized
+}
+
+/**
  * Logger service interface
  */
 export interface Logger {
@@ -47,32 +97,38 @@ class PinoLoggerService implements Logger {
 
   trace = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.trace({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.trace(sanitized, message)
     })
 
   debug = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.debug({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.debug(sanitized, message)
     })
 
   info = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.info({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.info(sanitized, message)
     })
 
   warn = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.warn({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.warn(sanitized, message)
     })
 
   error = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.error({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.error(sanitized, message)
     })
 
   fatal = (message: string, context?: LogContext): Effect.Effect<void> =>
     Effect.sync(() => {
-      this.pinoLogger.fatal({ ...this.baseContext, ...context }, message)
+      const sanitized = context ? sanitizeContext({ ...this.baseContext, ...context }) : this.baseContext
+      this.pinoLogger.fatal(sanitized, message)
     })
 
   withContext = (context: LogContext): Logger =>
