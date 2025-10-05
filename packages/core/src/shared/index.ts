@@ -28,6 +28,22 @@ export {
   FileTooLargeError,
 } from "./lib"
 
+// Export file processing utilities
+export {
+  parseIgnorePatterns,
+  loadEesignore,
+  getDefaultIgnorePatterns,
+  shouldIgnore,
+} from "./file-processing/eesignore"
+
+export {
+  collectFilesFromDirectory,
+  filterByExtension,
+  filterBySize,
+  type DirectoryProcessOptions,
+  type CollectedFile,
+} from "./file-processing/directory-processor"
+
 // Export environment variable keys
 export { ENV_KEYS } from "./config/env-keys"
 

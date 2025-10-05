@@ -16,6 +16,9 @@ import {
   log,
   error,
   ModelManagerTag,
+  collectFilesFromDirectory,
+  filterByExtension,
+  filterBySize,
 } from "@ees/core"
 
 /**
@@ -79,6 +82,15 @@ export interface CLICommands {
   upload(options: {
     files: string[]
     model?: string
+  }): Effect.Effect<void, Error, never>
+
+  /**
+   * Upload directory and create embeddings for all files
+   */
+  uploadDir(options: {
+    directory: string
+    model?: string
+    maxDepth?: number
   }): Effect.Effect<void, Error, never>
 
   /**
@@ -297,6 +309,65 @@ const makeCLICommands = Effect.gen(function* () {
       log(`\nUpload complete: ${successful} successful, ${failed} failed`)
     })) as unknown as (options: { files: string[]; model?: string }) => Effect.Effect<void, Error, never>
 
+  const uploadDir = ((options: { directory: string; model?: string; maxDepth?: number }) =>
+    Effect.gen(function* () {
+      log(`Scanning directory: ${options.directory}`)
+      log(`Using .eesignore for filtering...`)
+
+      // Collect files from directory
+      const collectedFiles = yield* collectFilesFromDirectory(options.directory, {
+        maxDepth: options.maxDepth,
+        followSymlinks: false,
+      })
+
+      // Filter files by supported extensions and size
+      const textExtensions = ['.txt', '.md', '.markdown', '.log', '.csv', '.json', '.yaml', '.yml', '.js', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.h']
+      const filteredFiles = filterBySize(
+        filterByExtension(collectedFiles, textExtensions),
+        10 * 1024 * 1024 // 10MB max
+      )
+
+      log(`Found ${filteredFiles.length} eligible files (${collectedFiles.length} total)`)
+
+      if (filteredFiles.length === 0) {
+        log("No eligible files found to process")
+        return
+      }
+
+      let successful = 0
+      let failed = 0
+
+      for (const file of filteredFiles) {
+        try {
+          // Read file content
+          const fs = yield* Effect.tryPromise({
+            try: () => import("fs/promises"),
+            catch: () => new Error("Failed to import fs"),
+          })
+
+          const content = yield* Effect.tryPromise({
+            try: () => fs.readFile(file.absolutePath, "utf-8"),
+            catch: () => new Error(`Failed to read file: ${file.relativePath}`),
+          })
+
+          // Create embedding from file content
+          const result = yield* appService.createEmbedding({
+            uri: file.relativePath,
+            text: content,
+            modelName: options.model,
+          })
+
+          log(`✓ Created embedding for ${file.relativePath} (ID: ${result.id})`)
+          successful++
+        } catch (error) {
+          log(`✗ Failed to process ${file.relativePath}: ${error}`)
+          failed++
+        }
+      }
+
+      log(`\nDirectory upload complete: ${successful} successful, ${failed} failed`)
+    })) as unknown as (options: { directory: string; model?: string; maxDepth?: number }) => Effect.Effect<void, Error, never>
+
   const migrate = ((options: { fromModel: string; toModel: string; dryRun?: boolean }) =>
     Effect.gen(function* () {
       // Check model compatibility
@@ -415,6 +486,7 @@ const makeCLICommands = Effect.gen(function* () {
     delete: deleteEmbedding,
     models,
     upload,
+    uploadDir,
     migrate,
     providers,
   } satisfies CLICommands

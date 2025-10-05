@@ -12,10 +12,17 @@ interface FileWithStatus {
   error?: string
 }
 
+// Extend HTMLInputElement attributes to include directory selection
+interface DirectoryInputAttributes {
+  webkitdirectory?: string
+  directory?: string
+}
+
 export function FileUpload() {
   const [files, setFiles] = useState<FileWithStatus[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [selectedModel, setSelectedModel] = useState('')
+  const [uploadMode, setUploadMode] = useState<'files' | 'directory'>('files')
   const { data: models } = useProviderModels()
   const uploadMutation = useUploadFile()
 
@@ -139,6 +146,25 @@ export function FileUpload() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
+            <label className="text-sm font-medium">Upload Mode</label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={uploadMode}
+              onChange={(e) => {
+                setUploadMode(e.target.value as 'files' | 'directory')
+                setFiles([]) // Clear files when switching modes
+              }}
+            >
+              <option value="files">Individual Files</option>
+              <option value="directory">Directory (with .eesignore support)</option>
+            </select>
+            {uploadMode === 'directory' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Uploads all files from the selected directory. Create a .eesignore file (like .gitignore) in the directory root to filter files.
+              </p>
+            )}
+          </div>
+          <div>
             <label className="text-sm font-medium">Embedding Model</label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -159,9 +185,14 @@ export function FileUpload() {
       {/* File Drop Zone */}
       <Card>
         <CardHeader>
-          <CardTitle>Upload Files</CardTitle>
+          <CardTitle>
+            {uploadMode === 'directory' ? 'Upload Directory' : 'Upload Files'}
+          </CardTitle>
           <CardDescription>
-            Drag and drop files here or click to select files
+            {uploadMode === 'directory'
+              ? 'Select a directory to upload all files (respects .eesignore patterns)'
+              : 'Drag and drop files here or click to select files'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -178,21 +209,31 @@ export function FileUpload() {
             <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <div className="space-y-2">
               <p className="text-lg font-medium">
-                {dragActive ? 'Drop files here' : 'Drag & drop files here'}
+                {dragActive
+                  ? uploadMode === 'directory' ? 'Drop directory here' : 'Drop files here'
+                  : uploadMode === 'directory' ? 'Click to select directory' : 'Drag & drop files here'
+                }
               </p>
               <p className="text-sm text-muted-foreground">
-                or click to select files
+                {uploadMode === 'directory'
+                  ? 'Select a directory to upload all its files'
+                  : 'or click to select files'
+                }
               </p>
               <Input
                 type="file"
-                multiple
+                multiple={uploadMode === 'files'}
+                {...(uploadMode === 'directory' && ({
+                  webkitdirectory: '',
+                  directory: '',
+                } as DirectoryInputAttributes))}
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
               />
               <label htmlFor="file-upload" className="cursor-pointer">
                 <Button variant="outline" type="button">
-                  Select Files
+                  {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
                 </Button>
               </label>
             </div>
