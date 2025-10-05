@@ -24,6 +24,15 @@ import {
   resolveModelName,
 } from "./provider-utils"
 
+/**
+ * Allowed Ollama models for embedding operations
+ * Only models in this list will be available for use
+ */
+const ALLOWED_OLLAMA_MODELS = [
+  "nomic-embed-text",
+  "embeddinggemma",
+] as const
+
 export interface OllamaProviderService extends EmbeddingProvider {}
 
 export const OllamaProviderService = Context.GenericTag<OllamaProviderService>(
@@ -115,13 +124,16 @@ const make = (config: OllamaConfig) =>
           }
 
           // Map Ollama API response to ModelInfo format with normalized names
-          return result.models.map(model => ({
-            name: normalizeModelName(model.name),
-            provider: "ollama" as const,
-            dimensions: 768, // Default embedding dimension for most models
-            maxTokens: 8192, // Default token limit
-            pricePerToken: 0, // Ollama is free/local
-          })) satisfies ModelInfo[]
+          // Filter to only include allowed models
+          return result.models
+            .map(model => ({
+              name: normalizeModelName(model.name),
+              provider: "ollama" as const,
+              dimensions: 768, // Default embedding dimension for most models
+              maxTokens: 8192, // Default token limit
+              pricePerToken: 0, // Ollama is free/local
+            }))
+            .filter(model => ALLOWED_OLLAMA_MODELS.includes(model.name as typeof ALLOWED_OLLAMA_MODELS[number])) satisfies ModelInfo[]
         },
         catch: (error) => {
           const handleError = createOllamaErrorHandler()
