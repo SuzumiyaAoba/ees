@@ -231,11 +231,13 @@ export function FileUpload() {
                 className="hidden"
                 id="file-upload"
               />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Button variant="outline" type="button">
-                  {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
-                </Button>
-              </label>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
+              </Button>
             </div>
           </div>
 
