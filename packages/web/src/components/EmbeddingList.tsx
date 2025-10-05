@@ -123,74 +123,83 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
       <Card>
         <CardHeader>
           <CardTitle>Embeddings</CardTitle>
-          {data && (
-            <PaginationControls
-              pagination={pagination}
-              total={data.total}
-            />
-          )}
+          <CardDescription>
+            {data && `Total: ${data.total} embeddings`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <LoadingState message="Loading embeddings..." />
           ) : data && data.embeddings.length > 0 ? (
-            <div className="space-y-4">
-              {data.embeddings.map((embedding) => (
-                <div
-                  key={embedding.id}
-                  className="border rounded-lg p-4 hover:bg-accent transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate" title={embedding.uri}>
-                        {formatUri(embedding.uri)}
-                      </h4>
-                      <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                        <span>ID: {embedding.id}</span>
-                        <span>Model: {embedding.model_name}</span>
-                        <span>Created: {formatDate(embedding.created_at)}</span>
+            <>
+              <div className="space-y-4">
+                {data.embeddings.map((embedding) => (
+                  <div
+                    key={embedding.id}
+                    className="border rounded-lg p-4 hover:bg-accent transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium truncate" title={embedding.uri}>
+                          {formatUri(embedding.uri)}
+                        </h4>
+                        <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                          <span>ID: {embedding.id}</span>
+                          <span>Model: {embedding.model_name}</span>
+                          <span>Created: {formatDate(embedding.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEmbeddingSelect?.(embedding)}
+                          title="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEmbeddingEdit?.(embedding)}
+                          title="Edit embedding"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(embedding.id)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete embedding"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onEmbeddingSelect?.(embedding)}
-                        title="View details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onEmbeddingEdit?.(embedding)}
-                        title="Edit embedding"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(embedding.id)}
-                        disabled={deleteMutation.isPending}
-                        title="Delete embedding"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {truncateText(embedding.text)}
+                    </p>
+
+                    <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
+                      <span>Embedding dimensions: {embedding.embedding.length}</span>
+                      <span>Last updated: {formatDate(embedding.updated_at)}</span>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {truncateText(embedding.text)}
-                  </p>
-
-                  <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
-                    <span>Embedding dimensions: {embedding.embedding.length}</span>
-                    <span>Last updated: {formatDate(embedding.updated_at)}</span>
-                  </div>
+              {/* Pagination Controls */}
+              {data && data.total > pagination.limit && (
+                <div className="mt-6 pt-4 border-t">
+                  <PaginationControls
+                    pagination={pagination}
+                    total={data.total}
+                  />
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <List className="h-12 w-12 mx-auto mb-4 opacity-50" />
