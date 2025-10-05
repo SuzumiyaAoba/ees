@@ -12,6 +12,12 @@ interface FileWithStatus {
   error?: string
 }
 
+// Extend HTMLInputElement attributes to include directory selection
+interface DirectoryInputAttributes {
+  webkitdirectory?: string
+  directory?: string
+}
+
 export function FileUpload() {
   const [files, setFiles] = useState<FileWithStatus[]>([])
   const [dragActive, setDragActive] = useState(false)
@@ -217,12 +223,10 @@ export function FileUpload() {
               <Input
                 type="file"
                 multiple={uploadMode === 'files'}
-                {...(uploadMode === 'directory' && {
-                  // @ts-ignore - webkitdirectory is not in TS types but supported by browsers
+                {...(uploadMode === 'directory' && ({
                   webkitdirectory: '',
-                  // @ts-ignore - directory is not in TS types but supported by some browsers
                   directory: '',
-                })}
+                } as DirectoryInputAttributes))}
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
