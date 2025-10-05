@@ -217,10 +217,12 @@ export function FileUpload() {
               <Input
                 type="file"
                 multiple={uploadMode === 'files'}
-                // @ts-expect-error - webkitdirectory is not in TS types but supported by browsers
-                webkitdirectory={uploadMode === 'directory' ? '' : undefined}
-                // @ts-expect-error - directory is not in TS types but supported by some browsers
-                directory={uploadMode === 'directory' ? '' : undefined}
+                {...(uploadMode === 'directory' && {
+                  // @ts-ignore - webkitdirectory is not in TS types but supported by browsers
+                  webkitdirectory: '',
+                  // @ts-ignore - directory is not in TS types but supported by some browsers
+                  directory: '',
+                })}
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
