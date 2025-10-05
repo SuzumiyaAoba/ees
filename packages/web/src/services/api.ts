@@ -44,7 +44,7 @@ class ApiClient {
         throw new Error(error.error)
       } else {
         // Non-JSON response (likely HTML error page)
-        const text = await response.text()
+        await response.text() // Consume response body
         throw new Error(`HTTP ${response.status}: Server returned non-JSON response. Check if API server is running on http://localhost:3000`)
       }
     }
