@@ -253,6 +253,40 @@ const uploadCommand = defineCommand({
   },
 })
 
+const uploadDirCommand = defineCommand({
+  meta: {
+    name: "upload-dir",
+    description: "Upload directory and create embeddings (respects .eesignore)",
+  },
+  args: {
+    directory: {
+      type: "positional",
+      description: "Directory to upload",
+      required: true,
+    },
+    model: {
+      type: "string",
+      alias: "m",
+      description: "Model name for embeddings",
+    },
+    maxDepth: {
+      type: "string",
+      alias: "d",
+      description: "Maximum directory depth to traverse",
+    },
+  },
+  async run({ args }) {
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.uploadDir({
+        directory: args.directory as string,
+        model: args.model,
+        maxDepth: args.maxDepth ? parseInt(args.maxDepth) : undefined,
+      })
+    )
+  },
+})
+
 const migrateCommand = defineCommand({
   meta: {
     name: "migrate",
@@ -337,6 +371,7 @@ const main = defineCommand({
     delete: deleteCommand,
     models: modelsCommand,
     upload: uploadCommand,
+    "upload-dir": uploadDirCommand,
     migrate: migrateCommand,
     providers: providersCommand,
   },
