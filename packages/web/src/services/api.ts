@@ -35,10 +35,24 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error: ErrorResponse = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }))
-      throw new Error(error.error)
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('application/json')) {
+        const error: ErrorResponse = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        }))
+        throw new Error(error.error)
+      } else {
+        // Non-JSON response (likely HTML error page)
+        const text = await response.text()
+        throw new Error(`HTTP ${response.status}: Server returned non-JSON response. Check if API server is running on http://localhost:3000`)
+      }
+    }
+
+    // Check if response is JSON before parsing
+    const contentType = response.headers.get('content-type')
+    if (!contentType?.includes('application/json')) {
+      throw new Error('Server returned non-JSON response. Check if API server is running on http://localhost:3000')
     }
 
     return response.json()
