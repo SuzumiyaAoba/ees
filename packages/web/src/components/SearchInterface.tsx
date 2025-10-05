@@ -152,6 +152,11 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               Found {searchResults.total_results} results for "{searchResults.query}"
               using {searchResults.model_name} model
             </CardDescription>
+            <div className="text-sm text-muted-foreground pt-2">
+              Showing {searchResults.results.length} of {searchResults.total_results} results
+              {searchResults.results.length < searchResults.total_results &&
+                ` (increase limit to see more)`}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
