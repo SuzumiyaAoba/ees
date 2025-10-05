@@ -57,6 +57,19 @@ export const BatchCreateEmbeddingRequestSchema = z
   })
   .openapi("BatchCreateEmbeddingRequest")
 
+export const UpdateEmbeddingRequestSchema = z
+  .object({
+    text: z.string().min(1, "Text is required").openapi({
+      description: "New text content for the embedding",
+      example: "Updated text content for re-embedding.",
+    }),
+    model_name: z.string().optional().openapi({
+      description: "Optional model name (uses existing model if not provided)",
+      example: "nomic-embed-text",
+    }),
+  })
+  .openapi("UpdateEmbeddingRequest")
+
 export const UriParamSchema = z.object({
   uri: z.string().openapi({
     param: { name: "uri", in: "path" },
@@ -151,6 +164,19 @@ export const CreateEmbeddingResponseSchema = z
     }),
   })
   .openapi("CreateEmbeddingResponse")
+
+export const UpdateEmbeddingResponseSchema = z
+  .object({
+    success: z.boolean().openapi({
+      description: "Whether the update was successful",
+      example: true,
+    }),
+    message: z.string().openapi({
+      description: "Success message",
+      example: "Embedding updated successfully",
+    }),
+  })
+  .openapi("UpdateEmbeddingResponse")
 
 export const BatchCreateEmbeddingResponseSchema = z
   .object({
@@ -326,7 +352,7 @@ export const EmbeddingsListResponseSchema = z
       description: "List of embeddings",
     }),
     count: z.number().openapi({
-      description: "Total count of embeddings",
+      description: "Number of embeddings in current page",
       example: 5,
     }),
     page: z.number().openapi({
@@ -336,6 +362,10 @@ export const EmbeddingsListResponseSchema = z
     limit: z.number().openapi({
       description: "Number of items per page",
       example: 10,
+    }),
+    total: z.number().openapi({
+      description: "Total count of all embeddings across all pages",
+      example: 25,
     }),
     total_pages: z.number().openapi({
       description: "Total number of pages",

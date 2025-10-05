@@ -88,6 +88,19 @@ export function useDeleteEmbedding() {
   })
 }
 
+// Update embedding hook
+export function useUpdateEmbedding() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { text: string; model_name?: string } }) =>
+      apiClient.updateEmbedding(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['embeddings'] })
+    },
+  })
+}
+
 // Search embeddings hook
 export function useSearchEmbeddings(searchParams: SearchEmbeddingRequest) {
   return useQuery({
@@ -129,5 +142,14 @@ export function useCurrentProvider() {
   return useQuery({
     queryKey: QUERY_KEYS.currentProvider(),
     queryFn: () => apiClient.getCurrentProvider(),
+  })
+}
+
+// Models hook
+export function useModels() {
+  return useQuery({
+    queryKey: ['models'],
+    queryFn: () => apiClient.getModels(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }

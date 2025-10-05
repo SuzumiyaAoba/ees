@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, Database, ArrowLeftRight } from 'lucide-react'
+import { Search, List, Upload, Settings, Database, ArrowLeftRight, Plus } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
+import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
 import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
+import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import type { Embedding, SearchResult } from '@/types/api'
 
 // Create a client
@@ -18,7 +20,7 @@ const queryClient = new QueryClient({
   },
 })
 
-type TabType = 'search' | 'list' | 'upload' | 'config' | 'migration'
+type TabType = 'search' | 'list' | 'create' | 'upload' | 'config' | 'migration'
 
 interface TabItem {
   id: TabType
@@ -29,14 +31,44 @@ interface TabItem {
 const tabs: TabItem[] = [
   { id: 'search', label: 'Search', icon: Search },
   { id: 'list', label: 'Browse', icon: List },
+  { id: 'create', label: 'Create', icon: Plus },
   { id: 'upload', label: 'Upload', icon: Upload },
   { id: 'migration', label: 'Migration', icon: ArrowLeftRight },
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
+const VALID_TABS: TabType[] = ['search', 'list', 'create', 'upload', 'config', 'migration']
+
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<TabType>('search')
-  // const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  // Get initial tab from URL hash or default to 'search'
+  const getInitialTab = (): TabType => {
+    const hash = window.location.hash.slice(1) as TabType
+    return VALID_TABS.includes(hash) ? hash : 'search'
+  }
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab)
+  const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [editingEmbedding, setEditingEmbedding] = useState<Embedding | null>(null)
+
+  // Sync tab with URL hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1) as TabType
+      if (VALID_TABS.includes(hash)) {
+        setActiveTab(hash)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    window.location.hash = tab
+  }
 
   const handleSearchResultSelect = (result: SearchResult) => {
     console.log('Selected search result:', result)
@@ -44,9 +76,23 @@ function AppContent() {
   }
 
   const handleEmbeddingSelect = (embedding: Embedding) => {
-    // setSelectedEmbedding(embedding)
-    console.log('Selected embedding:', embedding)
-    // You could open a modal or navigate to a detail view here
+    setSelectedEmbedding(embedding)
+    setIsDetailModalOpen(true)
+  }
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false)
+    // Keep embedding data for a moment to allow smooth close animation
+    setTimeout(() => setSelectedEmbedding(null), 200)
+  }
+
+  const handleEmbeddingEdit = (embedding: Embedding) => {
+    setEditingEmbedding(embedding)
+    handleTabChange('create')
+  }
+
+  const handleEditComplete = () => {
+    setEditingEmbedding(null)
   }
 
   const renderActiveTab = () => {
@@ -54,7 +100,9 @@ function AppContent() {
       case 'search':
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
       case 'list':
-        return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} />
+        return <EmbeddingList onEmbeddingSelect={handleEmbeddingSelect} onEmbeddingEdit={handleEmbeddingEdit} />
+      case 'create':
+        return <CreateEditEmbedding editingEmbedding={editingEmbedding} onEditComplete={handleEditComplete} />
       case 'upload':
         return <FileUpload />
       case 'migration':
@@ -97,7 +145,7 @@ function AppContent() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === tab.id
                       ? 'border-primary text-primary'
@@ -127,6 +175,13 @@ function AppContent() {
           </div>
         </div>
       </footer>
+
+      {/* Embedding Detail Modal */}
+      <EmbeddingDetailModal
+        embedding={selectedEmbedding}
+        open={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
     </div>
   )
 }

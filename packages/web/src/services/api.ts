@@ -2,6 +2,8 @@ import type {
   Embedding,
   CreateEmbeddingRequest,
   CreateEmbeddingResponse,
+  UpdateEmbeddingRequest,
+  UpdateEmbeddingResponse,
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
   SearchEmbeddingRequest,
@@ -84,6 +86,13 @@ class ApiClient {
     })
   }
 
+  async updateEmbedding(id: number, data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> {
+    return this.request<UpdateEmbeddingResponse>(`/embeddings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
   // Search operations
   async searchEmbeddings(data: SearchEmbeddingRequest): Promise<SearchEmbeddingResponse> {
     return this.request<SearchEmbeddingResponse>('/embeddings/search', {
@@ -131,7 +140,7 @@ class ApiClient {
     version?: string
     models?: string[]
   }> {
-    return this.request('/ollama/status')
+    return this.request('/providers/ollama/status')
   }
 
   // File upload helper

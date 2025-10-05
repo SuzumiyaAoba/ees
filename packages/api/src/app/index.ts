@@ -5,6 +5,7 @@ import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
+import { updateEmbeddingRoute } from "@/features/update-embedding"
 import {
   getEmbeddingByUriRoute,
   listEmbeddingsRoute,
@@ -244,6 +245,34 @@ app.openapi(deleteEmbeddingRoute, async (c) => {
       })
     ),
     "Embedding not found"
+  ) as never
+})
+
+/**
+ * Update embedding endpoint
+ * Updates the text content of an existing embedding and regenerates its vector
+ */
+app.openapi(updateEmbeddingRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const { text, model_name } = c.req.valid("json")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandler(c, "updateEmbedding",
+    withEmbeddingService(appService =>
+      Effect.gen(function* () {
+        const updated = yield* appService.updateEmbedding(id, text, model_name)
+        return {
+          success: updated,
+          message: updated ? "Embedding updated successfully" : "Failed to update embedding"
+        }
+      })
+    )
   ) as never
 })
 

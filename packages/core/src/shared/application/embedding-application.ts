@@ -97,6 +97,22 @@ export interface EmbeddingApplicationService {
   readonly deleteEmbedding: (
     id: number
   ) => Effect.Effect<boolean, DatabaseQueryError>
+
+  /**
+   * Update embedding by ID
+   */
+  readonly updateEmbedding: (
+    id: number,
+    text: string,
+    modelName?: string
+  ) => Effect.Effect<
+    boolean,
+    | ProviderConnectionError
+    | ProviderModelError
+    | ProviderAuthenticationError
+    | ProviderRateLimitError
+    | DatabaseQueryError
+  >
 }
 
 export const EmbeddingApplicationService =
@@ -144,6 +160,9 @@ const make = Effect.gen(function* () {
 
   const deleteEmbedding = (id: number) => embeddingService.deleteEmbedding(id)
 
+  const updateEmbedding = (id: number, text: string, modelName?: string) =>
+    embeddingService.updateEmbedding(id, text, modelName)
+
   return {
     createEmbedding,
     createBatchEmbeddings,
@@ -151,6 +170,7 @@ const make = Effect.gen(function* () {
     getEmbeddingByUri,
     listEmbeddings,
     deleteEmbedding,
+    updateEmbedding,
   } as const
 })
 

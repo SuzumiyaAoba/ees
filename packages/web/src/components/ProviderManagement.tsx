@@ -301,11 +301,11 @@ export function ProviderManagement() {
                 <span className="font-medium">Active Provider: {currentProvider.provider}</span>
               </div>
               {currentProvider.configuration && (
-                <div className="space-y-1 text-sm text-muted-foreground">
+                <div className="space-y-2 text-sm">
                   {Object.entries(currentProvider.configuration).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
-                      <span className="font-mono">{String(value)}</span>
+                    <div key={key}>
+                      <span className="capitalize text-muted-foreground">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
+                      <div className="font-mono text-foreground mt-0.5 break-all">{String(value)}</div>
                     </div>
                   ))}
                 </div>

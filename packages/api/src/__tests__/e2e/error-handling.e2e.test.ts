@@ -168,7 +168,10 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
 
         const response = await app.request(testCase.endpoint, requestOptions)
 
-        expect([404, 405]).toContain(response.status) // Method Not Allowed or Not Found
+        // 400: Bad Request (when route matches but validation fails, e.g., PUT /embeddings/search matches /embeddings/:id)
+        // 404: Not Found
+        // 405: Method Not Allowed
+        expect([400, 404, 405]).toContain(response.status)
       }
     })
   })

@@ -82,6 +82,7 @@ export interface ListEmbeddingsResult {
   count: number
   page: number
   limit: number
+  total: number
   total_pages: number
   has_next: boolean
   has_prev: boolean
@@ -172,6 +173,19 @@ export interface EmbeddingRepository {
    */
   readonly deleteById: (
     id: number
+  ) => Effect.Effect<boolean, DatabaseQueryError>
+
+  /**
+   * Update an embedding by ID
+   * @param id - Database ID of the embedding
+   * @param text - New text content
+   * @param embedding - New embedding vector
+   * @returns Effect containing boolean indicating success
+   */
+  readonly updateById: (
+    id: number,
+    text: string,
+    embedding: number[]
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
@@ -377,6 +391,7 @@ const make = Effect.gen(function* () {
         count: embeddingsData.length,
         page,
         limit,
+        total: totalCount,
         total_pages: totalPages,
         has_next: hasNext,
         has_prev: hasPrev,
@@ -395,6 +410,36 @@ const make = Effect.gen(function* () {
       })
 
       return result.rowsAffected > 0
+    })
+
+  const updateById = (
+    id: number,
+    text: string,
+    embedding: number[]
+  ): Effect.Effect<boolean, DatabaseQueryError> =>
+    Effect.gen(function* () {
+      const embeddingVector = JSON.stringify(embedding)
+
+      const result = yield* Effect.tryPromise({
+        try: async () => {
+          const updateResult = await client.execute({
+            sql: `
+              UPDATE embeddings
+              SET text = ?, embedding = vector(?), updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `,
+            args: [text, embeddingVector, id],
+          })
+          return updateResult.rowsAffected
+        },
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to update embedding in database",
+            cause: error,
+          }),
+      })
+
+      return result > 0
     })
 
   const searchSimilar = (
@@ -507,6 +552,7 @@ const make = Effect.gen(function* () {
     findByUri,
     findAll,
     deleteById,
+    updateById,
     searchSimilar,
   }
 
