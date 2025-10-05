@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const apiPort = process.env.API_PORT || '3000'
+const webPort = process.env.PORT || '3001'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -10,10 +13,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    port: Number(webPort),
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${apiPort}`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

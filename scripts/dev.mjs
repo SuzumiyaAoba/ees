@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process"
-import { writeFileSync } from "node:fs"
 import { getPort } from "get-port-please"
 
 const DEFAULT_API_PORT = 3000
@@ -23,12 +22,11 @@ async function findAvailablePorts() {
 	return { apiPort, webPort }
 }
 
-function updateWebEnv(apiPort) {
-	const envContent = `VITE_API_URL=http://localhost:${apiPort}\n`
-	writeFileSync("packages/web/.env.local", envContent)
-	console.log(
-		`\n✓ Updated packages/web/.env.local with API URL: http://localhost:${apiPort}\n`,
-	)
+function logServerInfo(apiPort, webPort) {
+	console.log(`\n🚀 Starting development servers...`)
+	console.log(`   API Server: http://localhost:${apiPort}`)
+	console.log(`   Web UI: http://localhost:${webPort}`)
+	console.log(`   Web UI will proxy /api requests to API Server\n`)
 }
 
 function startProcess(command, args, env, name) {
@@ -50,11 +48,7 @@ async function main() {
 	try {
 		const { apiPort, webPort } = await findAvailablePorts()
 
-		console.log(`\n🚀 Starting development servers...`)
-		console.log(`   API Server: http://localhost:${apiPort}`)
-		console.log(`   Web UI: http://localhost:${webPort}\n`)
-
-		updateWebEnv(apiPort)
+		logServerInfo(apiPort, webPort)
 
 		const apiProcess = startProcess(
 			"npm",
@@ -66,7 +60,7 @@ async function main() {
 		const webProcess = startProcess(
 			"npm",
 			["run", "dev", "--workspace=packages/web"],
-			{ PORT: webPort.toString() },
+			{ PORT: webPort.toString(), API_PORT: apiPort.toString() },
 			"Web UI",
 		)
 
