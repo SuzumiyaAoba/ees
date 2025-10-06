@@ -4,7 +4,6 @@
  */
 
 // Non-Ollama providers removed
-import type { ProviderConfigTemplate } from "@/shared/config/provider-factory"
 import { ENV_KEYS } from "@/shared/config/env-keys"
 
 /**
