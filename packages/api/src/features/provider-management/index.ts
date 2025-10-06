@@ -154,6 +154,13 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
           digest: "sha256:abc123",
         },
         {
+          name: "embeddinggemma",
+          displayName: "Embedding Gemma",
+          provider: "ollama",
+          dimensions: 768,
+          maxTokens: 8192,
+        },
+        {
           name: "text-embedding-3-small",
           displayName: "Text Embedding 3 Small",
           provider: "openai",
