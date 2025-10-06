@@ -94,6 +94,10 @@ class ApiClient {
     return this.request<Embedding>(`/embeddings/${encodeURIComponent(uri)}`)
   }
 
+  async getDistinctEmbeddingModels(): Promise<{ models: string[] }> {
+    return this.request<{ models: string[] }>(`/embeddings/models`)
+  }
+
   async deleteEmbedding(id: number): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/embeddings/${id}`, {
       method: 'DELETE',

@@ -6,6 +6,7 @@ import {
   UriModelParamSchema,
 } from "@ees/core"
 import { createResponsesWithErrors } from "@/shared/openapi-responses"
+import { z } from "zod"
 
 // List embeddings route
 export const listEmbeddingsRoute = createRoute({
@@ -46,6 +47,25 @@ export const getEmbeddingByUriRoute = createRoute({
       content: {
         "application/json": {
           schema: EmbeddingSchema,
+        },
+      },
+    },
+  }),
+})
+
+// List distinct model names present in DB (for browse filter)
+export const listEmbeddingModelsRoute = createRoute({
+  method: "get",
+  path: "/embeddings/models",
+  tags: ["Embeddings"],
+  summary: "List distinct model names",
+  description: "Return distinct model names present in the embeddings database for filtering",
+  responses: createResponsesWithErrors({
+    200: {
+      description: "List of distinct model names",
+      content: {
+        "application/json": {
+          schema: z.object({ models: z.array(z.string()) }),
         },
       },
     },

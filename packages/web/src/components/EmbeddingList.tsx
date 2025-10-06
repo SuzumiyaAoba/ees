@@ -2,7 +2,7 @@ import { List, Trash2, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useEmbeddings, useDeleteEmbedding } from '@/hooks/useEmbeddings'
+import { useEmbeddings, useDeleteEmbedding, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
@@ -33,6 +33,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   })
 
   const deleteMutation = useDeleteEmbedding()
+  const { data: distinctModels } = useDistinctEmbeddingModels()
 
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this embedding?')) {
@@ -96,11 +97,16 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             </div>
             <div>
               <label className="text-sm font-medium">Filter by Model</label>
-              <Input
-                placeholder="Enter model name..."
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={filters.modelName}
                 onChange={(e) => updateFilter('modelName', e.target.value)}
-              />
+              >
+                <option value="">All Models</option>
+                {distinctModels?.models?.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm font-medium">Items per page</label>
