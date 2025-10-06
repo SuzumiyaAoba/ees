@@ -4,7 +4,7 @@
  * Refactored to use generic configuration factory pattern
  */
 
-import { getEnv, getEnvWithDefault } from "@/shared/lib/env"
+import { getEnvWithDefault } from "@/shared/lib/env"
 import type { OllamaConfig, ProviderConfig } from "@/shared/providers/types"
 import { createSimpleProviderConfig } from "@/shared/config/provider-factory"
 import { OLLAMA_CONFIG_TEMPLATE } from "@/shared/config/provider-templates"
