@@ -16,7 +16,7 @@ import type {
  * Contains common settings shared across different provider implementations
  */
 export interface ProviderConfig {
-  readonly type: "ollama" | "openai" | "google" | "azure" | "cohere" | "mistral"
+  readonly type: "ollama"
   readonly apiKey?: string
   readonly baseUrl?: string
   readonly defaultModel?: string
@@ -38,53 +38,7 @@ export interface OllamaConfig extends ProviderConfig {
  * Configuration for OpenAI embedding provider
  * Requires API key and provides high-quality embeddings
  */
-export interface OpenAIConfig extends ProviderConfig {
-  readonly type: "openai"
-  /** OpenAI API key for authentication */
-  readonly apiKey: string
-  /** Base URL for OpenAI API @default "https://api.openai.com/v1" */
-  readonly baseUrl?: string
-  /** Default model name @default "text-embedding-3-small" */
-  readonly defaultModel?: string
-  /** OpenAI organization ID (optional) */
-  readonly organization?: string
-}
-
-/**
- * Configuration for Google AI embedding provider
- * Uses Google AI Studio for embeddings
- */
-export interface GoogleConfig extends ProviderConfig {
-  readonly type: "google"
-  /** Google AI API key for authentication */
-  readonly apiKey: string
-  /** Base URL for Google AI API endpoint */
-  readonly baseUrl?: string
-  /** Default model name @default "embedding-001" */
-  readonly defaultModel?: string
-}
-
-export interface AzureConfig extends ProviderConfig {
-  readonly type: "azure"
-  readonly apiKey: string
-  readonly baseUrl: string // Required: Azure endpoint URL
-  readonly defaultModel?: string // Default: text-embedding-ada-002
-  readonly apiVersion?: string // Azure API version
-}
-
-export interface CohereConfig extends ProviderConfig {
-  readonly type: "cohere"
-  readonly apiKey: string
-  readonly baseUrl?: string // Default: Cohere API endpoint
-  readonly defaultModel?: string // Default: embed-english-v3.0
-}
-
-export interface MistralConfig extends ProviderConfig {
-  readonly type: "mistral"
-  readonly apiKey: string
-  readonly baseUrl?: string // Default: Mistral API endpoint
-  readonly defaultModel?: string // Default: mistral-embed
-}
+// Non-Ollama provider configs removed as we only support Ollama
 
 /**
  * Information about an embedding model from a provider
