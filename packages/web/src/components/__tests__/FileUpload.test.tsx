@@ -686,4 +686,172 @@ describe('FileUpload', () => {
       }
     })
   })
+
+  describe('Directory Upload', () => {
+    it('should switch to directory mode', async () => {
+      const user = userEvent.setup()
+      
+      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+        data: mockModels,
+        isLoading: false,
+        error: null,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      renderWithQueryClient(<FileUpload />)
+
+      const modeSelect = screen.getByDisplayValue('Individual Files')
+      await user.selectOptions(modeSelect, 'directory')
+
+      expect(screen.getByText('Upload Directory')).toBeInTheDocument()
+      expect(screen.getByText('Select a directory to upload all files (respects .eesignore patterns)')).toBeInTheDocument()
+    })
+
+    it('should handle directory file selection', async () => {
+      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+        data: mockModels,
+        isLoading: false,
+        error: null,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      renderWithQueryClient(<FileUpload />)
+
+      // Switch to directory mode
+      const modeSelect = screen.getByDisplayValue('Individual Files')
+      fireEvent.change(modeSelect, { target: { value: 'directory' } })
+
+      // Create mock files with webkitRelativePath
+      const mockFile1 = new File(['content1'], 'file1.txt', { type: 'text/plain' })
+      const mockFile2 = new File(['content2'], 'file2.txt', { type: 'text/plain' })
+      const mockEesignoreFile = new File(['node_modules\n*.log'], '.eesignore', { type: 'text/plain' })
+      
+      // Add webkitRelativePath property
+      Object.defineProperty(mockFile1, 'webkitRelativePath', { value: 'subdir/file1.txt' })
+      Object.defineProperty(mockFile2, 'webkitRelativePath', { value: 'subdir/file2.txt' })
+      Object.defineProperty(mockEesignoreFile, 'webkitRelativePath', { value: '.eesignore' })
+      
+      // Mock the text() method for .eesignore file
+      Object.defineProperty(mockEesignoreFile, 'text', {
+        value: vi.fn().mockResolvedValue('node_modules\n*.log'),
+        writable: true
+      })
+
+      const fileInput = screen.getByTestId('file-upload')
+      
+      // Create a mock FileList
+      const mockFileList = {
+        0: mockFile1,
+        1: mockFile2,
+        2: mockEesignoreFile,
+        length: 3,
+        item: (index: number) => [mockFile1, mockFile2, mockEesignoreFile][index],
+        [Symbol.iterator]: function* () {
+          yield mockFile1
+          yield mockFile2
+          yield mockEesignoreFile
+        }
+      } as FileList
+
+      // Simulate file selection by directly calling the onChange handler
+      const changeEvent = {
+        target: {
+          files: mockFileList
+        }
+      } as React.ChangeEvent<HTMLInputElement>
+
+      // Get the component instance and call handleFileSelect directly
+      const component = screen.getByTestId('file-upload').closest('div')?.parentElement
+      if (component) {
+        // Trigger the change event
+        fireEvent.change(fileInput, changeEvent)
+      }
+
+      // Wait for async processing to complete
+      await waitFor(() => {
+        const controls = screen.getByTestId('upload-controls')
+        expect(controls).toBeInTheDocument()
+        expect(controls.textContent).toMatch(/3 file\(s\) selected/)
+      }, { timeout: 3000 })
+    })
+
+    it('should display filtering information', async () => {
+      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+        data: mockModels,
+        isLoading: false,
+        error: null,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      renderWithQueryClient(<FileUpload />)
+
+      // Switch to directory mode
+      const modeSelect = screen.getByDisplayValue('Individual Files')
+      fireEvent.change(modeSelect, { target: { value: 'directory' } })
+
+      // Create mock files
+      const mockFile1 = new File(['content1'], 'file1.txt', { type: 'text/plain' })
+      const mockFile2 = new File(['content2'], 'file2.txt', { type: 'text/plain' })
+      const mockEesignoreFile = new File(['node_modules\n*.log'], '.eesignore', { type: 'text/plain' })
+      
+      Object.defineProperty(mockFile1, 'webkitRelativePath', { value: 'subdir/file1.txt' })
+      Object.defineProperty(mockFile2, 'webkitRelativePath', { value: 'subdir/file2.txt' })
+      Object.defineProperty(mockEesignoreFile, 'webkitRelativePath', { value: '.eesignore' })
+      
+      // Mock the text() method for .eesignore file
+      Object.defineProperty(mockEesignoreFile, 'text', {
+        value: vi.fn().mockResolvedValue('node_modules\n*.log'),
+        writable: true
+      })
+
+      const fileInput = screen.getByTestId('file-upload')
+      
+      // Create a mock FileList
+      const mockFileList = {
+        0: mockFile1,
+        1: mockFile2,
+        2: mockEesignoreFile,
+        length: 3,
+        item: (index: number) => [mockFile1, mockFile2, mockEesignoreFile][index],
+        [Symbol.iterator]: function* () {
+          yield mockFile1
+          yield mockFile2
+          yield mockEesignoreFile
+        }
+      } as FileList
+
+      // Simulate file selection by directly calling the onChange handler
+      const changeEvent = {
+        target: {
+          files: mockFileList
+        }
+      } as React.ChangeEvent<HTMLInputElement>
+
+      // Get the component instance and call handleFileSelect directly
+      const component = screen.getByTestId('file-upload').closest('div')?.parentElement
+      if (component) {
+        // Trigger the change event
+        fireEvent.change(fileInput, changeEvent)
+      }
+
+      // Wait for async processing to complete
+      await waitFor(() => {
+        const controls = screen.getByTestId('upload-controls')
+        expect(controls).toBeInTheDocument()
+        expect(controls.textContent).toMatch(/\(3 of 3 after filtering\)/)
+      }, { timeout: 3000 })
+    })
+  })
 })
