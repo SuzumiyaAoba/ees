@@ -10,7 +10,7 @@ import * as pdfParse from "pdf-parse"
  * Supported file types for text extraction
  */
 export const SUPPORTED_FILE_TYPES = {
-  TEXT: ['.txt', '.md', '.markdown', '.log', '.csv', '.json', '.yaml', '.yml'],
+  TEXT: ['.txt', '.md', '.markdown', '.log', '.csv', '.json', '.yaml', '.yml', '.org'],
   DOCUMENT: ['.pdf'], // Future: Add more document types
   CODE: ['.js', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.h'],
 } as const
@@ -108,6 +108,13 @@ const isSupportedFileType = (filename: string, mimeType: string): boolean => {
   ]
 
   if (allSupportedExtensions.includes(extension)) {
+    return true
+  }
+
+  // Many browsers/clients send unknown text files as application/octet-stream.
+  // Allow best-effort processing for octet-stream and defer actual validation
+  // to the text extraction step.
+  if (mimeType === 'application/octet-stream') {
     return true
   }
 

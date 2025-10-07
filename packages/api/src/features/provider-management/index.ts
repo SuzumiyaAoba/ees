@@ -47,30 +47,6 @@ providerApp.openapi(listProvidersRoute, async (c) => {
           version: "0.1.0",
           modelCount: 5,
         },
-        {
-          name: "openai",
-          displayName: "OpenAI",
-          description: "OpenAI embedding models",
-          status: "unknown",
-        },
-        {
-          name: "google",
-          displayName: "Google AI",
-          description: "Google AI embedding models",
-          status: "unknown",
-        },
-        {
-          name: "cohere",
-          displayName: "Cohere",
-          description: "Cohere embedding models",
-          status: "unknown",
-        },
-        {
-          name: "mistral",
-          displayName: "Mistral",
-          description: "Mistral embedding models",
-          status: "unknown",
-        },
       ]
 
       return providers
@@ -154,36 +130,11 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
           digest: "sha256:abc123",
         },
         {
-          name: "text-embedding-3-small",
-          displayName: "Text Embedding 3 Small",
-          provider: "openai",
-          dimensions: 1536,
-          maxTokens: 8191,
-          pricePerToken: 0.00002,
-        },
-        {
-          name: "text-embedding-3-large",
-          displayName: "Text Embedding 3 Large",
-          provider: "openai",
-          dimensions: 3072,
-          maxTokens: 8191,
-          pricePerToken: 0.00013,
-        },
-        {
-          name: "embed-english-v3.0",
-          displayName: "Embed English v3.0",
-          provider: "cohere",
-          dimensions: 1024,
-          maxTokens: 512,
-          pricePerToken: 0.0001,
-        },
-        {
-          name: "mistral-embed",
-          displayName: "Mistral Embed",
-          provider: "mistral",
-          dimensions: 1024,
+          name: "embeddinggemma",
+          displayName: "Embedding Gemma",
+          provider: "ollama",
+          dimensions: 768,
           maxTokens: 8192,
-          pricePerToken: 0.0001,
         },
       ]
 

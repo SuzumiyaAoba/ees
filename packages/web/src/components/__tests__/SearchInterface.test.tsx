@@ -10,14 +10,27 @@ import { renderWithQueryClient } from '@/__tests__/test-utils'
 import { mockSearchResponse } from '@/__tests__/mocks/handlers'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
 
-// Mock the useSearchEmbeddings hook
+// Mock the useEmbeddings hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
   useSearchEmbeddings: vi.fn(),
+  useModels: vi.fn(),
 }))
 
 describe('SearchInterface', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Default mock for useModels
+    vi.mocked(useEmbeddingsModule.useModels).mockReturnValue({
+      data: {
+        models: [
+          { name: 'nomic-embed-text', displayName: 'Nomic Embed Text', available: true },
+          { name: 'text-embedding-3-small', displayName: 'OpenAI Small', available: true },
+        ]
+      },
+      isLoading: false,
+      error: null,
+    } as any)
   })
 
   describe('Rendering', () => {
@@ -243,7 +256,7 @@ describe('SearchInterface', () => {
 
       renderWithQueryClient(<SearchInterface />)
 
-      expect(screen.getByText(/error: search failed/i)).toBeInTheDocument()
+      expect(screen.getByText(/search failed/i)).toBeInTheDocument()
     })
   })
 

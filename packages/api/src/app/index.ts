@@ -9,6 +9,7 @@ import { updateEmbeddingRoute } from "@/features/update-embedding"
 import {
   getEmbeddingByUriRoute,
   listEmbeddingsRoute,
+  listEmbeddingModelsRoute,
 } from "@/features/list-embeddings"
 import { listModelsRoute } from "@/features/list-models"
 import { migrationApp } from "@/features/migrate-embeddings"
@@ -215,6 +216,19 @@ app.openapi(listEmbeddingsRoute, async (c) => {
   return executeEffectHandler(c, "listEmbeddings",
     withEmbeddingService(appService =>
       appService.listEmbeddings(filters)
+    )
+  ) as never
+})
+
+// List distinct model names (from DB) for browse filter
+app.openapi(listEmbeddingModelsRoute, async (c) => {
+  return executeEffectHandler(c, "listEmbeddingModels",
+    withModelManager(modelManager =>
+      Effect.gen(function* () {
+        const stats = yield* modelManager.getModelUsageStats()
+        const models = Object.keys(stats)
+        return { models }
+      })
     )
   ) as never
 })

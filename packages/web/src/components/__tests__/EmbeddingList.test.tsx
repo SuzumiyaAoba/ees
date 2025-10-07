@@ -170,7 +170,7 @@ describe('EmbeddingList', () => {
 
       renderWithQueryClient(<EmbeddingList />)
 
-      expect(screen.getByText(/error: failed to fetch embeddings/i)).toBeInTheDocument()
+      expect(screen.getByText(/failed to fetch embeddings/i)).toBeInTheDocument()
     })
   })
 
@@ -454,7 +454,7 @@ describe('EmbeddingList', () => {
 
       renderWithQueryClient(<EmbeddingList />)
 
-      expect(screen.getByText(/Showing 1-2 of 2 embeddings/)).toBeInTheDocument()
+      expect(screen.getByText(/Total: 2 embeddings/)).toBeInTheDocument()
     })
   })
 

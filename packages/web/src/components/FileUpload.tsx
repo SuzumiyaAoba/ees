@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useUploadFile, useProviderModels } from '@/hooks/useEmbeddings'
+import { loadEesignoreFromFiles, filterFiles } from '@/utils/eesignore'
 
 interface FileWithStatus {
   file: File
@@ -23,14 +24,14 @@ export function FileUpload() {
   const [dragActive, setDragActive] = useState(false)
   const [selectedModel, setSelectedModel] = useState('')
   const [uploadMode, setUploadMode] = useState<'files' | 'directory'>('files')
+  const [filterInfo, setFilterInfo] = useState<{ total: number; filtered: number } | null>(null)
   const { data: models } = useProviderModels()
   const uploadMutation = useUploadFile()
 
   const generateFileId = () => Math.random().toString(36).substring(2, 15)
 
-  const addFiles = useCallback((newFiles: FileList) => {
-    const fileArray = Array.from(newFiles)
-    const filesWithStatus: FileWithStatus[] = fileArray.map(file => ({
+  const addFiles = useCallback((newFiles: File[]) => {
+    const filesWithStatus: FileWithStatus[] = newFiles.map(file => ({
       file,
       id: generateFileId(),
       status: 'pending' as const,
@@ -55,7 +56,7 @@ export function FileUpload() {
     setDragActive(false)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(e.dataTransfer.files)
+      addFiles(Array.from(e.dataTransfer.files))
       e.dataTransfer.clearData()
     }
   }, [addFiles])
@@ -72,9 +73,24 @@ export function FileUpload() {
     setDragActive(false)
   }, [])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files)
+      if (uploadMode === 'directory') {
+        // Load .eesignore patterns and filter files
+        const patterns = await loadEesignoreFromFiles(e.target.files)
+        const fileArray = Array.from(e.target.files)
+        const totalCount = fileArray.length
+        const filtered = filterFiles(fileArray, patterns)
+
+        // Store filtering info
+        setFilterInfo({ total: totalCount, filtered: filtered.length })
+
+        // Add filtered files directly as array
+        addFiles(filtered)
+      } else {
+        setFilterInfo(null)
+        addFiles(Array.from(e.target.files))
+      }
     }
   }
 
@@ -82,12 +98,27 @@ export function FileUpload() {
     updateFileStatus(fileWithStatus.id, 'uploading')
 
     try {
-      await uploadMutation.mutateAsync({
+      console.log('[FileUpload] Uploading file:', fileWithStatus.file.name, 'Model:', selectedModel)
+      const result = await uploadMutation.mutateAsync({
         file: fileWithStatus.file,
         modelName: selectedModel || undefined,
       })
+      console.log('[FileUpload] Upload success:', result)
+
+      // Treat a 200 response with failed > 0 as an error for this file
+      if (typeof result === 'object' && result && 'failed' in result && typeof (result as { failed: number }).failed === 'number') {
+        const failedCount = (result as { failed: number }).failed
+        const successfulCount = (result as { successful?: number }).successful ?? 0
+        if (failedCount > 0 && successfulCount === 0) {
+          const message = (result as { message?: string }).message ?? 'All files failed to process'
+          updateFileStatus(fileWithStatus.id, 'error', message)
+          return
+        }
+      }
+
       updateFileStatus(fileWithStatus.id, 'success')
     } catch (error) {
+      console.error('[FileUpload] Upload error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Upload failed'
       updateFileStatus(fileWithStatus.id, 'error', errorMessage)
     }
@@ -222,7 +253,7 @@ export function FileUpload() {
               </p>
               <Input
                 type="file"
-                multiple={uploadMode === 'files'}
+                multiple={true}
                 {...(uploadMode === 'directory' && ({
                   webkitdirectory: '',
                   directory: '',
@@ -230,20 +261,28 @@ export function FileUpload() {
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
+                data-testid="file-upload"
               />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Button variant="outline" type="button">
-                  {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
-                </Button>
-              </label>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
+              </Button>
             </div>
           </div>
 
           {/* Upload Controls */}
           {files.length > 0 && (
-            <div className="flex justify-between items-center pt-4">
+            <div className="flex justify-between items-center pt-4" data-testid="upload-controls">
               <div className="text-sm text-muted-foreground">
                 {files.length} file(s) selected
+                {filterInfo && (
+                  <span className="ml-2 text-blue-600">
+                    ({filterInfo.filtered} of {filterInfo.total} after filtering)
+                  </span>
+                )}
                 {pendingCount > 0 && ` • ${pendingCount} pending`}
                 {uploadingCount > 0 && ` • ${uploadingCount} uploading`}
                 {successCount > 0 && ` • ${successCount} completed`}

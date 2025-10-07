@@ -1,6 +1,6 @@
-# Provider Configuration Guide
+# Provider Configuration (Ollama Only)
 
-Complete guide for configuring embedding providers in EES (Embeddings API Service).
+This guide documents configuring the single supported provider: Ollama.
 
 ## Table of Contents
 
@@ -33,25 +33,20 @@ EES supports multiple embedding providers, allowing you to choose based on your 
 | **Fast inference** | Ollama (local) or Cohere |
 | **Enterprise Azure** | Azure OpenAI |
 
-## Supported Providers
+## Supported Provider
 
 | Provider | Free Tier | Self-Hosted | API Key Required | Languages |
 |----------|-----------|-------------|------------------|-----------|
 | **Ollama** | ✅ Yes (Unlimited) | ✅ Yes | ❌ No | Multiple |
-| **OpenAI** | ❌ No | ❌ No | ✅ Yes | 100+ |
-| **Google AI** | ✅ Limited | ❌ No | ✅ Yes | 100+ |
-| **Cohere** | ✅ Limited | ❌ No | ✅ Yes | 100+ |
-| **Mistral** | ✅ Limited | ❌ No | ✅ Yes | Multiple |
-| **Azure OpenAI** | ❌ No | ☁️ Azure | ✅ Yes | 100+ |
 
 ---
 
 ## Provider Setup
 
-### Ollama (Default)
+### Ollama
 
 **Overview:**
-Ollama provides local, self-hosted embedding models with no API costs. It's the default provider for EES.
+Ollama provides local, self-hosted embedding models with no API costs. It is the only supported provider in EES.
 
 **Advantages:**
 - ✅ Completely free

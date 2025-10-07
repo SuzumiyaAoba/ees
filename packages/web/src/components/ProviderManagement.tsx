@@ -164,7 +164,7 @@ function ModelCard({ model, onDelete }: ModelCardProps) {
 }
 
 export function ProviderManagement() {
-  const [selectedProvider, setSelectedProvider] = useState<string>()
+  const [selectedProvider, setSelectedProvider] = useState<string>('ollama')
   const [newModelName, setNewModelName] = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
@@ -230,9 +230,7 @@ export function ProviderManagement() {
             <Server className="h-5 w-5" />
             Provider Overview
           </CardTitle>
-          <CardDescription>
-            Status and configuration of available embedding providers
-          </CardDescription>
+          <CardDescription>Ollama provider status and configuration</CardDescription>
         </CardHeader>
         <CardContent>
           {providersLoading ? (
@@ -242,15 +240,13 @@ export function ProviderManagement() {
             </div>
           ) : providers ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.map((provider) => (
+              {providers.filter(p => p.name === 'ollama').map((provider) => (
                 <Card
                   key={provider.name}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedProvider === provider.name ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => setSelectedProvider(
-                    selectedProvider === provider.name ? undefined : provider.name
-                  )}
+                  onClick={() => setSelectedProvider('ollama')}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -415,10 +411,7 @@ export function ProviderManagement() {
             <Database className="h-5 w-5" />
             Model Management
           </CardTitle>
-          <CardDescription>
-            View and manage models across all providers
-            {selectedProvider && ` (filtered by ${selectedProvider})`}
-          </CardDescription>
+          <CardDescription>View and manage Ollama models</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Model Pull Interface */}
@@ -439,31 +432,7 @@ export function ProviderManagement() {
             </div>
           </div>
 
-          {/* Provider Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Filter by provider:</span>
-            <select
-              value={selectedProvider || ''}
-              onChange={(e) => setSelectedProvider(e.target.value || undefined)}
-              className="px-3 py-1 border rounded text-sm"
-            >
-              <option value="">All providers</option>
-              {providers?.map((provider) => (
-                <option key={provider.name} value={provider.name}>
-                  {provider.displayName || provider.name}
-                </option>
-              ))}
-            </select>
-            {selectedProvider && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedProvider(undefined)}
-              >
-                Clear filter
-              </Button>
-            )}
-          </div>
+          {/* Provider Filter removed: Ollama only */}
 
           {/* Models Grid */}
           {modelsLoading ? (

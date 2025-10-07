@@ -407,19 +407,8 @@ const makeCLICommands = Effect.gen(function* () {
     Effect.gen(function* () {
       switch (options.action) {
         case "list": {
-          // Static provider information for now
-          const providerList = [
-            { name: "ollama", status: "online", description: "Local AI model provider" },
-            { name: "openai", status: "unknown", description: "OpenAI embedding models" },
-            { name: "google", status: "unknown", description: "Google AI embedding models" },
-            { name: "cohere", status: "unknown", description: "Cohere embedding models" },
-            { name: "mistral", status: "unknown", description: "Mistral embedding models" },
-          ]
-
           log("Available providers:")
-          for (const provider of providerList) {
-            log(`- ${provider.name} (${provider.status}): ${provider.description}`)
-          }
+          log("- ollama (online): Local AI model provider")
           break
         }
 

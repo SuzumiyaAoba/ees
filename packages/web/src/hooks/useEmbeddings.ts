@@ -14,6 +14,7 @@ export const QUERY_KEYS = {
   providerModels: (provider?: string) => ['providerModels', provider],
   currentProvider: () => ['currentProvider'],
   search: (query: SearchEmbeddingRequest) => ['search', query],
+  distinctModels: () => ['embeddings', 'distinct-models'],
 } as const
 
 // Embedding list hook
@@ -151,5 +152,14 @@ export function useModels() {
     queryKey: ['models'],
     queryFn: () => apiClient.getModels(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+// Distinct model names (from DB) for browse filter
+export function useDistinctEmbeddingModels() {
+  return useQuery({
+    queryKey: QUERY_KEYS.distinctModels(),
+    queryFn: () => apiClient.getDistinctEmbeddingModels(),
+    staleTime: 60 * 1000,
   })
 }

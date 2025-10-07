@@ -3,7 +3,7 @@
  * Separates database operations from business logic
  */
 
-import { and, eq, type SQL, sql } from "drizzle-orm"
+import { and, eq, like, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import {
   DatabaseService,
@@ -301,7 +301,8 @@ const make = Effect.gen(function* () {
       // Build where conditions based on filters
       const whereConditions: SQL<unknown>[] = []
       if (options?.uri) {
-        whereConditions.push(eq(embeddings.uri, options.uri))
+        // Enable partial match search for URI using SQL LIKE with wildcards
+        whereConditions.push(like(embeddings.uri, `%${options.uri}%`))
       }
       if (options?.model_name) {
         whereConditions.push(eq(embeddings.modelName, options.model_name))
