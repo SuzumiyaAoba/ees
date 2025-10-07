@@ -8,6 +8,7 @@ import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
 import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
+import { apiClient } from '@/services/api'
 import type { Embedding, SearchResult } from '@/types/api'
 
 // Create a client
@@ -70,9 +71,25 @@ function AppContent() {
     window.location.hash = tab
   }
 
-  const handleSearchResultSelect = (result: SearchResult) => {
-    console.log('Selected search result:', result)
-    // You could open a modal or navigate to a detail view here
+  const handleSearchResultSelect = async (result: SearchResult) => {
+    // Optimistically open with minimal data, then hydrate with full embedding
+    setSelectedEmbedding({
+      id: result.id,
+      uri: result.uri,
+      text: result.text,
+      model_name: result.model_name,
+      embedding: [],
+      created_at: result.created_at,
+      updated_at: result.updated_at,
+    })
+    setIsDetailModalOpen(true)
+
+    try {
+      const full = await apiClient.getEmbedding(result.uri, result.model_name)
+      setSelectedEmbedding(full)
+    } catch (e) {
+      console.error('Failed to load embedding details from search result:', e)
+    }
   }
 
   const handleEmbeddingSelect = (embedding: Embedding) => {

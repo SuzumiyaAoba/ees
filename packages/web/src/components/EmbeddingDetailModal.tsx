@@ -77,10 +77,14 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
             <div>
               <span className="text-xs text-muted-foreground">First 10 values:</span>
               <Card className="mt-1 p-3 bg-muted/30">
-                <code className="text-xs font-mono block overflow-x-auto">
-                  [{embedding.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
-                  {embedding.embedding.length > 10 ? ', ...' : ''}]
-                </code>
+                {embedding.embedding.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">Loading embedding vector...</span>
+                ) : (
+                  <code className="text-xs font-mono block overflow-x-auto">
+                    [{embedding.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                    {embedding.embedding.length > 10 ? ', ...' : ''}]
+                  </code>
+                )}
               </Card>
             </div>
           </div>

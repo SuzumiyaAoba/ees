@@ -39,13 +39,8 @@ export const OllamaProviderService = Context.GenericTag<OllamaProviderService>(
   "OllamaProviderService"
 )
 
-interface OllamaEmbedResponse {
-  embeddings: number[][]
-  model: string
-  total_duration?: number
-  load_duration?: number
-  prompt_eval_count?: number
-}
+// Legacy Ollama embed response shape kept for reference:
+// { embeddings: number[][], model: string, ... }
 
 const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
@@ -60,35 +55,55 @@ const make = (config: OllamaConfig) =>
             "embeddinggemma"
           )
 
-          const response = await fetch(`${baseUrl}/api/embed`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: modelName,
-              input: [request.text],
-            }),
-          })
+          // Prefer modern embeddings endpoint, but handle multiple response shapes
+          const tryRequest = async () => {
+            const res = await fetch(`${baseUrl}/api/embeddings`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: modelName,
+                // Some Ollama versions expect "prompt", others accept "input"
+                prompt: request.text,
+                input: request.text,
+              }),
+            })
+            return res
+          }
+
+          // Fallback to legacy endpoint if needed
+          let response = await tryRequest()
+          if (!response.ok) {
+            response = await fetch(`${baseUrl}/api/embed`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ model: modelName, input: [request.text] }),
+            })
+          }
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${await response.text()}`)
           }
 
-          const result = await response.json() as OllamaEmbedResponse
+          const raw = await response.json() as any
 
-          if (!result.embeddings || !Array.isArray(result.embeddings) || result.embeddings.length === 0) {
-            throw new Error("Invalid response format from Ollama API")
+          // Handle both shapes:
+          // - { embedding: number[] }
+          // - { embeddings: number[][] }
+          const embedding: number[] | undefined = Array.isArray(raw?.embedding)
+            ? (raw.embedding as number[])
+            : (Array.isArray(raw?.embeddings) && Array.isArray(raw.embeddings[0])
+              ? (raw.embeddings[0] as number[])
+              : undefined)
+
+          if (!embedding || embedding.length === 0) {
+            throw new Error("Invalid embedding response from Ollama API")
           }
-
-          const embedding = result.embeddings[0] as number[]
 
           return {
             embedding,
             model: modelName,
             provider: "ollama",
             dimensions: embedding.length,
-            // Ollama doesn't provide token usage in embed API, so omit the property
           } satisfies EmbeddingResponse
         },
         catch: (error) => {
