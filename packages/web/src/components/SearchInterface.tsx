@@ -29,6 +29,17 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const { data: searchResults, isLoading: isSearching, error } = useSearchEmbeddings(searchParams)
   const { data: modelsData } = useModels()
 
+  // When models are loaded, set default model to the first available one if not selected yet
+  useEffect(() => {
+    if (!modelsData?.models) return
+    if (searchParams.model_name) return
+
+    const firstAvailable = modelsData.models.find((m) => m.available)
+    if (firstAvailable?.name) {
+      updateFilter('model_name', firstAvailable.name)
+    }
+  }, [modelsData, searchParams.model_name, updateFilter])
+
   // Debounced search
   useEffect(() => {
     if (!query.trim()) {
@@ -92,9 +103,8 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={searchParams.model_name || ''}
-                onChange={(e) => updateFilter('model_name', e.target.value || undefined)}
+                onChange={(e) => updateFilter('model_name', e.target.value)}
               >
-                <option value="">All Models</option>
                 {modelsData?.models
                   .filter((model) => model.available)
                   .map((model) => (
