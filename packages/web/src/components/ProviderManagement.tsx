@@ -246,9 +246,7 @@ export function ProviderManagement() {
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedProvider === provider.name ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => setSelectedProvider(
-                    selectedProvider === provider.name ? undefined : provider.name
-                  )}
+                  onClick={() => setSelectedProvider('ollama')}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">
