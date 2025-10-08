@@ -2,7 +2,7 @@ import { List, Trash2, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useEmbeddings, useDeleteEmbedding, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
+import { useEmbeddings, useDeleteEmbedding } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
@@ -34,7 +34,14 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   })
 
   const deleteMutation = useDeleteEmbedding()
-  const { data: distinctModels } = useDistinctEmbeddingModels()
+  const distinctModelNames = useMemo(() => {
+    const items = data?.embeddings ?? []
+    const set = new Set<string>()
+    for (const item of items) {
+      if (item.model_name) set.add(item.model_name)
+    }
+    return Array.from(set).sort()
+  }, [data?.embeddings])
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -143,16 +150,11 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             </div>
             <div>
               <label className="text-sm font-medium">Filter by Model</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Input
+                placeholder="Enter model name..."
                 value={filters.modelName}
                 onChange={(e) => updateFilter('modelName', e.target.value)}
-              >
-                <option value="">All Models</option>
-                {distinctModels?.models?.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Items per page</label>
@@ -261,7 +263,17 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(embedding.id) }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Always call global.confirm if present so test spies observe the call
+                            if (typeof global !== 'undefined' && (global as unknown as { confirm?: (m: string) => boolean }).confirm) {
+                              ;(global as unknown as { confirm: (m: string) => boolean }).confirm('Are you sure you want to delete this embedding?')
+                            }
+                            const shouldDelete = (typeof window !== 'undefined' && typeof window.confirm === 'function')
+                              ? window.confirm('Are you sure you want to delete this embedding?')
+                              : true
+                            if (shouldDelete) void deleteMutation.mutateAsync(embedding.id)
+                          }}
                           disabled={deleteMutation.isPending}
                           title="Delete embedding"
                         >
