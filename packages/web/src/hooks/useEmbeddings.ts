@@ -31,11 +31,11 @@ export function useEmbeddings(params: {
 }
 
 // Single embedding hook
-export function useEmbedding(uri: string) {
+export function useEmbedding(uri: string, modelName: string) {
   return useQuery({
     queryKey: QUERY_KEYS.embedding(uri),
-    queryFn: () => apiClient.getEmbedding(uri),
-    enabled: !!uri,
+    queryFn: () => apiClient.getEmbedding(uri, modelName),
+    enabled: !!uri && !!modelName,
   })
 }
 

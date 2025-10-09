@@ -34,14 +34,6 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   })
 
   const deleteMutation = useDeleteEmbedding()
-  const distinctModelNames = useMemo(() => {
-    const items = data?.embeddings ?? []
-    const set = new Set<string>()
-    for (const item of items) {
-      if (item.model_name) set.add(item.model_name)
-    }
-    return Array.from(set).sort()
-  }, [data?.embeddings])
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -71,16 +63,6 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   }, [data?.embeddings])
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
-
-  const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this embedding?')) {
-      try {
-        await deleteMutation.mutateAsync(id)
-      } catch (error) {
-        console.error('Failed to delete embedding:', error)
-      }
-    }
-  }
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return
