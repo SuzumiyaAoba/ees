@@ -91,11 +91,13 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
 
       for (const fileResult of fileResults) {
         try {
-          // Create embedding for file content
+          // Create embedding for file content (with optional conversion info)
           const embedding = yield* appService.createEmbedding({
             uri: fileResult.filename,
             text: fileResult.content,
             modelName,
+            originalContent: fileResult.originalContent,
+            convertedFormat: fileResult.convertedFormat,
           })
 
           results.push({

@@ -19,12 +19,14 @@ import type { Embedding } from "@/entities/embedding/model/embedding"
  */
 const EMBEDDING_QUERIES = {
   INSERT_OR_UPDATE: `
-    INSERT INTO embeddings (uri, text, model_name, embedding)
-    VALUES (?, ?, ?, vector(?))
+    INSERT INTO embeddings (uri, text, model_name, embedding, original_content, converted_format)
+    VALUES (?, ?, ?, vector(?), ?, ?)
     ON CONFLICT(uri) DO UPDATE SET
       text = excluded.text,
       model_name = excluded.model_name,
       embedding = excluded.embedding,
+      original_content = excluded.original_content,
+      converted_format = excluded.converted_format,
       updated_at = CURRENT_TIMESTAMP
     RETURNING id
   `,
@@ -137,13 +139,17 @@ export interface EmbeddingRepository {
    * @param text - Text content
    * @param modelName - Model name used to generate embedding
    * @param embedding - Embedding vector
+   * @param originalContent - Optional original content before conversion
+   * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing the saved embedding's ID
    */
   readonly save: (
     uri: string,
     text: string,
     modelName: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ) => Effect.Effect<SaveEmbeddingResult, DatabaseQueryError>
 
   /**
@@ -212,7 +218,9 @@ const make = Effect.gen(function* () {
     uri: string,
     text: string,
     modelName: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ): Effect.Effect<SaveEmbeddingResult, DatabaseQueryError> =>
     Effect.gen(function* () {
       // Convert embedding array to libSQL F32_BLOB format using vector() function
@@ -223,7 +231,7 @@ const make = Effect.gen(function* () {
         try: async () => {
           const insertResult = await client.execute({
             sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
-            args: [uri, text, modelName, embeddingVector],
+            args: [uri, text, modelName, embeddingVector, originalContent ?? null, convertedFormat ?? null],
           })
           return insertResult.rows
         },

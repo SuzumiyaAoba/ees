@@ -47,12 +47,16 @@ export interface EmbeddingService {
    * @param uri - Unique identifier for the text content
    * @param text - Text content to generate embedding for
    * @param modelName - Optional model name to use (defaults to provider's default)
+   * @param originalContent - Optional original content before conversion
+   * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing the embedding creation result
    */
   readonly createEmbedding: (
     uri: string,
     text: string,
-    modelName?: string
+    modelName?: string,
+    originalContent?: string,
+    convertedFormat?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
     | ProviderConnectionError
@@ -330,7 +334,9 @@ const make = Effect.gen(function* () {
   const createSingleEmbedding = (
     uri: string,
     text: string,
-    modelName?: string
+    modelName?: string,
+    originalContent?: string,
+    convertedFormat?: string
   ): Effect.Effect<
     { id: number; uri: string; model_name: string },
     ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError | DatabaseQueryError
@@ -365,10 +371,10 @@ const make = Effect.gen(function* () {
       Effect.flatMap(() =>
         providerService.generateEmbedding({ text, modelName })
       ),
-      // Step 3: Save embedding to database with all metadata
+      // Step 3: Save embedding to database with all metadata (including optional conversion info)
       Effect.flatMap((embeddingResponse) =>
         pipe(
-          repository.save(uri, text, embeddingResponse.model, embeddingResponse.embedding),
+          repository.save(uri, text, embeddingResponse.model, embeddingResponse.embedding, originalContent, convertedFormat),
           // Step 4: Record success metrics after database save
           Effect.flatMap((saveResult) =>
             pipe(
@@ -402,9 +408,9 @@ const make = Effect.gen(function* () {
     )
   }
 
-  const createEmbedding = (uri: string, text: string, modelName?: string) =>
+  const createEmbedding = (uri: string, text: string, modelName?: string, originalContent?: string, convertedFormat?: string) =>
     pipe(
-      createSingleEmbedding(uri, text, modelName),
+      createSingleEmbedding(uri, text, modelName, originalContent, convertedFormat),
       Effect.map((result) => ({
         ...result,
         message: "Embedding created successfully",
