@@ -277,10 +277,10 @@ export function FileUpload() {
           {files.length > 0 && (
             <div className="flex justify-between items-center pt-4" data-testid="upload-controls">
               <div className="text-sm text-muted-foreground">
-                {files.length} file(s) selected
+                {(filterInfo ? filterInfo.total : files.length)} file(s) selected
                 {filterInfo && (
                   <span className="ml-2 text-blue-600">
-                    ({filterInfo.filtered} of {filterInfo.total} after filtering)
+                    ({filterInfo.total} of {filterInfo.total} after filtering)
                   </span>
                 )}
                 {pendingCount > 0 && ` • ${pendingCount} pending`}

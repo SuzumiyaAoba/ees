@@ -119,8 +119,20 @@ export async function loadEesignoreFromFiles(files: FileList): Promise<string[]>
  * Filter files based on ignore patterns
  */
 export function filterFiles(files: File[], patterns: string[]): File[] {
+  // Always exclude .gitignore and .eesignore files regardless of patterns
+  const alwaysExcluded = new Set(['.gitignore', '.eesignore'])
+
   return files.filter(file => {
     const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
+
+    // Extract the base filename for direct name checks
+    const segments = path.split("/")
+    const baseName = segments[segments.length - 1]
+
+    if (alwaysExcluded.has(baseName)) {
+      return false
+    }
+
     return !shouldIgnore(path, patterns)
   })
 }

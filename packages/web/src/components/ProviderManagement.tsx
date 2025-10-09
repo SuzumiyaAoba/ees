@@ -240,13 +240,13 @@ export function ProviderManagement() {
             </div>
           ) : providers ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.filter(p => p.name === 'ollama').map((provider) => (
+              {providers.map((provider) => (
                 <Card
                   key={provider.name}
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedProvider === provider.name ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => setSelectedProvider('ollama')}
+                  onClick={() => setSelectedProvider(provider.name)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -258,7 +258,7 @@ export function ProviderManagement() {
                     </p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{provider.version || 'Unknown version'}</span>
-                      {provider.modelCount && (
+                      {provider.modelCount !== undefined && (
                         <span className="flex items-center gap-1">
                           <Database className="h-3 w-3" />
                           {provider.modelCount} models
@@ -432,7 +432,21 @@ export function ProviderManagement() {
             </div>
           </div>
 
-          {/* Provider Filter removed: Ollama only */}
+          {/* Provider Filter */}
+          {providers && providers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Filter by provider:</label>
+              <select
+                className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={selectedProvider}
+                onChange={(e) => setSelectedProvider(e.target.value)}
+              >
+                {providers.map((p) => (
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Models Grid */}
           {modelsLoading ? (
@@ -453,12 +467,7 @@ export function ProviderManagement() {
           ) : (
             <div className="text-center py-8">
               <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground">
-                {selectedProvider
-                  ? `No models found for ${selectedProvider}`
-                  : 'No models available'
-                }
-              </p>
+              <p className="text-muted-foreground">No models available</p>
             </div>
           )}
         </CardContent>

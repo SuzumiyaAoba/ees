@@ -90,8 +90,8 @@ class ApiClient {
     return this.request<EmbeddingsListResponse>(`/embeddings${query ? `?${query}` : ''}`)
   }
 
-  async getEmbedding(uri: string): Promise<Embedding> {
-    return this.request<Embedding>(`/embeddings/${encodeURIComponent(uri)}`)
+  async getEmbedding(uri: string, modelName: string): Promise<Embedding> {
+    return this.request<Embedding>(`/embeddings/${encodeURIComponent(uri)}/${encodeURIComponent(modelName)}`)
   }
 
   async getDistinctEmbeddingModels(): Promise<{ models: string[] }> {

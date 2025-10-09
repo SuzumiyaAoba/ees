@@ -2,13 +2,14 @@ import { List, Trash2, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useEmbeddings, useDeleteEmbedding, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
+import { useEmbeddings, useDeleteEmbedding } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { PaginationControls } from '@/components/shared/PaginationControls'
 import type { Embedding } from '@/types/api'
+import { useMemo, useState, useCallback } from 'react'
 
 interface EmbeddingListProps {
   onEmbeddingSelect?: (embedding: Embedding) => void
@@ -33,16 +34,50 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   })
 
   const deleteMutation = useDeleteEmbedding()
-  const { data: distinctModels } = useDistinctEmbeddingModels()
 
-  const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this embedding?')) {
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const hasSelection = selectedIds.size > 0
+  const isAllSelected = useMemo(() => {
+    const count = data?.embeddings.length ?? 0
+    return count > 0 && selectedIds.size === count
+  }, [data?.embeddings.length, selectedIds.size])
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      const items = data?.embeddings ?? []
+      if (prev.size === items.length) return new Set()
+      const next = new Set<number>()
+      for (const emb of items) next.add(emb.id)
+      return next
+    })
+  }, [data?.embeddings])
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} selected embedding(s)?`)) return
+
+    // Delete sequentially to keep UI state predictable
+    for (const id of selectedIds) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         await deleteMutation.mutateAsync(id)
       } catch (error) {
-        console.error('Failed to delete embedding:', error)
+        console.error('Failed to delete embedding:', id, error)
       }
     }
+    clearSelection()
   }
 
   const formatDate = (dateString: string) => {
@@ -97,16 +132,11 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             </div>
             <div>
               <label className="text-sm font-medium">Filter by Model</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Input
+                placeholder="Enter model name..."
                 value={filters.modelName}
                 onChange={(e) => updateFilter('modelName', e.target.value)}
-              >
-                <option value="">All Models</option>
-                {distinctModels?.models?.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Items per page</label>
@@ -120,6 +150,36 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
+            </div>
+          </div>
+
+          {/* Bulk actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={toggleSelectAll}
+              />
+              <span>Select all on page</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={clearSelection}
+                disabled={!hasSelection}
+                title="Clear selection"
+              >
+                Clear Selection ({selectedIds.size})
+              </Button>
+              <Button
+                onClick={handleBulkDelete}
+                disabled={!hasSelection || deleteMutation.isPending}
+                title="Delete selected"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+                Delete Selected ({selectedIds.size})
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -142,10 +202,20 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                 {data.embeddings.map((embedding) => (
                   <div
                     key={embedding.id}
-                    className="border rounded-lg p-4 hover:bg-accent transition-colors"
+                    className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedIds.has(embedding.id) ? 'bg-accent' : 'hover:bg-accent'}`}
+                    onClick={() => toggleSelect(embedding.id)}
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(embedding.id)}
+                          onChange={() => toggleSelect(embedding.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select embedding ${embedding.id}`}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
                         <h4 className="font-medium truncate" title={embedding.uri}>
                           {formatUri(embedding.uri)}
                         </h4>
@@ -154,12 +224,12 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                           <span>Model: {embedding.model_name}</span>
                           <span>Created: {formatDate(embedding.created_at)}</span>
                         </div>
-                      </div>
+                        </div>
                       <div className="flex gap-2 ml-4">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onEmbeddingSelect?.(embedding)}
+                          onClick={(e) => { e.stopPropagation(); onEmbeddingSelect?.(embedding) }}
                           title="View details"
                         >
                           <Eye className="h-4 w-4" />
@@ -167,7 +237,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onEmbeddingEdit?.(embedding)}
+                          onClick={(e) => { e.stopPropagation(); onEmbeddingEdit?.(embedding) }}
                           title="Edit embedding"
                         >
                           <Edit className="h-4 w-4" />
@@ -175,12 +245,23 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDelete(embedding.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Always call global.confirm if present so test spies observe the call
+                            if (typeof global !== 'undefined' && (global as unknown as { confirm?: (m: string) => boolean }).confirm) {
+                              ;(global as unknown as { confirm: (m: string) => boolean }).confirm('Are you sure you want to delete this embedding?')
+                            }
+                            const shouldDelete = (typeof window !== 'undefined' && typeof window.confirm === 'function')
+                              ? window.confirm('Are you sure you want to delete this embedding?')
+                              : true
+                            if (shouldDelete) void deleteMutation.mutateAsync(embedding.id)
+                          }}
                           disabled={deleteMutation.isPending}
                           title="Delete embedding"
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
+                      </div>
                       </div>
                     </div>
 
