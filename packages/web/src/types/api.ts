@@ -6,6 +6,8 @@ export interface Embedding {
   text: string
   model_name: string
   embedding: number[]
+  original_content?: string
+  converted_format?: string
   created_at: string
   updated_at: string
 }
@@ -63,6 +65,8 @@ export interface SearchResult {
   text: string
   model_name: string
   similarity: number
+  original_content?: string
+  converted_format?: string
   created_at: string
   updated_at: string
 }
