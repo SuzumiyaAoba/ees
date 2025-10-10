@@ -61,6 +61,9 @@
             ollama
             sqlite
 
+            # Document conversion tools
+            pandoc
+
             # Development tools
             git
             curl
@@ -79,6 +82,7 @@
             echo "📦 npm version: $(npm --version)"
             echo "🗄️  SQLite version: $(sqlite3 --version)"
             echo "🤖 Ollama version: $(ollama --version)"
+            echo "📄 Pandoc version: $(pandoc --version | head -n1)"
             echo ""
 
             # Enable corepack for yarn/pnpm support (skip if it fails in Nix environment)
