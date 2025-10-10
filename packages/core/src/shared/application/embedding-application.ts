@@ -36,6 +36,8 @@ export interface EmbeddingApplicationService {
     uri: string
     text: string
     modelName?: string
+    originalContent?: string
+    convertedFormat?: string
   }) => Effect.Effect<
     CreateEmbeddingResponse,
     | ProviderConnectionError
@@ -128,8 +130,10 @@ const make = Effect.gen(function* () {
     uri: string
     text: string
     modelName?: string
+    originalContent?: string
+    convertedFormat?: string
   }) =>
-    embeddingService.createEmbedding(params.uri, params.text, params.modelName)
+    embeddingService.createEmbedding(params.uri, params.text, params.modelName, params.originalContent, params.convertedFormat)
 
   const createBatchEmbeddings = (request: BatchCreateEmbeddingRequest) =>
     embeddingService.createBatchEmbedding(request)

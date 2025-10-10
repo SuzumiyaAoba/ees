@@ -125,7 +125,7 @@ const make = Effect.gen(function* () {
         // Note: We don't migrate data because BLOB→F32_BLOB conversion is not possible
         // Users need to re-generate embeddings with the new format
         const existingData = await client.execute(`
-          SELECT uri, text, model_name, created_at, updated_at FROM embeddings
+          SELECT uri, text, model_name FROM embeddings
         `)
 
         // Step 3b: Drop old table and all associated indices
@@ -149,6 +149,8 @@ const make = Effect.gen(function* () {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           uri TEXT NOT NULL UNIQUE,
           text TEXT NOT NULL,
+          original_content TEXT,
+          converted_format TEXT,
           model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
           embedding F32_BLOB(768) NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,

@@ -5,6 +5,7 @@
 
 import { Effect } from "effect"
 import * as pdfParse from "pdf-parse"
+import { convertOrgToMarkdown, type PandocError } from "./pandoc-converter"
 
 /**
  * Supported file types for text extraction
@@ -24,6 +25,8 @@ export interface FileProcessingResult {
   readonly contentType: string
   readonly size: number
   readonly extractedChunks?: string[]
+  readonly originalContent?: string // Original content before conversion (e.g., org-mode text)
+  readonly convertedFormat?: string // Format after conversion (e.g., "markdown")
 }
 
 /**
@@ -61,6 +64,7 @@ export type FileProcessorError =
   | UnsupportedFileTypeError
   | FileProcessingError
   | FileTooLargeError
+  | PandocError
 
 /**
  * File processor configuration
@@ -197,25 +201,46 @@ const extractTextFromPDF = async (file: File, config?: FileProcessorConfig): Pro
 
 /**
  * Extract text content from file based on its type
+ * Returns an object with content and optional original content for converted files
  */
 const extractTextContent = async (
   file: File,
   _config: FileProcessorConfig
-): Promise<string> => {
+): Promise<{ content: string; originalContent?: string; convertedFormat?: string }> => {
   const extension = getFileExtension(file.name)
 
-  // Process different file types based on their extensions and content
+  // Special handling for org files - convert to markdown using pandoc
+  if (extension === '.org') {
+    const orgContent = await file.text()
 
+    // Attempt conversion with pandoc, but fall back to original content if conversion fails
+    try {
+      const markdown = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+      return {
+        content: markdown,
+        originalContent: orgContent,
+        convertedFormat: 'markdown'
+      }
+    } catch (error) {
+      // If pandoc is not available or conversion fails, use original content
+      console.warn(`Failed to convert org file to markdown: ${error}. Using original content.`)
+      return { content: orgContent }
+    }
+  }
+
+  // Process different file types based on their extensions and content
   if (SUPPORTED_FILE_TYPES.TEXT.includes(extension) ||
       SUPPORTED_FILE_TYPES.CODE.includes(extension) ||
       file.type.startsWith('text/')) {
-    return await file.text()
+    const content = await file.text()
+    return { content }
   }
 
   // Document processing (PDF, etc.)
   if (SUPPORTED_FILE_TYPES.DOCUMENT.includes(extension)) {
     if (extension === '.pdf') {
-      return await extractTextFromPDF(file, _config)
+      const content = await extractTextFromPDF(file, _config)
+      return { content }
     }
     // Future: Add support for other document types (docx, odt, etc.)
     throw new Error(`Document type ${extension} is not yet supported`)
@@ -223,7 +248,8 @@ const extractTextContent = async (
 
   // Fallback: try to read as text
   try {
-    return await file.text()
+    const content = await file.text()
+    return { content }
   } catch (error) {
     throw new Error(`Failed to extract text from ${file.name}: ${error}`)
   }
@@ -311,8 +337,8 @@ export const processFile = (
       )
     }
 
-    // Extract text content
-    const content = yield* Effect.tryPromise({
+    // Extract text content (with optional conversion)
+    const extractResult = yield* Effect.tryPromise({
       try: () => extractTextContent(file, config),
       catch: (error) => new FileProcessingError(
         `Failed to process file ${file.name}`,
@@ -322,7 +348,7 @@ export const processFile = (
     })
 
     // Validate extracted content
-    if (!content || content.trim().length === 0) {
+    if (!extractResult.content || extractResult.content.trim().length === 0) {
       return yield* Effect.fail(
         new FileProcessingError(
           `No text content found in file ${file.name}`,
@@ -334,11 +360,13 @@ export const processFile = (
     // Create result object
     const result: FileProcessingResult = {
       filename: file.name,
-      content: content.trim(),
+      content: extractResult.content.trim(),
       contentType: file.type,
       size: file.size,
+      ...(extractResult.originalContent && { originalContent: extractResult.originalContent }),
+      ...(extractResult.convertedFormat && { convertedFormat: extractResult.convertedFormat }),
       ...(config.enableChunking && {
-        extractedChunks: chunkText(content, config.maxChunkSize)
+        extractedChunks: chunkText(extractResult.content, config.maxChunkSize)
       })
     }
 
