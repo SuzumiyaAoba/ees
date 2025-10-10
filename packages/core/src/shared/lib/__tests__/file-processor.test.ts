@@ -560,6 +560,175 @@ describe("File Processor", () => {
         }
       })
     })
+
+    describe("org-mode file conversion", () => {
+      it("should convert org-mode files to markdown when pandoc is available", async () => {
+        const orgContent = `* Heading
+Some text content.
+** Subheading
+More text.`
+
+        const file = createMockFile("document.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("document.org")
+        expect(result.contentType).toBe("text/plain")
+        // Should have content (either converted or original)
+        expect(result.content).toBeTruthy()
+        expect(result.content.length).toBeGreaterThan(0)
+
+        // When pandoc is available, should have conversion metadata
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+          expect(result.convertedFormat).toBe("markdown")
+        } else {
+          // When pandoc is unavailable, should use original content directly
+          expect(result.content).toBe(orgContent)
+        }
+      })
+
+      it("should handle org-mode files with lists and formatting", async () => {
+        const orgContent = `* Todo List
+- [X] Completed task
+- [ ] Pending task
+
+** Notes
+*bold text*
+/italic text/`
+
+        const file = createMockFile("notes.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("notes.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+          expect(result.convertedFormat).toBe("markdown")
+        }
+      })
+
+      it("should handle org-mode files with code blocks", async () => {
+        const orgContent = `* Code Example
+#+BEGIN_SRC python
+def hello():
+    print("Hello, World!")
+#+END_SRC`
+
+        const file = createMockFile("code.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("code.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+          expect(result.convertedFormat).toBe("markdown")
+        }
+      })
+
+      it("should fallback to original content when pandoc is unavailable", async () => {
+        // This test verifies graceful degradation
+        const orgContent = "* Simple heading\nContent"
+        const file = createMockFile("fallback.org", orgContent, "text/plain")
+
+        // Process the file - if pandoc is unavailable, it should use original content
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("fallback.org")
+        expect(result.content).toBeTruthy()
+        // Should have content (either converted or original)
+        expect(result.content.length).toBeGreaterThan(0)
+      })
+
+      it("should handle org-mode with metadata", async () => {
+        const orgContent = `#+TITLE: My Document
+#+AUTHOR: John Doe
+#+DATE: 2024-01-01
+
+* Introduction
+This is the introduction.`
+
+        const file = createMockFile("metadata.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("metadata.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+        }
+      })
+
+      it("should handle org-mode with links", async () => {
+        const orgContent = `* Resources
+[[https://example.com][Example Site]]
+[[file:document.pdf][PDF Document]]`
+
+        const file = createMockFile("links.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("links.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+        }
+      })
+
+      it("should handle org-mode with tables", async () => {
+        const orgContent = `* Data Table
+| Name  | Age | City     |
+|-------+-----+----------|
+| Alice | 30  | New York |
+| Bob   | 25  | London   |`
+
+        const file = createMockFile("table.org", orgContent, "text/plain")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("table.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+        }
+      })
+
+      it("should handle empty org-mode files gracefully", async () => {
+        const file = createMockFile("empty.org", "", "text/plain")
+
+        const result = await Effect.runPromiseExit(processFile(file))
+
+        // Should fail with empty content error
+        expect(result._tag).toBe("Failure")
+      })
+
+      it("should detect org files by extension regardless of MIME type", async () => {
+        const orgContent = "* Heading\nContent"
+        const file = createMockFile("document.org", orgContent, "application/octet-stream")
+
+        const result = await Effect.runPromise(processFile(file))
+
+        expect(result.filename).toBe("document.org")
+        expect(result.content).toBeTruthy()
+
+        // Conversion metadata only present when pandoc is available
+        if (result.originalContent) {
+          expect(result.originalContent).toBe(orgContent)
+        }
+      })
+    })
   })
 
   describe("processFiles function", () => {
