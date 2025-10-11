@@ -103,14 +103,25 @@ export function FileUpload() {
         file: fileWithStatus.file,
         modelName: selectedModel || undefined,
       })
-      console.log('[FileUpload] Upload success:', result)
+      console.log('[FileUpload] Upload result:', result)
 
-      // Treat a 200 response with failed > 0 as an error for this file
+      // Check if the response contains results array (batch upload response)
+      if (typeof result === 'object' && result && 'results' in result) {
+        const typedResult = result as { results: Array<{ status: string; error?: string }> }
+        const fileResult = typedResult.results[0]
+
+        if (fileResult && fileResult.status === 'error') {
+          const errorMsg = fileResult.error || 'File processing failed'
+          updateFileStatus(fileWithStatus.id, 'error', errorMsg)
+          return
+        }
+      }
+
+      // Check if overall upload had failures
       if (typeof result === 'object' && result && 'failed' in result && typeof (result as { failed: number }).failed === 'number') {
         const failedCount = (result as { failed: number }).failed
-        const successfulCount = (result as { successful?: number }).successful ?? 0
-        if (failedCount > 0 && successfulCount === 0) {
-          const message = (result as { message?: string }).message ?? 'All files failed to process'
+        if (failedCount > 0) {
+          const message = (result as { message?: string }).message ?? 'File processing failed'
           updateFileStatus(fileWithStatus.id, 'error', message)
           return
         }
