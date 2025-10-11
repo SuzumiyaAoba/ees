@@ -24,6 +24,7 @@ export function FileUpload() {
   const [dragActive, setDragActive] = useState(false)
   const [selectedModel, setSelectedModel] = useState('')
   const [uploadMode, setUploadMode] = useState<'files' | 'directory'>('files')
+  const [concurrency, setConcurrency] = useState(3)
   const [filterInfo, setFilterInfo] = useState<{ total: number; filtered: number } | null>(null)
   const { data: models } = useProviderModels()
   const uploadMutation = useUploadFile()
@@ -139,8 +140,27 @@ export function FileUpload() {
   const uploadAllFiles = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending')
 
-    for (const file of pendingFiles) {
-      await uploadFile(file)
+    // Upload files with controlled concurrency
+    const queue = [...pendingFiles]
+    const executing: Promise<void>[] = []
+
+    while (queue.length > 0 || executing.length > 0) {
+      // Start new uploads up to concurrency limit
+      while (executing.length < concurrency && queue.length > 0) {
+        const file = queue.shift()
+        if (file) {
+          const promise = uploadFile(file).then(() => {
+            // Remove completed promise from executing array
+            executing.splice(executing.indexOf(promise), 1)
+          })
+          executing.push(promise)
+        }
+      }
+
+      // Wait for at least one upload to complete
+      if (executing.length > 0) {
+        await Promise.race(executing)
+      }
     }
   }
 
@@ -222,6 +242,25 @@ export function FileUpload() {
               ))}
             </select>
           </div>
+          {uploadMode === 'directory' && (
+            <div>
+              <label className="text-sm font-medium">Upload Concurrency</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={concurrency}
+                  onChange={(e) => setConcurrency(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="text-sm font-medium w-12 text-center">{concurrency}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Number of files to upload simultaneously (1-10)
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
