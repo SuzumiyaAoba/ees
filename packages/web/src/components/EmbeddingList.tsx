@@ -216,14 +216,21 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                           className="mt-1"
                         />
                         <div className="flex-1 min-w-0">
-                        <h4 className="font-medium truncate" title={embedding.uri}>
-                          {formatUri(embedding.uri)}
-                        </h4>
-                        <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                          <span>ID: {embedding.id}</span>
-                          <span>Model: {embedding.model_name}</span>
-                          <span>Created: {formatDate(embedding.created_at)}</span>
-                        </div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium truncate" title={embedding.uri}>
+                              {formatUri(embedding.uri)}
+                            </h4>
+                            {embedding.converted_format && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                org → {embedding.converted_format}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                            <span>ID: {embedding.id}</span>
+                            <span>Model: {embedding.model_name}</span>
+                            <span>Created: {formatDate(embedding.created_at)}</span>
+                          </div>
                         </div>
                       <div className="flex gap-2 ml-4">
                         <Button
