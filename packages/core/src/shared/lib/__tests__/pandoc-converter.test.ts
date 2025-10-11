@@ -284,6 +284,51 @@ Final thoughts.`
       expect(result).toContain("#")
     })
 
+    it("should include YAML frontmatter with title from org-mode", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document Title
+#+AUTHOR: Test Author
+#+DATE: 2024-01-01
+
+* Main Section
+Content goes here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Should contain YAML frontmatter delimiters
+      expect(result).toContain("---")
+      // Should include title in frontmatter
+      expect(result).toContain("title:")
+      expect(result).toContain("Test Document Title")
+    })
+
+    it("should extract title from org-mode #+title directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+title: Introduction to Org-Mode
+
+* Section 1
+This is content.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Pandoc should convert #+title to YAML frontmatter
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toMatch(/Introduction to Org-Mode/i)
+    })
+
     it("should convert org-mode with links", async () => {
       const available = await Effect.runPromise(isPandocAvailable())
       if (!available) {

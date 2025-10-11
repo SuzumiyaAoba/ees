@@ -58,8 +58,9 @@ export const isPandocAvailable = (): Effect.Effect<boolean, never> =>
 
 /**
  * Convert org-mode content to Markdown using pandoc
+ * Includes YAML frontmatter with title and other metadata from org-mode headers
  * @param orgContent - The org-mode text content
- * @returns Markdown formatted text
+ * @returns Markdown formatted text with YAML frontmatter
  */
 export const convertOrgToMarkdown = (
   orgContent: string
@@ -75,11 +76,18 @@ export const convertOrgToMarkdown = (
       )
     }
 
-    // Convert using pandoc with stdin/stdout
+    // Convert using pandoc with standalone mode to generate frontmatter
+    // --standalone: Generate complete document with metadata
+    // --wrap=preserve: Preserve line wrapping from source
     const result = yield* Effect.tryPromise({
       try: () =>
         new Promise<string>((resolve, reject) => {
-          const pandocProcess = spawn("pandoc", ["-f", "org", "-t", "markdown"])
+          const pandocProcess = spawn("pandoc", [
+            "-f", "org",
+            "-t", "markdown",
+            "--standalone",
+            "--wrap=preserve"
+          ])
 
           let stdout = ""
           let stderr = ""
