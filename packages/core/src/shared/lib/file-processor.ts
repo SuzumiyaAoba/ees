@@ -213,18 +213,12 @@ const extractTextContent = async (
   if (extension === '.org') {
     const orgContent = await file.text()
 
-    // Attempt conversion with pandoc, but fall back to original content if conversion fails
-    try {
-      const markdown = await Effect.runPromise(convertOrgToMarkdown(orgContent))
-      return {
-        content: markdown,
-        originalContent: orgContent,
-        convertedFormat: 'markdown'
-      }
-    } catch (error) {
-      // If pandoc is not available or conversion fails, use original content
-      console.warn(`Failed to convert org file to markdown: ${error}. Using original content.`)
-      return { content: orgContent }
+    // Attempt conversion with pandoc - propagate errors to caller
+    const markdown = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+    return {
+      content: markdown,
+      originalContent: orgContent,
+      convertedFormat: 'markdown'
     }
   }
 

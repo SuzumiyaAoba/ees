@@ -90,29 +90,30 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
       let failed = 0
 
       for (const fileResult of fileResults) {
-        try {
-          // Create embedding for file content (with optional conversion info)
-          const embedding = yield* appService.createEmbedding({
-            uri: fileResult.filename,
-            text: fileResult.content,
-            modelName,
-            originalContent: fileResult.originalContent,
-            convertedFormat: fileResult.convertedFormat,
-          })
-
-          results.push({
+        // Create embedding for file content (with optional conversion info)
+        const embeddingResult = yield* appService.createEmbedding({
+          uri: fileResult.filename,
+          text: fileResult.content,
+          modelName,
+          originalContent: fileResult.originalContent,
+          convertedFormat: fileResult.convertedFormat,
+        }).pipe(
+          Effect.map((embedding) => ({
             id: embedding.id,
             uri: embedding.uri,
-            status: "success",
-          })
-          successful++
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : "Unknown error"
-          results.push({
+            status: "success" as const,
+          })),
+          Effect.catchAll((error) => Effect.succeed({
             uri: fileResult.filename,
-            status: "error",
-            error: errorMessage,
-          })
+            status: "error" as const,
+            error: error instanceof Error ? error.message : "Unknown error",
+          }))
+        )
+
+        results.push(embeddingResult)
+        if (embeddingResult.status === "success") {
+          successful++
+        } else {
           failed++
         }
       }
