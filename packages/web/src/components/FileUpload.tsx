@@ -105,13 +105,14 @@ export function FileUpload() {
       })
       console.log('[FileUpload] Upload result:', result)
 
-      // Check if the response contains results array (batch upload response)
-      if (typeof result === 'object' && result && 'results' in result) {
-        const typedResult = result as { results: Array<{ status: string; error?: string }> }
-        const fileResult = typedResult.results[0]
+      // Check if the response contains results array (upload response structure)
+      if (typeof result === 'object' && result && 'results' in result && Array.isArray(result.results)) {
+        const fileResult = result.results[0]
 
-        if (fileResult && fileResult.status === 'error') {
-          const errorMsg = fileResult.error || 'File processing failed'
+        if (fileResult && 'status' in fileResult && fileResult.status === 'error') {
+          const errorMsg = ('error' in fileResult && typeof fileResult.error === 'string')
+            ? fileResult.error
+            : 'File processing failed'
           updateFileStatus(fileWithStatus.id, 'error', errorMsg)
           return
         }
