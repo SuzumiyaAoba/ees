@@ -594,5 +594,34 @@ Case variations.`
       expect(result).toContain("  - lowercase")
       expect(result).toContain("  - MixedCase")
     })
+
+    it("should remove filetags directive from converted content", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+AUTHOR: Test Author
+#+filetags: :test:example:
+
+* Introduction
+This is a test document.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Should have tags in frontmatter
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - test")
+      expect(result).toContain("  - example")
+
+      // Should NOT contain the filetags directive in content
+      expect(result).not.toContain("#+filetags:")
+      expect(result).not.toContain("#+FILETAGS:")
+      // Should not appear as code block
+      expect(result).not.toMatch(/```\{=org\}[\s\S]*#\+filetags:/i)
+    })
   })
 })

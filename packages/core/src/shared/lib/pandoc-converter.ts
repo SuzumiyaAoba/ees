@@ -103,6 +103,10 @@ export const convertOrgToMarkdown = (
     // Extract filetags before conversion
     const filetags = extractFiletags(orgContent)
 
+    // Remove filetags directive from content as pandoc doesn't process it
+    // This prevents it from appearing as a code block in the converted markdown
+    const contentWithoutFiletags = orgContent.replace(/^#\+filetags:.*$/im, '')
+
     // Convert using pandoc with standalone mode to generate frontmatter
     // --standalone: Generate complete document with metadata
     // --wrap=preserve: Preserve line wrapping from source
@@ -140,8 +144,8 @@ export const convertOrgToMarkdown = (
             }
           })
 
-          // Write input to stdin and close it
-          pandocProcess.stdin.write(orgContent)
+          // Write input to stdin and close it (use content without filetags)
+          pandocProcess.stdin.write(contentWithoutFiletags)
           pandocProcess.stdin.end()
 
           // Add timeout
