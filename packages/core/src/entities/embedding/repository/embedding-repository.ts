@@ -32,16 +32,31 @@ const EMBEDDING_QUERIES = {
   `,
   VECTOR_SEARCH_COSINE: `
     SELECT
-      e.id,
-      e.uri,
-      e.text,
-      e.model_name,
-      (1.0 - vector_distance_cos(e.embedding, vector(?))) as similarity,
-      e.created_at,
-      e.updated_at
-    FROM vector_top_k('idx_embeddings_vector', vector(?), ?) as v
-    INNER JOIN embeddings as e ON v.id = e.rowid
-    WHERE e.model_name = ?
+      id,
+      uri,
+      text,
+      model_name,
+      (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
+      created_at,
+      updated_at
+    FROM embeddings
+    WHERE model_name = ? AND (1.0 - vector_distance_cos(embedding, vector(?))) >= ?
+    ORDER BY similarity DESC
+    LIMIT ?
+  `,
+  VECTOR_SEARCH_COSINE_NO_THRESHOLD: `
+    SELECT
+      id,
+      uri,
+      text,
+      model_name,
+      (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
+      created_at,
+      updated_at
+    FROM embeddings
+    WHERE model_name = ?
+    ORDER BY similarity DESC
+    LIMIT ?
   `,
   VECTOR_SEARCH_FALLBACK: `
     SELECT
@@ -501,12 +516,10 @@ const make = Effect.gen(function* () {
         // Formula: similarity = 1.0 - cosine_distance
         // Higher similarity = more similar (1.0 = identical, 0.0 = orthogonal)
         vectorSearchQuery = threshold
-          // With threshold: filter results to only include embeddings above similarity threshold
-          ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE +
-            ` AND (1.0 - vector_distance_cos(e.embedding, vector(?))) >= ? ORDER BY similarity DESC`
+          // With threshold: filter results using WHERE clause
+          ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE
           // Without threshold: return top K most similar results
-          : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE +
-            ` ORDER BY similarity DESC`
+          : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE_NO_THRESHOLD
       } else {
         // Euclidean and dot product metrics use fallback query
         // These are computed in application layer rather than using libSQL vector functions
@@ -521,21 +534,16 @@ const make = Effect.gen(function* () {
           let args: (string | number)[]
           if (metric === "cosine") {
             args = threshold
-              // With threshold: [queryVector, queryVector, limit, modelName, queryVector, threshold]
-              // First queryVector: for vector_top_k function (K-nearest neighbors)
-              // Second queryVector: for similarity calculation in SELECT
-              // Third queryVector: for threshold comparison filter
-              ? [
-                  queryVector,
-                  queryVector,
-                  limit,
-                  modelName,
-                  queryVector,
-                  threshold,
-                ]
-              // Without threshold: [queryVector, queryVector, limit, modelName]
-              // Simpler query with fewer parameters when no threshold filtering needed
-              : [queryVector, queryVector, limit, modelName]
+              // With threshold: [queryVector, modelName, queryVector, threshold, limit]
+              // First queryVector: for similarity calculation in SELECT
+              // modelName: filter by model
+              // Second queryVector: for similarity comparison in WHERE clause
+              // threshold: minimum similarity value
+              // limit: maximum number of results
+              ? [queryVector, modelName, queryVector, threshold, limit]
+              // Without threshold: [queryVector, modelName, limit]
+              // Simpler query without threshold filtering
+              : [queryVector, modelName, limit]
           } else {
             // Fallback query parameters: [queryVector, modelName, limit]
             // Simpler structure for non-cosine metrics computed in application layer
