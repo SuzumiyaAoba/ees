@@ -458,5 +458,141 @@ Content.`
       expect(result).toContain("author:")
       expect(result).toContain("Test User")
     })
+
+    it("should extract filetags and convert to tags array in frontmatter", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document with Tags
+#+AUTHOR: Test Author
+#+filetags: :project:important:draft:
+
+* Content
+This document has tags.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toContain("Document with Tags")
+
+      // Check for tags array in YAML format
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - project")
+      expect(result).toContain("  - important")
+      expect(result).toContain("  - draft")
+    })
+
+    it("should handle filetags with spaces", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags:  :tag1:tag2:tag3:
+
+* Content
+Tags with extra spaces.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - tag1")
+      expect(result).toContain("  - tag2")
+      expect(result).toContain("  - tag3")
+    })
+
+    it("should handle filetags without leading/trailing colons", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags: tag1:tag2:tag3
+
+* Content
+Tags without colons at boundaries.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - tag1")
+      expect(result).toContain("  - tag2")
+      expect(result).toContain("  - tag3")
+    })
+
+    it("should handle single filetag", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags: :singletag:
+
+* Content
+Document with one tag.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - singletag")
+    })
+
+    it("should work without filetags directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document Without Tags
+#+AUTHOR: Test Author
+
+* Content
+No tags here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      // Should not contain tags section when no filetags
+      expect(result).not.toContain("tags:")
+    })
+
+    it("should handle case-insensitive filetags directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+FILETAGS: :uppercase:lowercase:MixedCase:
+
+* Content
+Case variations.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - uppercase")
+      expect(result).toContain("  - lowercase")
+      expect(result).toContain("  - MixedCase")
+    })
   })
 })

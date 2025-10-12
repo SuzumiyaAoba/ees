@@ -57,6 +57,30 @@ export const isPandocAvailable = (): Effect.Effect<boolean, never> =>
   }).pipe(Effect.catchAll(() => Effect.succeed(false)))
 
 /**
+ * Extract filetags from org-mode content
+ * Format: #+filetags: :tag1:tag2:tag3:
+ * @param orgContent - The org-mode text content
+ * @returns Array of tags
+ */
+const extractFiletags = (orgContent: string): string[] => {
+  const filetagsRegex = /^#\+filetags:\s*(.*)$/im
+  const match = orgContent.match(filetagsRegex)
+
+  if (!match || !match[1]) {
+    return []
+  }
+
+  // Extract tags from :tag1:tag2:tag3: format
+  const tagsString = match[1].trim()
+  const tags = tagsString
+    .split(':')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0)
+
+  return tags
+}
+
+/**
  * Convert org-mode content to Markdown using pandoc
  * Includes YAML frontmatter with title and other metadata from org-mode headers
  * @param orgContent - The org-mode text content
@@ -75,6 +99,9 @@ export const convertOrgToMarkdown = (
         )
       )
     }
+
+    // Extract filetags before conversion
+    const filetags = extractFiletags(orgContent)
 
     // Convert using pandoc with standalone mode to generate frontmatter
     // --standalone: Generate complete document with metadata
@@ -142,8 +169,39 @@ export const convertOrgToMarkdown = (
       )
     }
 
+    // Add filetags to frontmatter if present
+    if (filetags.length > 0) {
+      return addTagsToFrontmatter(result.trim(), filetags)
+    }
+
     return result.trim()
   })
+
+/**
+ * Add tags array to YAML frontmatter
+ * @param markdown - Markdown content with or without frontmatter
+ * @param tags - Array of tags to add
+ * @returns Markdown with tags in frontmatter
+ */
+const addTagsToFrontmatter = (markdown: string, tags: string[]): string => {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
+  const match = markdown.match(frontmatterRegex)
+
+  if (match) {
+    // Frontmatter exists, add tags to it
+    const existingFrontmatter = match[1]
+    const content = match[2]
+
+    // Format tags as YAML array
+    const tagsYaml = `tags:\n${tags.map(tag => `  - ${tag}`).join('\n')}`
+
+    return `---\n${existingFrontmatter}\n${tagsYaml}\n---\n${content}`
+  } else {
+    // No frontmatter, create one with tags
+    const tagsYaml = `tags:\n${tags.map(tag => `  - ${tag}`).join('\n')}`
+    return `---\n${tagsYaml}\n---\n\n${markdown}`
+  }
+}
 
 /**
  * Generic pandoc conversion function
