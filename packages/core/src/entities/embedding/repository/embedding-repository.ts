@@ -182,16 +182,26 @@ export interface EmbeddingRepository {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Delete all embeddings from the database
+   * @returns Effect containing the number of embeddings deleted
+   */
+  readonly deleteAll: () => Effect.Effect<number, DatabaseQueryError>
+
+  /**
    * Update an embedding by ID
    * @param id - Database ID of the embedding
    * @param text - New text content
    * @param embedding - New embedding vector
+   * @param originalContent - Optional original content before conversion
+   * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing boolean indicating success
    */
   readonly updateById: (
     id: number,
     text: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
@@ -293,6 +303,8 @@ const make = Effect.gen(function* () {
         text: row.text,
         model_name: row.modelName,
         embedding,
+        original_content: row.originalContent,
+        converted_format: row.convertedFormat,
         created_at: row.createdAt,
         updated_at: row.updatedAt,
       }
@@ -377,6 +389,8 @@ const make = Effect.gen(function* () {
               text: row.text,
               model_name: row.modelName,
               embedding,
+              original_content: row.originalContent,
+              converted_format: row.convertedFormat,
               created_at: row.createdAt,
               updated_at: row.updatedAt,
             })),
@@ -421,10 +435,26 @@ const make = Effect.gen(function* () {
       return result.rowsAffected > 0
     })
 
+  const deleteAll = (): Effect.Effect<number, DatabaseQueryError> =>
+    Effect.gen(function* () {
+      const result = yield* Effect.tryPromise({
+        try: () => db.delete(embeddings),
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to delete all embeddings from database",
+            cause: error,
+          }),
+      })
+
+      return result.rowsAffected
+    })
+
   const updateById = (
     id: number,
     text: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ): Effect.Effect<boolean, DatabaseQueryError> =>
     Effect.gen(function* () {
       const embeddingVector = JSON.stringify(embedding)
@@ -434,10 +464,10 @@ const make = Effect.gen(function* () {
           const updateResult = await client.execute({
             sql: `
               UPDATE embeddings
-              SET text = ?, embedding = vector(?), updated_at = CURRENT_TIMESTAMP
+              SET text = ?, embedding = vector(?), original_content = ?, converted_format = ?, updated_at = CURRENT_TIMESTAMP
               WHERE id = ?
             `,
-            args: [text, embeddingVector, id],
+            args: [text, embeddingVector, originalContent ?? null, convertedFormat ?? null, id],
           })
           return updateResult.rowsAffected
         },
@@ -561,6 +591,7 @@ const make = Effect.gen(function* () {
     findByUri,
     findAll,
     deleteById,
+    deleteAll,
     updateById,
     searchSimilar,
   }

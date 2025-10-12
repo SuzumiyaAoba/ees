@@ -6,6 +6,8 @@ export interface Embedding {
   text: string
   model_name: string
   embedding: number[]
+  original_content?: string | null
+  converted_format?: string | null
   created_at: string | null
   updated_at: string | null
 }

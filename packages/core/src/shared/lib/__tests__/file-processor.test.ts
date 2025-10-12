@@ -664,6 +664,16 @@ This is the introduction.`
         // Conversion metadata only present when pandoc is available
         if (result.originalContent) {
           expect(result.originalContent).toBe(orgContent)
+          expect(result.convertedFormat).toBe("markdown")
+
+          // Verify frontmatter is included in converted content
+          expect(result.content).toContain("---")
+          expect(result.content).toContain("title:")
+          expect(result.content).toContain("My Document")
+          expect(result.content).toContain("author:")
+          expect(result.content).toContain("John Doe")
+          expect(result.content).toContain("date:")
+          expect(result.content).toContain("2024-01-01")
         }
       })
 

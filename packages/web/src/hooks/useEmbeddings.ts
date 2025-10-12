@@ -89,6 +89,18 @@ export function useDeleteEmbedding() {
   })
 }
 
+// Delete all embeddings hook
+export function useDeleteAllEmbeddings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => apiClient.deleteAllEmbeddings(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['embeddings'] })
+    },
+  })
+}
+
 // Update embedding hook
 export function useUpdateEmbedding() {
   const queryClient = useQueryClient()

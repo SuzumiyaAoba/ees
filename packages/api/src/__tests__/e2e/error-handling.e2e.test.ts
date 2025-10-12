@@ -146,7 +146,7 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       const unsupportedMethods = [
         { method: "PUT", endpoint: "/embeddings" },
         { method: "PATCH", endpoint: "/embeddings" },
-        { method: "DELETE", endpoint: "/embeddings" }, // DELETE without ID
+        // DELETE /embeddings is now supported for delete all operation
         { method: "PUT", endpoint: "/embeddings/search" },
         { method: "GET", endpoint: "/embeddings/search" },
         { method: "PUT", endpoint: "/embeddings/batch" },

@@ -284,6 +284,51 @@ Final thoughts.`
       expect(result).toContain("#")
     })
 
+    it("should include YAML frontmatter with title from org-mode", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document Title
+#+AUTHOR: Test Author
+#+DATE: 2024-01-01
+
+* Main Section
+Content goes here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Should contain YAML frontmatter delimiters
+      expect(result).toContain("---")
+      // Should include title in frontmatter
+      expect(result).toContain("title:")
+      expect(result).toContain("Test Document Title")
+    })
+
+    it("should extract title from org-mode #+title directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+title: Introduction to Org-Mode
+
+* Section 1
+This is content.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Pandoc should convert #+title to YAML frontmatter
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toMatch(/Introduction to Org-Mode/i)
+    })
+
     it("should convert org-mode with links", async () => {
       const available = await Effect.runPromise(isPandocAvailable())
       if (!available) {
@@ -317,6 +362,266 @@ Final thoughts.`
 
       expect(result).toBeTruthy()
       expect(result.trim().length).toBeGreaterThan(0)
+    })
+
+    it("should include all org-mode metadata properties in frontmatter", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Complete Metadata Example
+#+AUTHOR: Jane Smith
+#+DATE: 2024-12-15
+#+DESCRIPTION: A comprehensive test document
+#+KEYWORDS: testing, metadata, org-mode, pandoc
+#+LANGUAGE: en
+
+* Introduction
+This document tests various metadata fields.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+
+      // Verify frontmatter delimiters
+      expect(result).toContain("---")
+
+      // Verify all metadata fields are present
+      expect(result).toContain("title:")
+      expect(result).toContain("Complete Metadata Example")
+
+      expect(result).toContain("author:")
+      expect(result).toContain("Jane Smith")
+
+      expect(result).toContain("date:")
+      expect(result).toContain("2024-12-15")
+
+      expect(result).toContain("description:")
+      expect(result).toContain("A comprehensive test document")
+
+      expect(result).toContain("keywords:")
+      expect(result).toContain("testing, metadata, org-mode, pandoc")
+
+      // Pandoc converts #+LANGUAGE to "lang" not "language"
+      expect(result).toContain("lang:")
+      expect(result).toContain("en")
+    })
+
+    it("should handle org-mode with custom properties", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document with Custom Properties
+#+AUTHOR: John Doe
+#+EMAIL: john@example.com
+#+SUBTITLE: A detailed guide
+#+CATEGORY: Documentation
+
+* Content
+Main content here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toContain("Document with Custom Properties")
+      expect(result).toContain("author:")
+      expect(result).toContain("John Doe")
+    })
+
+    it("should handle case-insensitive org-mode directives", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+title: Lowercase Title
+#+author: Test User
+#+date: 2024-12-15
+
+* Section
+Content.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toMatch(/Lowercase Title/)
+      expect(result).toContain("author:")
+      expect(result).toContain("Test User")
+    })
+
+    it("should extract filetags and convert to tags array in frontmatter", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document with Tags
+#+AUTHOR: Test Author
+#+filetags: :project:important:draft:
+
+* Content
+This document has tags.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toContain("Document with Tags")
+
+      // Check for tags array in YAML format
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - project")
+      expect(result).toContain("  - important")
+      expect(result).toContain("  - draft")
+    })
+
+    it("should handle filetags with spaces", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags:  :tag1:tag2:tag3:
+
+* Content
+Tags with extra spaces.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - tag1")
+      expect(result).toContain("  - tag2")
+      expect(result).toContain("  - tag3")
+    })
+
+    it("should handle filetags without leading/trailing colons", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags: tag1:tag2:tag3
+
+* Content
+Tags without colons at boundaries.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - tag1")
+      expect(result).toContain("  - tag2")
+      expect(result).toContain("  - tag3")
+    })
+
+    it("should handle single filetag", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+filetags: :singletag:
+
+* Content
+Document with one tag.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - singletag")
+    })
+
+    it("should work without filetags directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document Without Tags
+#+AUTHOR: Test Author
+
+* Content
+No tags here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      // Should not contain tags section when no filetags
+      expect(result).not.toContain("tags:")
+    })
+
+    it("should handle case-insensitive filetags directive", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+FILETAGS: :uppercase:lowercase:MixedCase:
+
+* Content
+Case variations.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - uppercase")
+      expect(result).toContain("  - lowercase")
+      expect(result).toContain("  - MixedCase")
+    })
+
+    it("should remove filetags directive from converted content", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Test Document
+#+AUTHOR: Test Author
+#+filetags: :test:example:
+
+* Introduction
+This is a test document.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      // Should have tags in frontmatter
+      expect(result).toContain("tags:")
+      expect(result).toContain("  - test")
+      expect(result).toContain("  - example")
+
+      // Should NOT contain the filetags directive in content
+      expect(result).not.toContain("#+filetags:")
+      expect(result).not.toContain("#+FILETAGS:")
+      // Should not appear as code block
+      expect(result).not.toMatch(/```\{=org\}[\s\S]*#\+filetags:/i)
     })
   })
 })
