@@ -186,12 +186,16 @@ export interface EmbeddingRepository {
    * @param id - Database ID of the embedding
    * @param text - New text content
    * @param embedding - New embedding vector
+   * @param originalContent - Optional original content before conversion
+   * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing boolean indicating success
    */
   readonly updateById: (
     id: number,
     text: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
@@ -428,7 +432,9 @@ const make = Effect.gen(function* () {
   const updateById = (
     id: number,
     text: string,
-    embedding: number[]
+    embedding: number[],
+    originalContent?: string,
+    convertedFormat?: string
   ): Effect.Effect<boolean, DatabaseQueryError> =>
     Effect.gen(function* () {
       const embeddingVector = JSON.stringify(embedding)
@@ -438,10 +444,10 @@ const make = Effect.gen(function* () {
           const updateResult = await client.execute({
             sql: `
               UPDATE embeddings
-              SET text = ?, embedding = vector(?), updated_at = CURRENT_TIMESTAMP
+              SET text = ?, embedding = vector(?), original_content = ?, converted_format = ?, updated_at = CURRENT_TIMESTAMP
               WHERE id = ?
             `,
-            args: [text, embeddingVector, id],
+            args: [text, embeddingVector, originalContent ?? null, convertedFormat ?? null, id],
           })
           return updateResult.rowsAffected
         },

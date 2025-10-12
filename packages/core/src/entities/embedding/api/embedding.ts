@@ -119,12 +119,16 @@ export interface EmbeddingService {
    * @param id - Database ID of the embedding to update
    * @param text - New text content
    * @param modelName - Optional model name (defaults to current provider's default)
+   * @param originalContent - Optional original content before conversion
+   * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing boolean indicating success
    */
   readonly updateEmbedding: (
     id: number,
     text: string,
-    modelName?: string
+    modelName?: string,
+    originalContent?: string,
+    convertedFormat?: string
   ) => Effect.Effect<
     boolean,
     | ProviderConnectionError
@@ -603,7 +607,9 @@ const make = Effect.gen(function* () {
   const updateEmbedding = (
     id: number,
     text: string,
-    modelName?: string
+    modelName?: string,
+    originalContent?: string,
+    convertedFormat?: string
   ): Effect.Effect<
     boolean,
     | ProviderConnectionError
@@ -622,10 +628,10 @@ const make = Effect.gen(function* () {
       Effect.flatMap(() =>
         providerService.generateEmbedding({ text, modelName })
       ),
-      // Step 3: Update embedding in database
+      // Step 3: Update embedding in database with all metadata
       Effect.flatMap((embeddingResponse) =>
         pipe(
-          repository.updateById(id, text, embeddingResponse.embedding),
+          repository.updateById(id, text, embeddingResponse.embedding, originalContent, convertedFormat),
           // Step 4: Record success metrics
           Effect.flatMap((updated) =>
             pipe(
