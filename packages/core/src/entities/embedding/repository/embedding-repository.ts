@@ -293,6 +293,8 @@ const make = Effect.gen(function* () {
         text: row.text,
         model_name: row.modelName,
         embedding,
+        original_content: row.originalContent,
+        converted_format: row.convertedFormat,
         created_at: row.createdAt,
         updated_at: row.updatedAt,
       }
@@ -377,6 +379,8 @@ const make = Effect.gen(function* () {
               text: row.text,
               model_name: row.modelName,
               embedding,
+              original_content: row.originalContent,
+              converted_format: row.convertedFormat,
               created_at: row.createdAt,
               updated_at: row.updatedAt,
             })),
