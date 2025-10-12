@@ -101,6 +101,11 @@ export interface EmbeddingApplicationService {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Delete all embeddings
+   */
+  readonly deleteAllEmbeddings: () => Effect.Effect<number, DatabaseQueryError>
+
+  /**
    * Update embedding by ID
    */
   readonly updateEmbedding: (
@@ -164,6 +169,8 @@ const make = Effect.gen(function* () {
 
   const deleteEmbedding = (id: number) => embeddingService.deleteEmbedding(id)
 
+  const deleteAllEmbeddings = () => embeddingService.deleteAllEmbeddings()
+
   const updateEmbedding = (id: number, text: string, modelName?: string) =>
     embeddingService.updateEmbedding(id, text, modelName)
 
@@ -174,6 +181,7 @@ const make = Effect.gen(function* () {
     getEmbeddingByUri,
     listEmbeddings,
     deleteEmbedding,
+    deleteAllEmbeddings,
     updateEmbedding,
   } as const
 })

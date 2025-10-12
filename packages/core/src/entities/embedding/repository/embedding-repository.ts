@@ -182,6 +182,12 @@ export interface EmbeddingRepository {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Delete all embeddings from the database
+   * @returns Effect containing the number of embeddings deleted
+   */
+  readonly deleteAll: () => Effect.Effect<number, DatabaseQueryError>
+
+  /**
    * Update an embedding by ID
    * @param id - Database ID of the embedding
    * @param text - New text content
@@ -429,6 +435,20 @@ const make = Effect.gen(function* () {
       return result.rowsAffected > 0
     })
 
+  const deleteAll = (): Effect.Effect<number, DatabaseQueryError> =>
+    Effect.gen(function* () {
+      const result = yield* Effect.tryPromise({
+        try: () => db.delete(embeddings),
+        catch: (error) =>
+          new DatabaseQueryError({
+            message: "Failed to delete all embeddings from database",
+            cause: error,
+          }),
+      })
+
+      return result.rowsAffected
+    })
+
   const updateById = (
     id: number,
     text: string,
@@ -571,6 +591,7 @@ const make = Effect.gen(function* () {
     findByUri,
     findAll,
     deleteById,
+    deleteAll,
     updateById,
     searchSimilar,
   }

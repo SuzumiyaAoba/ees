@@ -104,6 +104,12 @@ class ApiClient {
     })
   }
 
+  async deleteAllEmbeddings(): Promise<{ message: string; deleted_count: number }> {
+    return this.request<{ message: string; deleted_count: number }>('/embeddings', {
+      method: 'DELETE',
+    })
+  }
+
   async updateEmbedding(id: number, data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> {
     return this.request<UpdateEmbeddingResponse>(`/embeddings/${id}`, {
       method: 'PUT',

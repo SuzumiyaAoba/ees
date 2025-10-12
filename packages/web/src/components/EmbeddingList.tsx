@@ -1,8 +1,8 @@
-import { List, Trash2, Eye, Edit } from 'lucide-react'
+import { List, Trash2, Eye, Edit, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useEmbeddings, useDeleteEmbedding } from '@/hooks/useEmbeddings'
+import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
@@ -34,6 +34,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   })
 
   const deleteMutation = useDeleteEmbedding()
+  const deleteAllMutation = useDeleteAllEmbeddings()
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -78,6 +79,21 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
       }
     }
     clearSelection()
+  }
+
+  const handleDeleteAll = async () => {
+    const totalCount = data?.total ?? 0
+    if (totalCount === 0) return
+
+    const confirmMessage = `Are you sure you want to delete ALL ${totalCount} embedding(s)? This action cannot be undone.`
+    if (!confirm(confirmMessage)) return
+
+    try {
+      await deleteAllMutation.mutateAsync()
+      clearSelection()
+    } catch (error) {
+      console.error('Failed to delete all embeddings:', error)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -179,6 +195,15 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
                 Delete Selected ({selectedIds.size})
+              </Button>
+              <Button
+                onClick={handleDeleteAll}
+                disabled={!data || data.total === 0 || deleteAllMutation.isPending}
+                title="Delete all embeddings"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Delete All ({data?.total ?? 0})
               </Button>
             </div>
           </div>

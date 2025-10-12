@@ -5,6 +5,7 @@ import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
+import { deleteAllEmbeddingsRoute } from "@/features/delete-all-embeddings"
 import { updateEmbeddingRoute } from "@/features/update-embedding"
 import {
   getEmbeddingByUriRoute,
@@ -228,6 +229,25 @@ app.openapi(listEmbeddingModelsRoute, async (c) => {
         const stats = yield* modelManager.getModelUsageStats()
         const models = Object.keys(stats)
         return { models }
+      })
+    )
+  ) as never
+})
+
+/**
+ * Delete all embeddings endpoint
+ * Removes all embeddings from the database
+ */
+app.use("/embeddings", security.rateLimits.general)
+app.openapi(deleteAllEmbeddingsRoute, async (c) => {
+  return executeEffectHandler(c, "deleteAllEmbeddings",
+    withEmbeddingService(appService =>
+      Effect.gen(function* () {
+        const deletedCount = yield* appService.deleteAllEmbeddings()
+        return {
+          message: `Successfully deleted ${deletedCount} embedding(s)`,
+          deleted_count: deletedCount
+        }
       })
     )
   ) as never

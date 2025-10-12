@@ -115,6 +115,12 @@ export interface EmbeddingService {
   ) => Effect.Effect<boolean, DatabaseQueryError>
 
   /**
+   * Delete all embeddings from the database
+   * @returns Effect containing the number of embeddings deleted
+   */
+  readonly deleteAllEmbeddings: () => Effect.Effect<number, DatabaseQueryError>
+
+  /**
    * Update an embedding's text content by ID
    * @param id - Database ID of the embedding to update
    * @param text - New text content
@@ -600,6 +606,8 @@ const make = Effect.gen(function* () {
 
   const deleteEmbedding = (id: number) => repository.deleteById(id)
 
+  const deleteAllEmbeddings = () => repository.deleteAll()
+
   /**
    * Update an embedding's text content
    * Generates a new embedding vector for the updated text and saves it
@@ -776,6 +784,7 @@ const make = Effect.gen(function* () {
     getEmbedding,
     getAllEmbeddings,
     deleteEmbedding,
+    deleteAllEmbeddings,
     updateEmbedding,
     searchEmbeddings,
     listProviders,
