@@ -363,5 +363,100 @@ This is content.`
       expect(result).toBeTruthy()
       expect(result.trim().length).toBeGreaterThan(0)
     })
+
+    it("should include all org-mode metadata properties in frontmatter", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Complete Metadata Example
+#+AUTHOR: Jane Smith
+#+DATE: 2024-12-15
+#+DESCRIPTION: A comprehensive test document
+#+KEYWORDS: testing, metadata, org-mode, pandoc
+#+LANGUAGE: en
+
+* Introduction
+This document tests various metadata fields.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+
+      // Verify frontmatter delimiters
+      expect(result).toContain("---")
+
+      // Verify all metadata fields are present
+      expect(result).toContain("title:")
+      expect(result).toContain("Complete Metadata Example")
+
+      expect(result).toContain("author:")
+      expect(result).toContain("Jane Smith")
+
+      expect(result).toContain("date:")
+      expect(result).toContain("2024-12-15")
+
+      expect(result).toContain("description:")
+      expect(result).toContain("A comprehensive test document")
+
+      expect(result).toContain("keywords:")
+      expect(result).toContain("testing, metadata, org-mode, pandoc")
+
+      // Pandoc converts #+LANGUAGE to "lang" not "language"
+      expect(result).toContain("lang:")
+      expect(result).toContain("en")
+    })
+
+    it("should handle org-mode with custom properties", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+TITLE: Document with Custom Properties
+#+AUTHOR: John Doe
+#+EMAIL: john@example.com
+#+SUBTITLE: A detailed guide
+#+CATEGORY: Documentation
+
+* Content
+Main content here.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toContain("Document with Custom Properties")
+      expect(result).toContain("author:")
+      expect(result).toContain("John Doe")
+    })
+
+    it("should handle case-insensitive org-mode directives", async () => {
+      const available = await Effect.runPromise(isPandocAvailable())
+      if (!available) {
+        console.log("Skipping test - pandoc not available")
+        return
+      }
+
+      const orgContent = `#+title: Lowercase Title
+#+author: Test User
+#+date: 2024-12-15
+
+* Section
+Content.`
+
+      const result = await Effect.runPromise(convertOrgToMarkdown(orgContent))
+
+      expect(result).toBeTruthy()
+      expect(result).toContain("---")
+      expect(result).toContain("title:")
+      expect(result).toMatch(/Lowercase Title/)
+      expect(result).toContain("author:")
+      expect(result).toContain("Test User")
+    })
   })
 })
