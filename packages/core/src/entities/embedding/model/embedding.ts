@@ -16,12 +16,14 @@ export interface CreateEmbeddingRequest {
   uri: string
   text: string
   model_name?: string
+  title?: string
 }
 
 export interface BatchCreateEmbeddingRequest {
   texts: Array<{
     uri: string
     text: string
+    title?: string
   }>
   model_name?: string
 }
@@ -74,6 +76,7 @@ export interface EmbeddingsListResponse {
 export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
+  query_task_type?: string
   limit?: number
   threshold?: number | undefined
   metric?: "cosine" | "euclidean" | "dot_product"

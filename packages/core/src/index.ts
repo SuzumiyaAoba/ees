@@ -20,6 +20,7 @@ export type {
 
 // Export OpenAPI schemas for API package consumption
 export {
+  TaskTypeSchema,
   CreateEmbeddingRequestSchema,
   UpdateEmbeddingRequestSchema,
   BatchCreateEmbeddingRequestSchema,
@@ -51,6 +52,16 @@ export {
   ModelManagerTag,
   ModelManagerLive,
 } from './shared/models/index'
+
+export {
+  TaskType,
+  EMBEDDINGGEMMA_TASK_PROMPTS,
+  MODEL_TASK_SUPPORT,
+  isTaskTypeSupported,
+  getTaskTypePromptFormatter,
+  formatTextWithTaskType,
+} from './shared/models/task-type'
+export type { TaskType as TaskTypeEnum } from './shared/models/task-type'
 
 export {
   CoreApplicationLayer,

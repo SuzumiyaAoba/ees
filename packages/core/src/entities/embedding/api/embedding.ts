@@ -47,6 +47,7 @@ export interface EmbeddingService {
    * @param uri - Unique identifier for the text content
    * @param text - Text content to generate embedding for
    * @param modelName - Optional model name to use (defaults to provider's default)
+   * @param title - Optional title for document (improves accuracy for embeddinggemma)
    * @param originalContent - Optional original content before conversion
    * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing the embedding creation result
@@ -55,6 +56,7 @@ export interface EmbeddingService {
     uri: string,
     text: string,
     modelName?: string,
+    title?: string,
     originalContent?: string,
     convertedFormat?: string
   ) => Effect.Effect<

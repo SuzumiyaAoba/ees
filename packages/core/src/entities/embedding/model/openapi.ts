@@ -12,6 +12,21 @@ export const StoredEmbeddingDataSchema = z.union([
   z.string(),
 ])
 
+// Task type enum schema
+export const TaskTypeSchema = z.enum([
+  "retrieval_query",
+  "retrieval_document",
+  "question_answering",
+  "fact_verification",
+  "classification",
+  "clustering",
+  "semantic_similarity",
+  "code_retrieval",
+]).openapi({
+  description: "Task type for model-specific search modes",
+  example: "retrieval_document",
+})
+
 // Request schemas
 export const CreateEmbeddingRequestSchema = z
   .object({
@@ -26,6 +41,10 @@ export const CreateEmbeddingRequestSchema = z
     model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Name of the embedding model to use",
       example: "nomic-embed-text",
+    }),
+    title: z.string().optional().openapi({
+      description: "Optional title for document (improves search accuracy for embeddinggemma)",
+      example: "Document Title",
     }),
   })
   .openapi("CreateEmbeddingRequest")
@@ -42,6 +61,10 @@ export const BatchCreateEmbeddingRequestSchema = z
           text: z.string().min(1).openapi({
             description: "Text content to generate embedding for",
             example: "This is the first document content.",
+          }),
+          title: z.string().optional().openapi({
+            description: "Optional title for document (improves search accuracy)",
+            example: "Document Title",
           }),
         })
       )
@@ -232,6 +255,10 @@ export const SearchEmbeddingRequestSchema = z
     model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Model name to use for query embedding generation",
       example: "nomic-embed-text",
+    }),
+    query_task_type: TaskTypeSchema.optional().default("retrieval_query").openapi({
+      description: "Task type for query embedding (e.g., retrieval_query for search, question_answering for Q&A)",
+      example: "retrieval_query",
     }),
     limit: z.number().int().min(1).max(100).optional().default(10).openapi({
       description: "Maximum number of results to return (max 100)",
