@@ -709,6 +709,7 @@ const make = Effect.gen(function* () {
       query,
       model_name,
       query_task_type,  // Optional task type for query formatting
+      query_title,      // Optional title for retrieval_document task type
       limit = 10,  // Default limit prevents unbounded result sets
       threshold,   // Optional minimum similarity threshold
       metric = "cosine",  // Cosine similarity is best for text embeddings
@@ -721,7 +722,8 @@ const make = Effect.gen(function* () {
     const formattedQuery = formatTextWithTaskType(
       effectiveModelName,
       query,
-      taskType
+      taskType,
+      query_title  // Pass title to formatter for retrieval_document
     )
 
     // Log the query being sent to the embedding model
@@ -732,6 +734,7 @@ const make = Effect.gen(function* () {
       formatted_query: formattedQuery,
       model_name: effectiveModelName,
       task_type: taskType,
+      query_title,
       limit,
       metric,
       threshold
