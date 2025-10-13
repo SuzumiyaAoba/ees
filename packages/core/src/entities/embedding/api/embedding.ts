@@ -6,6 +6,7 @@
 import { Context, Effect, Layer, Option, pipe } from "effect"
 import { getDefaultProvider } from "@/shared/config/providers"
 import { DatabaseQueryError } from "@/shared/errors/database"
+import { createPinoLogger, createLoggerConfig } from "@/shared/observability"
 import {
   EmbeddingProviderService,
   ProviderConnectionError,
@@ -699,6 +700,9 @@ const make = Effect.gen(function* () {
    * @returns Effect containing search results and metadata
    */
   const searchEmbeddings = (request: SearchEmbeddingRequest) => {
+    // Initialize logger for search operations
+    const logger = createPinoLogger(createLoggerConfig())
+
     // Capture start time for duration metrics
     const startTime = Date.now()
     const {
@@ -719,6 +723,19 @@ const make = Effect.gen(function* () {
       query,
       taskType
     )
+
+    // Log the query being sent to the embedding model
+    logger.info({
+      component: "embedding-service",
+      operation: "search",
+      original_query: query,
+      formatted_query: formattedQuery,
+      model_name: effectiveModelName,
+      task_type: taskType,
+      limit,
+      metric,
+      threshold
+    }, "Search query sent to embedding model")
 
     return pipe(
       // Step 1: Generate embedding vector for the formatted query text
