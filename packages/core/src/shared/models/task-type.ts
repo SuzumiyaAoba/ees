@@ -74,10 +74,10 @@ export type TaskType = (typeof TaskType)[keyof typeof TaskType]
  */
 export const EMBEDDINGGEMMA_TASK_PROMPTS: Record<TaskType, (content: string, title?: string) => string> = {
   [TaskType.RETRIEVAL_QUERY]: (content: string) =>
-    `search_query: ${content}`,
+    `task: search result | query: ${content}`,
 
   [TaskType.RETRIEVAL_DOCUMENT]: (content: string, title?: string) =>
-    title ? `search_document: ${title}\n${content}` : `search_document: ${content}`,
+    title ? `title: ${title} | text: ${content}` : `title: none | text: ${content}`,
 
   [TaskType.QUESTION_ANSWERING]: (content: string) =>
     `task: question answering | query: ${content}`,
