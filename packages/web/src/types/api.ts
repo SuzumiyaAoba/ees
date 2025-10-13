@@ -61,6 +61,18 @@ export type TaskType =
   | 'semantic_similarity'
   | 'code_retrieval'
 
+export interface TaskTypeMetadata {
+  value: TaskType
+  label: string
+  description: string
+}
+
+export interface ListTaskTypesResponse {
+  model_name: string
+  task_types: TaskTypeMetadata[]
+  count: number
+}
+
 export interface SearchEmbeddingRequest {
   query: string
   model_name?: string

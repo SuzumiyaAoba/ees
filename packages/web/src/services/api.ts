@@ -226,6 +226,10 @@ class ApiClient {
   async getModels(): Promise<ListModelsResponse> {
     return this.request<ListModelsResponse>('/models')
   }
+
+  async getTaskTypes(modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> {
+    return this.request<import('@/types/api').ListTaskTypesResponse>(`/models/task-types?model=${encodeURIComponent(modelName)}`)
+  }
 }
 
 export const apiClient = new ApiClient()

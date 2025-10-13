@@ -151,3 +151,67 @@ export function formatTextWithTaskType(
   }
   return text
 }
+
+/**
+ * Task type metadata with human-readable labels and descriptions
+ */
+export interface TaskTypeMetadata {
+  value: TaskType
+  label: string
+  description: string
+}
+
+/**
+ * Task type metadata for all available task types
+ */
+export const TASK_TYPE_METADATA: Record<TaskType, Omit<TaskTypeMetadata, 'value'>> = {
+  [TaskType.RETRIEVAL_QUERY]: {
+    label: 'Retrieval (Query)',
+    description: 'Document search and information retrieval'
+  },
+  [TaskType.RETRIEVAL_DOCUMENT]: {
+    label: 'Retrieval (Document)',
+    description: 'Document indexing with title support'
+  },
+  [TaskType.QUESTION_ANSWERING]: {
+    label: 'Question Answering',
+    description: 'Q&A scenarios'
+  },
+  [TaskType.FACT_VERIFICATION]: {
+    label: 'Fact Verification',
+    description: 'Fact-checking scenarios'
+  },
+  [TaskType.CLASSIFICATION]: {
+    label: 'Classification',
+    description: 'Predefined label classification'
+  },
+  [TaskType.CLUSTERING]: {
+    label: 'Clustering',
+    description: 'Similarity-based clustering'
+  },
+  [TaskType.SEMANTIC_SIMILARITY]: {
+    label: 'Semantic Similarity',
+    description: 'Similarity scoring (not recommended for search)'
+  },
+  [TaskType.CODE_RETRIEVAL]: {
+    label: 'Code Retrieval',
+    description: 'Search code blocks with natural language'
+  },
+}
+
+/**
+ * Get supported task types with metadata for a specific model
+ * @param modelName - Name of the model to get task types for
+ * @returns Array of task type metadata supported by the model
+ */
+export function getSupportedTaskTypes(modelName: string): TaskTypeMetadata[] {
+  const supportedTypes = MODEL_TASK_SUPPORT[modelName] || [
+    TaskType.RETRIEVAL_QUERY,
+    TaskType.RETRIEVAL_DOCUMENT
+  ]
+
+  return supportedTypes.map(type => ({
+    value: type,
+    ...TASK_TYPE_METADATA[type]
+  }))
+}

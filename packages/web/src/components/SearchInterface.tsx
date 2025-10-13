@@ -6,62 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
-import type { SearchResult, TaskType } from '@/types/api'
+import { apiClient } from '@/services/api'
+import type { SearchResult, TaskType, TaskTypeMetadata } from '@/types/api'
 
 interface SearchInterfaceProps {
   onResultSelect?: (result: SearchResult) => void
 }
 
-// Task type options with display names and descriptions
-const TASK_TYPE_OPTIONS: Array<{
-  value: TaskType
-  label: string
-  description: string
-}> = [
-  {
-    value: 'retrieval_query',
-    label: 'Retrieval (Query)',
-    description: 'Document search and information retrieval'
-  },
-  {
-    value: 'retrieval_document',
-    label: 'Retrieval (Document)',
-    description: 'Document indexing with title support'
-  },
-  {
-    value: 'question_answering',
-    label: 'Question Answering',
-    description: 'Q&A scenarios'
-  },
-  {
-    value: 'fact_verification',
-    label: 'Fact Verification',
-    description: 'Fact-checking scenarios'
-  },
-  {
-    value: 'classification',
-    label: 'Classification',
-    description: 'Predefined label classification'
-  },
-  {
-    value: 'clustering',
-    label: 'Clustering',
-    description: 'Similarity-based clustering'
-  },
-  {
-    value: 'semantic_similarity',
-    label: 'Semantic Similarity',
-    description: 'Similarity scoring (not recommended for search)'
-  },
-  {
-    value: 'code_retrieval',
-    label: 'Code Retrieval',
-    description: 'Search code blocks with natural language'
-  },
-]
-
 export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [query, setQuery] = useState('')
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
 
   // Use shared filters hook
   const { filters: searchParams, updateFilter } = useFilters({
@@ -88,6 +43,36 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       updateFilter('model_name', firstAvailable.name)
     }
   }, [modelsData, searchParams.model_name, updateFilter])
+
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      if (!searchParams.model_name) return
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(searchParams.model_name)
+        setTaskTypeOptions(response.task_types)
+
+        // If current task type is not supported by the new model, reset to the first available
+        const isSupported = response.task_types.some(t => t.value === searchParams.query_task_type)
+        if (!isSupported && response.task_types.length > 0) {
+          updateFilter('query_task_type', response.task_types[0].value as TaskType)
+        }
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        // Fallback to default task types
+        setTaskTypeOptions([
+          { value: 'retrieval_query', label: 'Retrieval (Query)', description: 'Document search and information retrieval' },
+          { value: 'retrieval_document', label: 'Retrieval (Document)', description: 'Document indexing with title support' }
+        ] as TaskTypeMetadata[])
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [searchParams.model_name])
 
   // Debounced search
   useEffect(() => {
@@ -169,13 +154,20 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={searchParams.query_task_type}
                 onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
-                title={TASK_TYPE_OPTIONS.find(opt => opt.value === searchParams.query_task_type)?.description}
+                title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
+                disabled={isLoadingTaskTypes || taskTypeOptions.length === 0}
               >
-                {TASK_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                {isLoadingTaskTypes ? (
+                  <option>Loading...</option>
+                ) : taskTypeOptions.length === 0 ? (
+                  <option>No task types available</option>
+                ) : (
+                  taskTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
             <div>

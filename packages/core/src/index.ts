@@ -57,11 +57,13 @@ export {
   TaskType,
   EMBEDDINGGEMMA_TASK_PROMPTS,
   MODEL_TASK_SUPPORT,
+  TASK_TYPE_METADATA,
   isTaskTypeSupported,
   getTaskTypePromptFormatter,
   formatTextWithTaskType,
+  getSupportedTaskTypes,
 } from './shared/models/task-type'
-export type { TaskType as TaskTypeEnum } from './shared/models/task-type'
+export type { TaskType as TaskTypeEnum, TaskTypeMetadata } from './shared/models/task-type'
 
 export {
   CoreApplicationLayer,
