@@ -101,21 +101,22 @@ export const EMBEDDINGGEMMA_TASK_PROMPTS: Record<TaskType, (content: string, tit
 /**
  * Model-specific task type support
  * Maps model names to their supported task types
+ * Only models with actual prompt formatters should be listed here
  */
 export const MODEL_TASK_SUPPORT: Record<string, TaskType[]> = {
   "embeddinggemma": Object.values(TaskType),
-  "nomic-embed-text": [TaskType.RETRIEVAL_QUERY, TaskType.RETRIEVAL_DOCUMENT],
-  // Other models can be added here with their supported task types
+  // Other models can be added here when they have specific task type prompt formatters
 }
 
 /**
  * Check if a model supports a specific task type
+ * Only returns true if the model has a prompt formatter for the task type
  */
 export function isTaskTypeSupported(modelName: string, taskType: TaskType): boolean {
   const supportedTasks = MODEL_TASK_SUPPORT[modelName]
   if (!supportedTasks) {
-    // If model not in the list, assume basic retrieval support only
-    return taskType === TaskType.RETRIEVAL_QUERY || taskType === TaskType.RETRIEVAL_DOCUMENT
+    // If model not in the list, it doesn't support task type formatting
+    return false
   }
   return supportedTasks.includes(taskType)
 }
@@ -201,14 +202,17 @@ export const TASK_TYPE_METADATA: Record<TaskType, Omit<TaskTypeMetadata, 'value'
 
 /**
  * Get supported task types with metadata for a specific model
+ * Returns empty array if the model doesn't have task type formatters
  * @param modelName - Name of the model to get task types for
- * @returns Array of task type metadata supported by the model
+ * @returns Array of task type metadata supported by the model, or empty array if not supported
  */
 export function getSupportedTaskTypes(modelName: string): TaskTypeMetadata[] {
-  const supportedTypes = MODEL_TASK_SUPPORT[modelName] || [
-    TaskType.RETRIEVAL_QUERY,
-    TaskType.RETRIEVAL_DOCUMENT
-  ]
+  const supportedTypes = MODEL_TASK_SUPPORT[modelName]
+
+  // If model not in the list, it doesn't support task type formatting
+  if (!supportedTypes) {
+    return []
+  }
 
   return supportedTypes.map(type => ({
     value: type,

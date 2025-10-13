@@ -26,7 +26,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       threshold: 0.7,
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
-      query_task_type: 'retrieval_query' as TaskType,
+      query_task_type: undefined as TaskType | undefined,
     }
   })
 
@@ -55,17 +55,20 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
         setTaskTypeOptions(response.task_types)
 
         // If current task type is not supported by the new model, reset to the first available
-        const isSupported = response.task_types.some(t => t.value === searchParams.query_task_type)
-        if (!isSupported && response.task_types.length > 0) {
-          updateFilter('query_task_type', response.task_types[0].value as TaskType)
+        // If no task types available, clear the query_task_type
+        if (response.task_types.length === 0) {
+          updateFilter('query_task_type', undefined)
+        } else {
+          const isSupported = response.task_types.some(t => t.value === searchParams.query_task_type)
+          if (!isSupported) {
+            updateFilter('query_task_type', response.task_types[0].value as TaskType)
+          }
         }
       } catch (error) {
         console.error('Failed to load task types:', error)
-        // Fallback to default task types
-        setTaskTypeOptions([
-          { value: 'retrieval_query', label: 'Retrieval (Query)', description: 'Document search and information retrieval' },
-          { value: 'retrieval_document', label: 'Retrieval (Document)', description: 'Document indexing with title support' }
-        ] as TaskTypeMetadata[])
+        // On error, clear task types (model doesn't support them)
+        setTaskTypeOptions([])
+        updateFilter('query_task_type', undefined)
       } finally {
         setIsLoadingTaskTypes(false)
       }
@@ -131,7 +134,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           </div>
 
           {/* Search Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
             <div>
               <label className="text-sm font-medium">Model</label>
               <select
@@ -148,28 +151,23 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                   ))}
               </select>
             </div>
-            <div>
-              <label className="text-sm font-medium">Task Type</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={searchParams.query_task_type}
-                onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
-                title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
-                disabled={isLoadingTaskTypes || taskTypeOptions.length === 0}
-              >
-                {isLoadingTaskTypes ? (
-                  <option>Loading...</option>
-                ) : taskTypeOptions.length === 0 ? (
-                  <option>No task types available</option>
-                ) : (
-                  taskTypeOptions.map((option) => (
+            {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
+              <div>
+                <label className="text-sm font-medium">Task Type</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={searchParams.query_task_type}
+                  onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
+                  title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
+                >
+                  {taskTypeOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
-                  ))
-                )}
-              </select>
-            </div>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium">Limit</label>
               <Input
