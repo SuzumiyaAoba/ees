@@ -6,11 +6,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
-import type { SearchResult } from '@/types/api'
+import type { SearchResult, TaskType } from '@/types/api'
 
 interface SearchInterfaceProps {
   onResultSelect?: (result: SearchResult) => void
 }
+
+// Task type options with display names and descriptions
+const TASK_TYPE_OPTIONS: Array<{
+  value: TaskType
+  label: string
+  description: string
+}> = [
+  {
+    value: 'retrieval_query',
+    label: 'Retrieval (Query)',
+    description: 'Document search and information retrieval'
+  },
+  {
+    value: 'retrieval_document',
+    label: 'Retrieval (Document)',
+    description: 'Document indexing with title support'
+  },
+  {
+    value: 'question_answering',
+    label: 'Question Answering',
+    description: 'Q&A scenarios'
+  },
+  {
+    value: 'fact_verification',
+    label: 'Fact Verification',
+    description: 'Fact-checking scenarios'
+  },
+  {
+    value: 'classification',
+    label: 'Classification',
+    description: 'Predefined label classification'
+  },
+  {
+    value: 'clustering',
+    label: 'Clustering',
+    description: 'Similarity-based clustering'
+  },
+  {
+    value: 'semantic_similarity',
+    label: 'Semantic Similarity',
+    description: 'Similarity scoring (not recommended for search)'
+  },
+  {
+    value: 'code_retrieval',
+    label: 'Code Retrieval',
+    description: 'Search code blocks with natural language'
+  },
+]
 
 export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [query, setQuery] = useState('')
@@ -23,6 +71,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       threshold: 0.7,
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
+      query_task_type: 'retrieval_query' as TaskType,
     }
   })
 
@@ -97,7 +146,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           </div>
 
           {/* Search Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="text-sm font-medium">Model</label>
               <select
@@ -112,6 +161,21 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                       {model.displayName || model.name}
                     </option>
                   ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Task Type</label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={searchParams.query_task_type}
+                onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
+                title={TASK_TYPE_OPTIONS.find(opt => opt.value === searchParams.query_task_type)?.description}
+              >
+                {TASK_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

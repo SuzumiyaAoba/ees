@@ -51,9 +51,20 @@ export interface BatchCreateEmbeddingResponse {
   message: string
 }
 
+export type TaskType =
+  | 'retrieval_query'
+  | 'retrieval_document'
+  | 'question_answering'
+  | 'fact_verification'
+  | 'classification'
+  | 'clustering'
+  | 'semantic_similarity'
+  | 'code_retrieval'
+
 export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
+  query_task_type?: TaskType
   limit?: number
   threshold?: number
   metric?: 'cosine' | 'euclidean' | 'dot_product'
