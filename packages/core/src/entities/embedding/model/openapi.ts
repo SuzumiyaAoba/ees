@@ -260,6 +260,10 @@ export const SearchEmbeddingRequestSchema = z
       description: "Task type for query embedding (e.g., retrieval_query for search, question_answering for Q&A)",
       example: "retrieval_query",
     }),
+    query_title: z.string().optional().openapi({
+      description: "Optional title for retrieval_document task type (improves search accuracy)",
+      example: "Machine Learning Basics",
+    }),
     limit: z.number().int().min(1).max(100).optional().default(10).openapi({
       description: "Maximum number of results to return (max 100)",
       example: 10,

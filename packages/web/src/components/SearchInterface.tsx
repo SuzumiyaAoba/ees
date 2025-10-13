@@ -15,6 +15,7 @@ interface SearchInterfaceProps {
 
 export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [query, setQuery] = useState('')
+  const [title, setTitle] = useState('')
   const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
   const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
 
@@ -27,6 +28,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
       query_task_type: undefined as TaskType | undefined,
+      query_title: undefined as string | undefined,
     }
   })
 
@@ -77,7 +79,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
     loadTaskTypes()
   }, [searchParams.model_name])
 
-  // Debounced search
+  // Debounced search for query
   useEffect(() => {
     if (!query.trim()) {
       updateFilter('query', '')
@@ -91,9 +93,19 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
     return () => clearTimeout(timer)
   }, [query, updateFilter])
 
+  // Debounced search for title
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateFilter('query_title', title || undefined)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [title, updateFilter])
+
   const handleSearch = () => {
     if (query.trim()) {
       updateFilter('query', query)
+      updateFilter('query_title', title || undefined)
     }
   }
 
@@ -132,6 +144,23 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               Search
             </Button>
           </div>
+
+          {/* Title input for retrieval_document task type */}
+          {searchParams.query_task_type === 'retrieval_document' && (
+            <div>
+              <label className="text-sm font-medium">Title (optional)</label>
+              <Input
+                placeholder="Enter document title for better accuracy..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Providing a title improves search accuracy for document retrieval
+              </p>
+            </div>
+          )}
 
           {/* Search Options */}
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>

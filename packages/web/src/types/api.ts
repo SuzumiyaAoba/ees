@@ -77,6 +77,7 @@ export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
   query_task_type?: TaskType
+  query_title?: string
   limit?: number
   threshold?: number
   metric?: 'cosine' | 'euclidean' | 'dot_product'
