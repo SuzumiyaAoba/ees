@@ -74,10 +74,10 @@ export type TaskType = (typeof TaskType)[keyof typeof TaskType]
  */
 export const EMBEDDINGGEMMA_TASK_PROMPTS: Record<TaskType, (content: string, title?: string) => string> = {
   [TaskType.RETRIEVAL_QUERY]: (content: string) =>
-    `search_query: ${content}`,
+    `task: search result | query: ${content}`,
 
   [TaskType.RETRIEVAL_DOCUMENT]: (content: string, title?: string) =>
-    title ? `search_document: ${title}\n${content}` : `search_document: ${content}`,
+    title ? `title: ${title} | text: ${content}` : `title: none | text: ${content}`,
 
   [TaskType.QUESTION_ANSWERING]: (content: string) =>
     `task: question answering | query: ${content}`,
@@ -101,21 +101,22 @@ export const EMBEDDINGGEMMA_TASK_PROMPTS: Record<TaskType, (content: string, tit
 /**
  * Model-specific task type support
  * Maps model names to their supported task types
+ * Only models with actual prompt formatters should be listed here
  */
 export const MODEL_TASK_SUPPORT: Record<string, TaskType[]> = {
   "embeddinggemma": Object.values(TaskType),
-  "nomic-embed-text": [TaskType.RETRIEVAL_QUERY, TaskType.RETRIEVAL_DOCUMENT],
-  // Other models can be added here with their supported task types
+  // Other models can be added here when they have specific task type prompt formatters
 }
 
 /**
  * Check if a model supports a specific task type
+ * Only returns true if the model has a prompt formatter for the task type
  */
 export function isTaskTypeSupported(modelName: string, taskType: TaskType): boolean {
   const supportedTasks = MODEL_TASK_SUPPORT[modelName]
   if (!supportedTasks) {
-    // If model not in the list, assume basic retrieval support only
-    return taskType === TaskType.RETRIEVAL_QUERY || taskType === TaskType.RETRIEVAL_DOCUMENT
+    // If model not in the list, it doesn't support task type formatting
+    return false
   }
   return supportedTasks.includes(taskType)
 }
@@ -150,4 +151,71 @@ export function formatTextWithTaskType(
     return formatter(text, title)
   }
   return text
+}
+
+/**
+ * Task type metadata with human-readable labels and descriptions
+ */
+export interface TaskTypeMetadata {
+  value: TaskType
+  label: string
+  description: string
+}
+
+/**
+ * Task type metadata for all available task types
+ */
+export const TASK_TYPE_METADATA: Record<TaskType, Omit<TaskTypeMetadata, 'value'>> = {
+  [TaskType.RETRIEVAL_QUERY]: {
+    label: 'Retrieval (Query)',
+    description: 'Document search and information retrieval'
+  },
+  [TaskType.RETRIEVAL_DOCUMENT]: {
+    label: 'Retrieval (Document)',
+    description: 'Document indexing with title support'
+  },
+  [TaskType.QUESTION_ANSWERING]: {
+    label: 'Question Answering',
+    description: 'Q&A scenarios'
+  },
+  [TaskType.FACT_VERIFICATION]: {
+    label: 'Fact Verification',
+    description: 'Fact-checking scenarios'
+  },
+  [TaskType.CLASSIFICATION]: {
+    label: 'Classification',
+    description: 'Predefined label classification'
+  },
+  [TaskType.CLUSTERING]: {
+    label: 'Clustering',
+    description: 'Similarity-based clustering'
+  },
+  [TaskType.SEMANTIC_SIMILARITY]: {
+    label: 'Semantic Similarity',
+    description: 'Similarity scoring (not recommended for search)'
+  },
+  [TaskType.CODE_RETRIEVAL]: {
+    label: 'Code Retrieval',
+    description: 'Search code blocks with natural language'
+  },
+}
+
+/**
+ * Get supported task types with metadata for a specific model
+ * Returns empty array if the model doesn't have task type formatters
+ * @param modelName - Name of the model to get task types for
+ * @returns Array of task type metadata supported by the model, or empty array if not supported
+ */
+export function getSupportedTaskTypes(modelName: string): TaskTypeMetadata[] {
+  const supportedTypes = MODEL_TASK_SUPPORT[modelName]
+
+  // If model not in the list, it doesn't support task type formatting
+  if (!supportedTypes) {
+    return []
+  }
+
+  return supportedTypes.map(type => ({
+    value: type,
+    ...TASK_TYPE_METADATA[type]
+  }))
 }

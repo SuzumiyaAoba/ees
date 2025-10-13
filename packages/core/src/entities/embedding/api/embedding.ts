@@ -6,6 +6,7 @@
 import { Context, Effect, Layer, Option, pipe } from "effect"
 import { getDefaultProvider } from "@/shared/config/providers"
 import { DatabaseQueryError } from "@/shared/errors/database"
+import { createPinoLogger, createLoggerConfig } from "@/shared/observability"
 import {
   EmbeddingProviderService,
   ProviderConnectionError,
@@ -27,6 +28,10 @@ import {
 } from "@/shared/cache"
 import { tryPromiseWithError } from "@/shared/lib/effect-utils"
 import { validateEmbeddingInput } from "@/entities/embedding/lib/embedding-validation"
+import {
+  formatTextWithTaskType,
+  TaskType,
+} from "@/shared/models/task-type"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -662,13 +667,15 @@ const make = Effect.gen(function* () {
    * Search for similar embeddings using vector similarity
    *
    * Algorithm Flow:
-   * 1. Generate embedding vector for the query text
-   * 2. Perform vector similarity search in repository
-   * 3. Record search metrics (duration and metric type)
-   * 4. Return results with metadata
+   * 1. Format query text with task type if model supports it (e.g., retrieval_query for embeddinggemma)
+   * 2. Generate embedding vector for the formatted query text
+   * 3. Perform vector similarity search in repository
+   * 4. Record search metrics (duration and metric type)
+   * 5. Return results with metadata
    *
    * Business Rules:
    * - Query must use same model as stored embeddings for accurate comparison
+   * - Task type formatting applied only to models that support it (e.g., embeddinggemma)
    * - Default limit is 10 results (prevents excessive memory usage)
    * - Default metric is "cosine" (most common for text embeddings)
    * - Results are ranked by similarity (highest similarity first)
@@ -689,24 +696,51 @@ const make = Effect.gen(function* () {
    * - Threshold is optional (filters results by minimum similarity if provided)
    * - Empty results are valid (count: 0)
    *
-   * @param request - Search parameters (query text, model, limit, threshold, metric)
+   * @param request - Search parameters (query text, model, limit, threshold, metric, query_task_type)
    * @returns Effect containing search results and metadata
    */
   const searchEmbeddings = (request: SearchEmbeddingRequest) => {
+    // Initialize logger for search operations
+    const logger = createPinoLogger(createLoggerConfig())
+
     // Capture start time for duration metrics
     const startTime = Date.now()
     const {
       query,
       model_name,
+      query_task_type,  // Optional task type for query formatting
       limit = 10,  // Default limit prevents unbounded result sets
       threshold,   // Optional minimum similarity threshold
       metric = "cosine",  // Cosine similarity is best for text embeddings
     } = request
 
+    // Get effective model name and format query with task type if supported
+    const provider = getDefaultProvider()
+    const effectiveModelName = model_name ?? provider.defaultModel ?? "nomic-embed-text"
+    const taskType: TaskType = (query_task_type as TaskType | undefined) ?? TaskType.RETRIEVAL_QUERY
+    const formattedQuery = formatTextWithTaskType(
+      effectiveModelName,
+      query,
+      taskType
+    )
+
+    // Log the query being sent to the embedding model
+    logger.info({
+      component: "embedding-service",
+      operation: "search",
+      original_query: query,
+      formatted_query: formattedQuery,
+      model_name: effectiveModelName,
+      task_type: taskType,
+      limit,
+      metric,
+      threshold
+    }, "Search query sent to embedding model")
+
     return pipe(
-      // Step 1: Generate embedding vector for the query text
+      // Step 1: Generate embedding vector for the formatted query text
       // Must use same model as stored embeddings for accurate comparison
-      providerService.generateEmbedding({ text: query, modelName: model_name }),
+      providerService.generateEmbedding({ text: formattedQuery, modelName: model_name }),
       // Step 2: Perform vector similarity search in repository
       Effect.flatMap((queryEmbeddingResponse) =>
         pipe(

@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
-import type { SearchResult } from '@/types/api'
+import { apiClient } from '@/services/api'
+import type { SearchResult, TaskType, TaskTypeMetadata } from '@/types/api'
 
 interface SearchInterfaceProps {
   onResultSelect?: (result: SearchResult) => void
@@ -14,6 +15,8 @@ interface SearchInterfaceProps {
 
 export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [query, setQuery] = useState('')
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
 
   // Use shared filters hook
   const { filters: searchParams, updateFilter } = useFilters({
@@ -23,6 +26,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       threshold: 0.7,
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
+      query_task_type: undefined as TaskType | undefined,
     }
   })
 
@@ -39,6 +43,39 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       updateFilter('model_name', firstAvailable.name)
     }
   }, [modelsData, searchParams.model_name, updateFilter])
+
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      if (!searchParams.model_name) return
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(searchParams.model_name)
+        setTaskTypeOptions(response.task_types)
+
+        // If current task type is not supported by the new model, reset to the first available
+        // If no task types available, clear the query_task_type
+        if (response.task_types.length === 0) {
+          updateFilter('query_task_type', undefined)
+        } else {
+          const isSupported = response.task_types.some(t => t.value === searchParams.query_task_type)
+          if (!isSupported) {
+            updateFilter('query_task_type', response.task_types[0].value as TaskType)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        // On error, clear task types (model doesn't support them)
+        setTaskTypeOptions([])
+        updateFilter('query_task_type', undefined)
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [searchParams.model_name])
 
   // Debounced search
   useEffect(() => {
@@ -97,7 +134,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           </div>
 
           {/* Search Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
             <div>
               <label className="text-sm font-medium">Model</label>
               <select
@@ -114,6 +151,23 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                   ))}
               </select>
             </div>
+            {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
+              <div>
+                <label className="text-sm font-medium">Task Type</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={searchParams.query_task_type}
+                  onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
+                  title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
+                >
+                  {taskTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium">Limit</label>
               <Input

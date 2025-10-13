@@ -13,6 +13,7 @@ import {
   listEmbeddingModelsRoute,
 } from "@/features/list-embeddings"
 import { listModelsRoute } from "@/features/list-models"
+import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
@@ -333,6 +334,12 @@ app.openapi(listModelsRoute, async (c) => {
     )
   ) as never
 })
+
+/**
+ * List task types endpoint
+ * Returns supported task types for a specific model
+ */
+registerListTaskTypesRoutes(app)
 
 /**
  * OpenAPI specification endpoint
