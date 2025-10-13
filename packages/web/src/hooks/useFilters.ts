@@ -39,11 +39,11 @@ export function useFilters<T extends Record<string, unknown>>(
     })
   }, [filters, initialFilters])
 
-  return useMemo(() => ({
+  return {
     filters,
     setFilters,
     updateFilter,
     resetFilters,
     hasActiveFilters,
-  }), [filters, updateFilter, resetFilters, hasActiveFilters])
+  }
 }

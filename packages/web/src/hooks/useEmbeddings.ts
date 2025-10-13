@@ -13,7 +13,16 @@ export const QUERY_KEYS = {
   providers: () => ['providers'],
   providerModels: (provider?: string) => ['providerModels', provider],
   currentProvider: () => ['currentProvider'],
-  search: (query: SearchEmbeddingRequest) => ['search', query],
+  search: (query: SearchEmbeddingRequest) => [
+    'search',
+    query.query,
+    query.model_name,
+    query.query_task_type,
+    query.query_title,
+    query.limit,
+    query.threshold,
+    query.metric,
+  ] as const,
   distinctModels: () => ['embeddings', 'distinct-models'],
 } as const
 
