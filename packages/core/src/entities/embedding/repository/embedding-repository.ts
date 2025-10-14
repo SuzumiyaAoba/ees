@@ -58,19 +58,46 @@ const EMBEDDING_QUERIES = {
     ORDER BY similarity DESC
     LIMIT ?
   `,
-  VECTOR_SEARCH_FALLBACK: `
+  VECTOR_SEARCH_EUCLIDEAN: `
     SELECT
       id,
       uri,
       text,
       model_name,
-      vector_distance_cos(embedding, vector(?)) as distance,
+      vector_distance_l2(embedding, vector(?)) as distance,
+      created_at,
+      updated_at
+    FROM embeddings
+    WHERE model_name = ? AND vector_distance_l2(embedding, vector(?)) <= ?
+    ORDER BY distance ASC
+    LIMIT ?
+  `,
+  VECTOR_SEARCH_EUCLIDEAN_NO_THRESHOLD: `
+    SELECT
+      id,
+      uri,
+      text,
+      model_name,
+      vector_distance_l2(embedding, vector(?)) as distance,
       created_at,
       updated_at
     FROM embeddings
     WHERE model_name = ?
     ORDER BY distance ASC
     LIMIT ?
+  `,
+  VECTOR_SEARCH_DOT_PRODUCT: `
+    SELECT
+      id,
+      uri,
+      text,
+      model_name,
+      embedding,
+      created_at,
+      updated_at
+    FROM embeddings
+    WHERE model_name = ?
+    LIMIT 10000
   `,
 } as const
 
@@ -126,6 +153,7 @@ type VectorSearchRowRaw = {
   model_name: string | null
   similarity?: number | string | null
   distance?: number | string | null
+  embedding?: string | Uint8Array | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -520,11 +548,18 @@ const make = Effect.gen(function* () {
           ? EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE
           // Without threshold: return top K most similar results
           : EMBEDDING_QUERIES.VECTOR_SEARCH_COSINE_NO_THRESHOLD
+      } else if (metric === "euclidean") {
+        // Euclidean distance (L2): measures straight-line distance between vectors
+        // Uses libSQL's native vector_distance_l2() function
+        // Lower distance = more similar (0 = identical vectors)
+        vectorSearchQuery = threshold
+          ? EMBEDDING_QUERIES.VECTOR_SEARCH_EUCLIDEAN
+          : EMBEDDING_QUERIES.VECTOR_SEARCH_EUCLIDEAN_NO_THRESHOLD
       } else {
-        // Euclidean and dot product metrics use fallback query
-        // These are computed in application layer rather than using libSQL vector functions
-        // This provides flexibility for metrics not natively supported by libSQL
-        vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_FALLBACK
+        // Dot product: measures both angle and magnitude similarity
+        // libSQL doesn't have native dot product function, so compute in application layer
+        // Retrieves all embeddings and calculates dot product similarity in memory
+        vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_DOT_PRODUCT
       }
 
       const searchResults = yield* Effect.tryPromise({
@@ -532,6 +567,7 @@ const make = Effect.gen(function* () {
           // Build query parameters array based on metric and threshold
           // Parameter order must match placeholders (?) in the SQL query
           let args: (string | number)[]
+
           if (metric === "cosine") {
             args = threshold
               // With threshold: [queryVector, modelName, queryVector, threshold, limit]
@@ -544,10 +580,17 @@ const make = Effect.gen(function* () {
               // Without threshold: [queryVector, modelName, limit]
               // Simpler query without threshold filtering
               : [queryVector, modelName, limit]
+          } else if (metric === "euclidean") {
+            args = threshold
+              // With threshold: [queryVector, modelName, queryVector, threshold, limit]
+              // Similar structure to cosine for consistency
+              ? [queryVector, modelName, queryVector, threshold, limit]
+              // Without threshold: [queryVector, modelName, limit]
+              : [queryVector, modelName, limit]
           } else {
-            // Fallback query parameters: [queryVector, modelName, limit]
-            // Simpler structure for non-cosine metrics computed in application layer
-            args = [queryVector, modelName, limit]
+            // Dot product: [modelName] only
+            // Retrieves all embeddings for in-memory calculation
+            args = [modelName]
           }
 
           // Execute the vector search query using libSQL client
@@ -567,29 +610,85 @@ const make = Effect.gen(function* () {
 
       // Transform raw database rows into typed SimilarEmbedding objects
       // Handles type conversion and similarity score normalization
-      const results = searchResults
-        .map((row) => ({
-          id: Number(row["id"] ?? 0),
-          uri: String(row["uri"] ?? ""),
-          text: String(row["text"] ?? ""),
-          model_name: String(row["model_name"] ?? ""),
-          // Similarity score calculation varies by metric:
-          // - Cosine: pre-calculated in SQL (already 0-1 range where higher = more similar)
-          // - Others: convert distance to similarity (similarity = 1 - distance)
-          similarity:
-            metric === "cosine"
-              ? Number(row["similarity"] ?? 0)
-              : 1.0 - Number(row["distance"] ?? 0),
-          created_at: row["created_at"] ? String(row["created_at"]) : null,
-          updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
-        }))
-        .filter(
-          (result) =>
-            // Apply threshold filter for non-cosine metrics
-            // Cosine metric filters in SQL for better performance
-            // Other metrics filter here after distance-to-similarity conversion
-            !threshold || result.similarity >= threshold
-        )
+      let results: SimilarEmbedding[]
+
+      if (metric === "dot_product") {
+        // Dot product calculation in application layer
+        // libSQL doesn't provide native dot product distance function
+        results = searchResults
+          .map((row) => {
+            // Parse the embedding from database storage format
+            const embeddingData = row["embedding"]
+            let embedding: number[]
+
+            if (typeof embeddingData === "string") {
+              // Try to parse as JSON array
+              try {
+                const parsed = JSON.parse(embeddingData)
+                if (Array.isArray(parsed) && parsed.every((v) => typeof v === "number")) {
+                  embedding = parsed as number[]
+                } else {
+                  return null
+                }
+              } catch {
+                return null
+              }
+            } else {
+              return null
+            }
+
+            // Calculate dot product: sum of element-wise multiplication
+            // Dot product measures both angle and magnitude similarity
+            const dotProduct = queryEmbedding.reduce(
+              (sum, val, idx) => sum + val * (embedding[idx] ?? 0),
+              0
+            )
+
+            return {
+              id: Number(row["id"] ?? 0),
+              uri: String(row["uri"] ?? ""),
+              text: String(row["text"] ?? ""),
+              model_name: String(row["model_name"] ?? ""),
+              // Dot product as similarity: higher values = more similar
+              // Note: Only valid for normalized vectors
+              similarity: dotProduct,
+              created_at: row["created_at"] ? String(row["created_at"]) : null,
+              updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
+            }
+          })
+          .filter((result): result is SimilarEmbedding => result !== null)
+          .filter((result) => !threshold || result.similarity >= threshold)
+          // Sort by similarity descending (higher dot product = more similar)
+          .sort((a, b) => b.similarity - a.similarity)
+          // Take top K results
+          .slice(0, limit)
+      } else {
+        // Cosine and Euclidean: use pre-calculated values from SQL
+        results = searchResults
+          .map((row) => ({
+            id: Number(row["id"] ?? 0),
+            uri: String(row["uri"] ?? ""),
+            text: String(row["text"] ?? ""),
+            model_name: String(row["model_name"] ?? ""),
+            // Similarity score calculation varies by metric:
+            // - Cosine: pre-calculated in SQL (0-1 range, higher = more similar)
+            // - Euclidean: convert distance to similarity (lower distance = higher similarity)
+            //   For Euclidean, we invert: similarity = 1 / (1 + distance)
+            //   This ensures 0 distance = 1.0 similarity, and larger distances approach 0
+            similarity:
+              metric === "cosine"
+                ? Number(row["similarity"] ?? 0)
+                : 1.0 / (1.0 + Number(row["distance"] ?? 0)),
+            created_at: row["created_at"] ? String(row["created_at"]) : null,
+            updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
+          }))
+          .filter(
+            (result) =>
+              // Apply threshold filter for Euclidean if not filtered in SQL
+              // Cosine metric already filters in SQL for better performance
+              !threshold || result.similarity >= threshold
+          )
+      }
 
       return results
     })
