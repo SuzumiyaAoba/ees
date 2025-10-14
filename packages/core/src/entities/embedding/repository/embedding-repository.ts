@@ -68,20 +68,6 @@ const EMBEDDING_QUERIES = {
       created_at,
       updated_at
     FROM embeddings
-    WHERE model_name = ? AND vector_distance_l2(embedding, vector(?)) <= ?
-    ORDER BY distance ASC
-    LIMIT ?
-  `,
-  VECTOR_SEARCH_EUCLIDEAN_NO_THRESHOLD: `
-    SELECT
-      id,
-      uri,
-      text,
-      model_name,
-      vector_distance_l2(embedding, vector(?)) as distance,
-      created_at,
-      updated_at
-    FROM embeddings
     WHERE model_name = ?
     ORDER BY distance ASC
     LIMIT ?
@@ -552,9 +538,8 @@ const make = Effect.gen(function* () {
         // Euclidean distance (L2): measures straight-line distance between vectors
         // Uses libSQL's native vector_distance_l2() function
         // Lower distance = more similar (0 = identical vectors)
-        vectorSearchQuery = threshold
-          ? EMBEDDING_QUERIES.VECTOR_SEARCH_EUCLIDEAN
-          : EMBEDDING_QUERIES.VECTOR_SEARCH_EUCLIDEAN_NO_THRESHOLD
+        // Threshold filtering is done in application layer after converting distance to similarity
+        vectorSearchQuery = EMBEDDING_QUERIES.VECTOR_SEARCH_EUCLIDEAN
       } else {
         // Dot product: measures both angle and magnitude similarity
         // libSQL doesn't have native dot product function, so compute in application layer
@@ -581,12 +566,9 @@ const make = Effect.gen(function* () {
               // Simpler query without threshold filtering
               : [queryVector, modelName, limit]
           } else if (metric === "euclidean") {
-            args = threshold
-              // With threshold: [queryVector, modelName, queryVector, threshold, limit]
-              // Similar structure to cosine for consistency
-              ? [queryVector, modelName, queryVector, threshold, limit]
-              // Without threshold: [queryVector, modelName, limit]
-              : [queryVector, modelName, limit]
+            // Euclidean: [queryVector, modelName, limit]
+            // Threshold filtering is done in application layer after similarity conversion
+            args = [queryVector, modelName, limit]
           } else {
             // Dot product: [modelName] only
             // Retrieves all embeddings for in-memory calculation
