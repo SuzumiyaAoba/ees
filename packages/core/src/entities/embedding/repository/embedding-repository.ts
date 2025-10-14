@@ -597,47 +597,39 @@ const make = Effect.gen(function* () {
       if (metric === "dot_product") {
         // Dot product calculation in application layer
         // libSQL doesn't provide native dot product distance function
-        results = searchResults
-          .map((row) => {
-            // Parse the embedding from database storage format
-            const embeddingData = row["embedding"]
-            let embedding: number[]
+        const parsedResults = yield* Effect.all(
+          searchResults.map((row) =>
+            Effect.gen(function* () {
+              // Parse the embedding from database storage format
+              // Handles both F32_BLOB (ArrayBuffer/Uint8Array) and legacy JSON string formats
+              const embeddingData = row["embedding"]
+              const embedding = yield* parseStoredEmbeddingData(embeddingData)
 
-            if (typeof embeddingData === "string") {
-              // Try to parse as JSON array
-              try {
-                const parsed = JSON.parse(embeddingData)
-                if (Array.isArray(parsed) && parsed.every((v) => typeof v === "number")) {
-                  embedding = parsed as number[]
-                } else {
-                  return null
-                }
-              } catch {
-                return null
+              // Calculate dot product: sum of element-wise multiplication
+              // Dot product measures both angle and magnitude similarity
+              const dotProduct = queryEmbedding.reduce(
+                (sum, val, idx) => sum + val * (embedding[idx] ?? 0),
+                0
+              )
+
+              return {
+                id: Number(row["id"] ?? 0),
+                uri: String(row["uri"] ?? ""),
+                text: String(row["text"] ?? ""),
+                model_name: String(row["model_name"] ?? ""),
+                // Dot product as similarity: higher values = more similar
+                // Note: Only valid for normalized vectors
+                similarity: dotProduct,
+                created_at: row["created_at"] ? String(row["created_at"]) : null,
+                updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
               }
-            } else {
-              return null
-            }
-
-            // Calculate dot product: sum of element-wise multiplication
-            // Dot product measures both angle and magnitude similarity
-            const dotProduct = queryEmbedding.reduce(
-              (sum, val, idx) => sum + val * (embedding[idx] ?? 0),
-              0
+            }).pipe(
+              Effect.catchAll(() => Effect.succeed(null))
             )
+          )
+        )
 
-            return {
-              id: Number(row["id"] ?? 0),
-              uri: String(row["uri"] ?? ""),
-              text: String(row["text"] ?? ""),
-              model_name: String(row["model_name"] ?? ""),
-              // Dot product as similarity: higher values = more similar
-              // Note: Only valid for normalized vectors
-              similarity: dotProduct,
-              created_at: row["created_at"] ? String(row["created_at"]) : null,
-              updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
-            }
-          })
+        results = parsedResults
           .filter((result): result is SimilarEmbedding => result !== null)
           .filter((result) => !threshold || result.similarity >= threshold)
           // Sort by similarity descending (higher dot product = more similar)
