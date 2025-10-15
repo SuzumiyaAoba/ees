@@ -229,3 +229,15 @@ export interface SyncUploadDirectoryResponse {
   files_failed: number
   message: string
 }
+
+// File System types
+export interface DirectoryEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+}
+
+export interface ListDirectoryResponse {
+  path: string
+  entries: DirectoryEntry[]
+}

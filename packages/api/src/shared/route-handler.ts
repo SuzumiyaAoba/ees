@@ -2,10 +2,11 @@ import { Effect } from "effect"
 import type { Context } from "hono"
 import { AppLayer } from "@/app/providers/main"
 import { handleErrorResponse } from "@/shared/error-handler"
-import { EmbeddingApplicationService, ModelManagerTag, UploadDirectoryRepository } from "@ees/core"
+import { EmbeddingApplicationService, ModelManagerTag, UploadDirectoryRepository, FileSystemService } from "@ees/core"
 import type { EmbeddingApplicationService as EmbeddingApplicationServiceType } from "@ees/core"
 import type { ModelManager } from "@ees/core"
 import type { UploadDirectoryRepository as UploadDirectoryRepositoryType } from "@ees/core"
+import type { FileSystemService as FileSystemServiceType } from "@ees/core"
 
 /**
  * Generic route handler that abstracts the common Effect execution pattern
@@ -65,6 +66,19 @@ export function withUploadDirectoryRepository<T, E, R>(
   return Effect.gen(function* () {
     const repository = yield* UploadDirectoryRepository
     return yield* repositoryCall(repository)
+  })
+}
+
+/**
+ * Helper for creating Effect programs with FileSystemService
+ * Reduces boilerplate in file system endpoints
+ */
+export function withFileSystemService<T, E, R>(
+  serviceCall: (service: FileSystemServiceType) => Effect.Effect<T, E, R>
+): Effect.Effect<T, E, FileSystemServiceType | R> {
+  return Effect.gen(function* () {
+    const service = yield* FileSystemService
+    return yield* serviceCall(service)
   })
 }
 

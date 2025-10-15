@@ -26,8 +26,9 @@ import {
   deleteUploadDirectoryRoute,
   syncUploadDirectoryRoute,
 } from "@/features/upload-directory"
+import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
-import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository } from "@/shared/route-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService } from "@/shared/route-handler"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
   requestLoggingMiddleware,
@@ -591,6 +592,31 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
 })
 
 /**
+ * File System Endpoints
+ */
+
+/**
+ * List directory contents endpoint
+ * Returns subdirectories for directory picker
+ */
+app.openapi(listDirectoryRoute, async (c) => {
+  const { path } = c.req.valid("query")
+
+  return executeEffectHandler(c, "listDirectory",
+    withFileSystemService(service =>
+      Effect.gen(function* () {
+        const entries = yield* service.listDirectory(path)
+
+        return {
+          path,
+          entries,
+        }
+      })
+    )
+  ) as never
+})
+
+/**
  * OpenAPI specification endpoint
  * Provides machine-readable API documentation in OpenAPI 3.0 format
  */
@@ -632,6 +658,10 @@ app.doc("/openapi.json", {
     {
       name: "Upload Directories",
       description: "Upload directory management and synchronization endpoints",
+    },
+    {
+      name: "File System",
+      description: "File system browsing endpoints for directory picker",
     },
   ],
 })

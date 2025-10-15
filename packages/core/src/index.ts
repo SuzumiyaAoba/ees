@@ -115,3 +115,10 @@ export {
   SyncUploadDirectoryResponseSchema,
   DeleteUploadDirectoryResponseSchema,
 } from './entities/upload-directory/model/openapi'
+
+// Export file system service
+export {
+  FileSystemService,
+  FileSystemServiceLive,
+  type DirectoryEntry,
+} from './entities/file-system/api/file-system'
