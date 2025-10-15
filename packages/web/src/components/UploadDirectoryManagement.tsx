@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { FolderOpen, FolderPlus, RefreshCw, Trash2, Edit, CheckCircle, AlertCircle } from 'lucide-react'
+import { FolderOpen, FolderPlus, RefreshCw, Trash2, Edit, CheckCircle, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { DirectoryPickerModal } from '@/components/DirectoryPickerModal'
 import {
   useUploadDirectories,
   useCreateUploadDirectory,
@@ -27,6 +28,7 @@ export function UploadDirectoryManagement() {
     description: '',
   })
   const [syncingDirectories, setSyncingDirectories] = useState<Set<number>>(new Set())
+  const [showDirectoryPicker, setShowDirectoryPicker] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -141,13 +143,23 @@ export function UploadDirectoryManagement() {
 
               <div>
                 <label className="text-sm font-medium">Directory Path</label>
-                <Input
-                  type="text"
-                  value={formData.path}
-                  onChange={(e) => setFormData({ ...formData, path: e.target.value })}
-                  placeholder="/Users/username/Documents"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={formData.path}
+                    onChange={(e) => setFormData({ ...formData, path: e.target.value })}
+                    placeholder="/Users/username/Documents"
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowDirectoryPicker(true)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Absolute path to the directory on your system
                 </p>
@@ -309,6 +321,17 @@ export function UploadDirectoryManagement() {
           </CardContent>
         </Card>
       )}
+
+      {/* Directory Picker Modal */}
+      <DirectoryPickerModal
+        open={showDirectoryPicker}
+        onClose={() => setShowDirectoryPicker(false)}
+        onSelect={(path) => {
+          setFormData({ ...formData, path })
+          setShowDirectoryPicker(false)
+        }}
+        initialPath={formData.path || '/Users'}
+      />
     </div>
   )
 }

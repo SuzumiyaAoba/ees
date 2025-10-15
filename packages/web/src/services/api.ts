@@ -21,6 +21,7 @@ import type {
   UploadDirectory,
   UploadDirectoryListResponse,
   SyncUploadDirectoryResponse,
+  ListDirectoryResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -270,6 +271,14 @@ class ApiClient {
     return this.request<SyncUploadDirectoryResponse>(`/upload-directories/${id}/sync`, {
       method: 'POST',
     })
+  }
+
+  // File System operations
+  async listDirectory(path: string): Promise<ListDirectoryResponse> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('path', path)
+
+    return this.request<ListDirectoryResponse>(`/file-system/list?${searchParams.toString()}`)
   }
 }
 
