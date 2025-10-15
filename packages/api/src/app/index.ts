@@ -18,8 +18,16 @@ import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
+import {
+  createUploadDirectoryRoute,
+  listUploadDirectoriesRoute,
+  getUploadDirectoryRoute,
+  updateUploadDirectoryRoute,
+  deleteUploadDirectoryRoute,
+  syncUploadDirectoryRoute,
+} from "@/features/upload-directory"
 import { rootRoute } from "./config/routes"
-import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository } from "@/shared/route-handler"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
   requestLoggingMiddleware,
@@ -342,6 +350,247 @@ app.openapi(listModelsRoute, async (c) => {
 registerListTaskTypesRoutes(app)
 
 /**
+ * Upload Directory Management Endpoints
+ */
+
+/**
+ * Create upload directory endpoint
+ * Register a new directory path for document management
+ */
+app.use("/upload-directories", security.rateLimits.general)
+app.openapi(createUploadDirectoryRoute, async (c) => {
+  const { name, path, model_name, description } = c.req.valid("json")
+
+  return executeEffectHandler(c, "createUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        // Check if path already exists
+        const existing = yield* repository.findByPath(path)
+        if (existing) {
+          return yield* Effect.fail(new Error("Directory path already registered"))
+        }
+
+        const result = yield* repository.create({
+          name,
+          path,
+          modelName: model_name,
+          description,
+        })
+
+        return {
+          id: result.id,
+          message: "Upload directory created successfully",
+        }
+      })
+    )
+  ) as never
+})
+
+/**
+ * List upload directories endpoint
+ * Retrieve all registered upload directories
+ */
+app.openapi(listUploadDirectoriesRoute, async (c) => {
+  return executeEffectHandler(c, "listUploadDirectories",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directories = yield* repository.findAll()
+
+        return {
+          directories: directories.map((dir: {
+            id: number
+            name: string
+            path: string
+            modelName: string
+            description: string | null
+            lastSyncedAt: string | null
+            createdAt: string | null
+            updatedAt: string | null
+          }) => ({
+            id: dir.id,
+            name: dir.name,
+            path: dir.path,
+            model_name: dir.modelName,
+            description: dir.description,
+            last_synced_at: dir.lastSyncedAt,
+            created_at: dir.createdAt,
+            updated_at: dir.updatedAt,
+          })),
+          count: directories.length,
+        }
+      })
+    )
+  ) as never
+})
+
+/**
+ * Get upload directory by ID endpoint
+ * Retrieve a specific upload directory
+ */
+app.openapi(getUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "getUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directory = yield* repository.findById(id)
+
+        if (!directory) {
+          return null
+        }
+
+        return {
+          id: directory.id,
+          name: directory.name,
+          path: directory.path,
+          model_name: directory.modelName,
+          description: directory.description,
+          last_synced_at: directory.lastSyncedAt,
+          created_at: directory.createdAt,
+          updated_at: directory.updatedAt,
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Update upload directory endpoint
+ * Update directory metadata (name, model, description)
+ */
+app.openapi(updateUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const updates = c.req.valid("json")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "updateUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const updated = yield* repository.update(id, {
+          ...(updates.name && { name: updates.name }),
+          ...(updates.model_name && { modelName: updates.model_name }),
+          ...(updates.description !== undefined && { description: updates.description }),
+        })
+
+        if (!updated) {
+          return null
+        }
+
+        const directory = yield* repository.findById(id)
+        if (!directory) {
+          return null
+        }
+
+        return {
+          id: directory.id,
+          name: directory.name,
+          path: directory.path,
+          model_name: directory.modelName,
+          description: directory.description,
+          last_synced_at: directory.lastSyncedAt,
+          created_at: directory.createdAt,
+          updated_at: directory.updatedAt,
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Delete upload directory endpoint
+ * Remove a directory from the system
+ */
+app.openapi(deleteUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "deleteUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const deleted = yield* repository.deleteById(id)
+
+        if (!deleted) {
+          return null
+        }
+
+        return {
+          message: "Upload directory deleted successfully",
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Sync upload directory endpoint
+ * Scan directory and process all files
+ * TODO: Implement full sync functionality with file scanning and embedding creation
+ */
+app.openapi(syncUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "syncUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directory = yield* repository.findById(id)
+
+        if (!directory) {
+          return null
+        }
+
+        // TODO: Implement full sync logic
+        // 1. Scan directory for files
+        // 2. Process each file
+        // 3. Create/update embeddings
+        // 4. Update last_synced_at timestamp
+
+        // For now, just update the timestamp
+        yield* repository.updateLastSynced(id)
+
+        return {
+          directory_id: id,
+          files_processed: 0,
+          files_created: 0,
+          files_updated: 0,
+          files_failed: 0,
+          message: "Directory sync endpoint created - full implementation pending",
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
  * OpenAPI specification endpoint
  * Provides machine-readable API documentation in OpenAPI 3.0 format
  */
@@ -379,6 +628,10 @@ app.doc("/openapi.json", {
     {
       name: "Providers",
       description: "Provider management and status endpoints",
+    },
+    {
+      name: "Upload Directories",
+      description: "Upload directory management and synchronization endpoints",
     },
   ],
 })
