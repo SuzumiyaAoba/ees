@@ -182,6 +182,30 @@ const make = Effect.gen(function* () {
         CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON embeddings(libsql_vector_idx(embedding, 'metric=cosine'))
       `)
 
+      // Create upload_directories table for directory management
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS upload_directories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL UNIQUE,
+          model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
+          description TEXT,
+          last_synced_at TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+
+      // Index on path: Enables fast lookups and prevents duplicates
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_upload_directories_path ON upload_directories(path)
+      `)
+
+      // Index on created_at: Supports time-based queries and sorting
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_upload_directories_created_at ON upload_directories(created_at)
+      `)
+
       if (needsMigration) {
         logger.info("✅ Database migration completed successfully")
       }
