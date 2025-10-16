@@ -113,7 +113,7 @@ export function UploadDirectoryManagement() {
                 Upload Directory Management
               </CardTitle>
               <CardDescription>
-                Register directories for one-click document synchronization
+                Register directories for one-click document synchronization. Supports .eesignore for filtering files.
               </CardDescription>
             </div>
             <Button onClick={() => setShowCreateForm(!showCreateForm)}>
@@ -161,7 +161,7 @@ export function UploadDirectoryManagement() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Absolute path to the directory on your system
+                  Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore).
                 </p>
               </div>
 
