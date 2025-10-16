@@ -547,7 +547,6 @@ app.openapi(deleteUploadDirectoryRoute, async (c) => {
 /**
  * Sync upload directory endpoint
  * Scan directory and process all files
- * TODO: Implement full sync functionality with file scanning and embedding creation
  */
 app.openapi(syncUploadDirectoryRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
@@ -568,22 +567,77 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
           return null
         }
 
-        // TODO: Implement full sync logic
-        // 1. Scan directory for files
-        // 2. Process each file
-        // 3. Create/update embeddings
-        // 4. Update last_synced_at timestamp
+        const appService = yield* withEmbeddingService(service => Effect.succeed(service))
 
-        // For now, just update the timestamp
+        // Import necessary modules
+        const { collectFilesFromDirectory, processFile } = yield* Effect.promise(() => import("@ees/core"))
+        const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
+
+        // Collect all files from directory
+        const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+
+        // Track statistics
+        let filesCreated = 0
+        let filesUpdated = 0
+        let filesFailed = 0
+
+        // Process each file
+        for (const collectedFile of collectedFiles) {
+          try {
+            // Read file content
+            const buffer = yield* Effect.tryPromise({
+              try: () => readFile(collectedFile.absolutePath),
+              catch: (error) => new Error(`Failed to read file: ${String(error)}`)
+            })
+
+            // Create a File object from buffer (convert Buffer to Uint8Array)
+            const file = new File([new Uint8Array(buffer)], collectedFile.relativePath, {
+              type: "application/octet-stream"
+            })
+
+            // Process file to extract text
+            const fileResult = yield* processFile(file).pipe(
+              Effect.catchAll((error) => {
+                logger.error({
+                  operation: "syncUploadDirectory",
+                  file: collectedFile.absolutePath,
+                  error: error.message
+                }, "Failed to process file")
+                filesFailed++
+                return Effect.fail(error)
+              })
+            )
+
+            // Create embedding for file content
+            yield* appService.createEmbedding({
+              uri: collectedFile.relativePath,
+              text: fileResult.content,
+              modelName: directory.modelName,
+              originalContent: fileResult.originalContent,
+              convertedFormat: fileResult.convertedFormat,
+            })
+
+            filesCreated++
+          } catch (error) {
+            logger.error({
+              operation: "syncUploadDirectory",
+              file: collectedFile.absolutePath,
+              error: error instanceof Error ? error.message : String(error)
+            }, "Failed to create embedding for file")
+            filesFailed++
+          }
+        }
+
+        // Update last_synced_at timestamp
         yield* repository.updateLastSynced(id)
 
         return {
           directory_id: id,
-          files_processed: 0,
-          files_created: 0,
-          files_updated: 0,
-          files_failed: 0,
-          message: "Directory sync endpoint created - full implementation pending",
+          files_processed: collectedFiles.length,
+          files_created: filesCreated,
+          files_updated: filesUpdated,
+          files_failed: filesFailed,
+          message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`,
         }
       })
     ),
