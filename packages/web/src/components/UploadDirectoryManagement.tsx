@@ -306,18 +306,56 @@ export function UploadDirectoryManagement() {
       </Card>
 
       {/* Sync Success Message */}
-      {syncMutation.isSuccess && (
+      {syncMutation.isSuccess && syncMutation.data && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-green-700">
+            <div className="flex items-center gap-2 text-green-700 mb-4">
               <CheckCircle className="h-5 w-5" />
-              <div>
+              <div className="flex-1">
                 <p className="font-medium">Directory synced successfully!</p>
                 <p className="text-sm">
-                  {syncMutation.data?.message || 'Files have been processed and embeddings updated.'}
+                  {syncMutation.data.message || 'Files have been processed and embeddings updated.'}
                 </p>
               </div>
             </div>
+
+            {/* Statistics */}
+            <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
+              <div className="bg-white rounded p-2 border border-green-200">
+                <p className="text-muted-foreground">Processed</p>
+                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_processed}</p>
+              </div>
+              <div className="bg-white rounded p-2 border border-green-200">
+                <p className="text-muted-foreground">Created</p>
+                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_created}</p>
+              </div>
+              <div className="bg-white rounded p-2 border border-green-200">
+                <p className="text-muted-foreground">Updated</p>
+                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_updated}</p>
+              </div>
+              <div className="bg-white rounded p-2 border border-green-200">
+                <p className="text-muted-foreground">Failed</p>
+                <p className="text-lg font-semibold text-red-600">{syncMutation.data.files_failed}</p>
+              </div>
+            </div>
+
+            {/* File List */}
+            {syncMutation.data.files && syncMutation.data.files.length > 0 && (
+              <details className="text-sm">
+                <summary className="cursor-pointer font-medium text-green-700 hover:text-green-800">
+                  Files processed ({syncMutation.data.files.length})
+                </summary>
+                <div className="mt-2 max-h-60 overflow-y-auto bg-white rounded border border-green-200 p-3">
+                  <ul className="list-disc list-inside space-y-1">
+                    {syncMutation.data.files.map((file, index) => (
+                      <li key={index} className="text-muted-foreground break-all">
+                        {file}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            )}
           </CardContent>
         </Card>
       )}

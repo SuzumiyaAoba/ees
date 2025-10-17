@@ -135,6 +135,10 @@ export const SyncUploadDirectoryResponseSchema = z
       description: "Number of files that failed to process",
       example: 2,
     }),
+    files: z.array(z.string()).openapi({
+      description: "List of files that were collected for processing",
+      example: ["file1.txt", "file2.md", "docs/readme.md"],
+    }),
     message: z.string().openapi({
       description: "Success message",
       example: "Directory synced successfully",

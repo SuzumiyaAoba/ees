@@ -227,6 +227,7 @@ export interface SyncUploadDirectoryResponse {
   files_created: number
   files_updated: number
   files_failed: number
+  files: string[]
   message: string
 }
 

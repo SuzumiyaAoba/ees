@@ -644,6 +644,7 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
           files_created: filesCreated,
           files_updated: filesUpdated,
           files_failed: filesFailed,
+          files: collectedFiles.map(f => f.relativePath),
           message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`,
         }
       })
