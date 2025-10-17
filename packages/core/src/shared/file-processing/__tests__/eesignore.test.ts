@@ -39,6 +39,13 @@ node_modules
       expect(patterns).toContain(".git")
       expect(patterns).toContain("*.log")
     })
+
+    it("should include system and version control files", () => {
+      const patterns = getDefaultIgnorePatterns()
+      expect(patterns).toContain(".gitignore")
+      expect(patterns).toContain(".DS_Store")
+      expect(patterns).toContain(".eesignore")
+    })
   })
 
   describe("shouldIgnore", () => {

@@ -25,6 +25,7 @@ export function parseIgnorePatterns(content: string): string[] {
 
 /**
  * Load .eesignore file from directory
+ * Always merges user patterns with default patterns
  */
 export function loadEesignore(
   dirPath: string
@@ -32,12 +33,16 @@ export function loadEesignore(
   return Effect.tryPromise({
     try: async () => {
       const ignoreFilePath = join(dirPath, ".eesignore")
+      const defaultPatterns = getDefaultIgnorePatterns()
+
       try {
         const content = await readFile(ignoreFilePath, "utf-8")
-        return parseIgnorePatterns(content)
+        const userPatterns = parseIgnorePatterns(content)
+        // Merge user patterns with default patterns (user patterns take precedence)
+        return [...userPatterns, ...defaultPatterns]
       } catch {
-        // No .eesignore file found, return default patterns
-        return getDefaultIgnorePatterns()
+        // No .eesignore file found, return only default patterns
+        return defaultPatterns
       }
     },
     catch: (error) =>
@@ -46,22 +51,30 @@ export function loadEesignore(
 }
 
 /**
- * Default ignore patterns when no .eesignore file exists
+ * Default ignore patterns that are always applied
+ * These patterns are merged with user-defined .eesignore patterns
  */
 export function getDefaultIgnorePatterns(): string[] {
   return [
-    "node_modules",
+    // Version control and system files
     ".git",
+    ".gitignore",
     ".DS_Store",
-    "*.log",
-    ".env",
-    ".env.*",
+    ".eesignore",
+
+    // Build artifacts and dependencies
+    "node_modules",
     "dist",
     "build",
     "coverage",
     ".next",
     ".nuxt",
     ".cache",
+
+    // Logs and environment files
+    "*.log",
+    ".env",
+    ".env.*",
   ]
 }
 
