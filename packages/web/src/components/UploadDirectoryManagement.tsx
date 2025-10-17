@@ -3,6 +3,7 @@ import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Se
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Progress } from '@/components/ui/Progress'
 import { DirectoryPickerModal } from '@/components/DirectoryPickerModal'
 import {
   useUploadDirectories,
@@ -280,6 +281,22 @@ export function UploadDirectoryManagement() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Progress indicator during sync */}
+                  {syncingDirectories.has(directory.id) && syncMutation.isPending && (
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground font-medium">Syncing files...</span>
+                        <span className="text-xs text-muted-foreground">
+                          Processing directory
+                        </span>
+                      </div>
+                      <Progress value={50} max={100} className="h-2" />
+                      <p className="text-xs text-muted-foreground italic">
+                        Please wait while files are being processed and embeddings are generated.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-4 text-sm text-muted-foreground border-t pt-3">
                     <div>
