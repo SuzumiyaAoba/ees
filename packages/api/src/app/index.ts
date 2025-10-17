@@ -1,5 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { streamSSE } from "hono/streaming"
 import { Effect } from "effect"
 import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
@@ -651,6 +652,201 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
     ),
     "Upload directory not found"
   ) as never
+})
+
+/**
+ * Sync upload directory with SSE endpoint
+ * Provides real-time progress updates via Server-Sent Events
+ */
+app.get("/upload-directories/:id/sync/stream", async (c) => {
+  const { id: idStr } = c.req.param()
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return streamSSE(c, async (stream) => {
+    try {
+      await Effect.runPromise(
+        withUploadDirectoryRepository(repository =>
+          Effect.gen(function* () {
+            const directory = yield* repository.findById(id)
+
+            if (!directory) {
+              yield* Effect.promise(() => stream.writeSSE({
+                data: JSON.stringify({ type: "error", message: "Upload directory not found" }),
+                event: "error"
+              }))
+              return
+            }
+
+            const appService = yield* withEmbeddingService(service => Effect.succeed(service))
+
+            // Import necessary modules
+            const { collectFilesFromDirectory, processFile } = yield* Effect.promise(() => import("@ees/core"))
+            const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
+
+            // Send start event
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({ type: "start", directory_id: id }),
+              event: "progress"
+            }))
+
+            // Collect all files from directory
+            logger.info({ operation: "syncUploadDirectorySSE", path: directory.path }, "Collecting files from directory")
+            const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+
+            const totalFiles = collectedFiles.length
+
+            // Send collected event with total count
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({
+                type: "collected",
+                total_files: totalFiles,
+                files: collectedFiles.map(f => f.relativePath)
+              }),
+              event: "progress"
+            }))
+
+            // Track statistics
+            let filesCreated = 0
+            let filesUpdated = 0
+            let filesFailed = 0
+            let currentIndex = 0
+
+            // Process each file
+            for (const collectedFile of collectedFiles) {
+              currentIndex++
+
+              try {
+                // Send processing event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "processing",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+
+                // Read file content
+                const buffer = yield* Effect.tryPromise({
+                  try: () => readFile(collectedFile.absolutePath),
+                  catch: (error) => new Error(`Failed to read file: ${String(error)}`)
+                })
+
+                // Create a File object from buffer
+                const file = new File([new Uint8Array(buffer)], collectedFile.relativePath, {
+                  type: "application/octet-stream"
+                })
+
+                // Process file to extract text
+                const fileResult = yield* processFile(file).pipe(
+                  Effect.catchAll((error) => {
+                    logger.error({
+                      operation: "syncUploadDirectorySSE",
+                      file: collectedFile.absolutePath,
+                      error: error.message
+                    }, "Failed to process file")
+                    filesFailed++
+                    return Effect.fail(error)
+                  })
+                )
+
+                // Create embedding for file content
+                yield* appService.createEmbedding({
+                  uri: collectedFile.relativePath,
+                  text: fileResult.content,
+                  modelName: directory.modelName,
+                  originalContent: fileResult.originalContent,
+                  convertedFormat: fileResult.convertedFormat,
+                })
+
+                filesCreated++
+
+                // Send file completed event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "file_completed",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    status: "success",
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+              } catch (error) {
+                logger.error({
+                  operation: "syncUploadDirectorySSE",
+                  file: collectedFile.absolutePath,
+                  error: error instanceof Error ? error.message : String(error)
+                }, "Failed to create embedding for file")
+                filesFailed++
+
+                // Send file failed event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "file_failed",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    status: "failed",
+                    error: error instanceof Error ? error.message : String(error),
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+              }
+            }
+
+            // Update last_synced_at timestamp
+            yield* repository.updateLastSynced(id)
+
+            // Send completion event
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({
+                type: "completed",
+                directory_id: id,
+                files_processed: totalFiles,
+                files_created: filesCreated,
+                files_updated: filesUpdated,
+                files_failed: filesFailed,
+                message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`
+              }),
+              event: "progress"
+            }))
+          })
+        )
+      )
+    } catch (error) {
+      logger.error({
+        operation: "syncUploadDirectorySSE",
+        error: error instanceof Error ? error.message : String(error)
+      }, "Failed to sync directory")
+
+      await stream.writeSSE({
+        data: JSON.stringify({
+          type: "error",
+          message: error instanceof Error ? error.message : String(error)
+        }),
+        event: "error"
+      })
+    } finally {
+      await stream.close()
+    }
+  })
 })
 
 /**
