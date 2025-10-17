@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FolderOpen, FolderPlus, RefreshCw, Trash2, Edit, CheckCircle, AlertCircle, Search } from 'lucide-react'
+import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
