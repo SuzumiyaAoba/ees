@@ -15,6 +15,13 @@ import type {
   CompatibilityCheckRequest,
   CompatibilityResponse,
   ListModelsResponse,
+  CreateUploadDirectoryRequest,
+  CreateUploadDirectoryResponse,
+  UpdateUploadDirectoryRequest,
+  UploadDirectory,
+  UploadDirectoryListResponse,
+  SyncUploadDirectoryResponse,
+  ListDirectoryResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -229,6 +236,49 @@ class ApiClient {
 
   async getTaskTypes(modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> {
     return this.request<import('@/types/api').ListTaskTypesResponse>(`/models/task-types?model=${encodeURIComponent(modelName)}`)
+  }
+
+  // Upload Directory operations
+  async createUploadDirectory(data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> {
+    return this.request<CreateUploadDirectoryResponse>('/upload-directories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getUploadDirectories(): Promise<UploadDirectoryListResponse> {
+    return this.request<UploadDirectoryListResponse>('/upload-directories')
+  }
+
+  async getUploadDirectory(id: number): Promise<UploadDirectory> {
+    return this.request<UploadDirectory>(`/upload-directories/${id}`)
+  }
+
+  async updateUploadDirectory(id: number, data: UpdateUploadDirectoryRequest): Promise<UploadDirectory> {
+    return this.request<UploadDirectory>(`/upload-directories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteUploadDirectory(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/upload-directories/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async syncUploadDirectory(id: number): Promise<SyncUploadDirectoryResponse> {
+    return this.request<SyncUploadDirectoryResponse>(`/upload-directories/${id}/sync`, {
+      method: 'POST',
+    })
+  }
+
+  // File System operations
+  async listDirectory(path: string): Promise<ListDirectoryResponse> {
+    const searchParams = new URLSearchParams()
+    searchParams.set('path', path)
+
+    return this.request<ListDirectoryResponse>(`/file-system/list?${searchParams.toString()}`)
   }
 }
 

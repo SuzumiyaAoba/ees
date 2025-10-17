@@ -8,7 +8,18 @@ import type {
 
 // Query keys for React Query
 export const QUERY_KEYS = {
-  embeddings: (params?: Record<string, unknown>) => ['embeddings', params],
+  embeddings: (params?: {
+    page?: number
+    limit?: number
+    uri?: string
+    model_name?: string
+  }) => [
+    'embeddings',
+    params?.page,
+    params?.limit,
+    params?.uri,
+    params?.model_name,
+  ] as const,
   embedding: (uri: string) => ['embedding', uri],
   providers: () => ['providers'],
   providerModels: (provider?: string) => ['providerModels', provider],

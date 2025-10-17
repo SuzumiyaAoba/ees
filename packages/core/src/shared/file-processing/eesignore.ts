@@ -6,6 +6,7 @@
 import { Effect } from "effect"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
+import { minimatch } from "minimatch"
 
 /**
  * Parse .eesignore file content into patterns
@@ -24,6 +25,7 @@ export function parseIgnorePatterns(content: string): string[] {
 
 /**
  * Load .eesignore file from directory
+ * Always merges user patterns with default patterns
  */
 export function loadEesignore(
   dirPath: string
@@ -31,12 +33,16 @@ export function loadEesignore(
   return Effect.tryPromise({
     try: async () => {
       const ignoreFilePath = join(dirPath, ".eesignore")
+      const defaultPatterns = getDefaultIgnorePatterns()
+
       try {
         const content = await readFile(ignoreFilePath, "utf-8")
-        return parseIgnorePatterns(content)
+        const userPatterns = parseIgnorePatterns(content)
+        // Merge user patterns with default patterns (user patterns take precedence)
+        return [...userPatterns, ...defaultPatterns]
       } catch {
-        // No .eesignore file found, return default patterns
-        return getDefaultIgnorePatterns()
+        // No .eesignore file found, return only default patterns
+        return defaultPatterns
       }
     },
     catch: (error) =>
@@ -45,90 +51,98 @@ export function loadEesignore(
 }
 
 /**
- * Default ignore patterns when no .eesignore file exists
+ * Default ignore patterns that are always applied
+ * These patterns are merged with user-defined .eesignore patterns
  */
 export function getDefaultIgnorePatterns(): string[] {
   return [
-    "node_modules",
+    // Version control and system files
     ".git",
+    ".gitignore",
     ".DS_Store",
-    "*.log",
-    ".env",
-    ".env.*",
+    ".eesignore",
+
+    // Build artifacts and dependencies
+    "node_modules",
     "dist",
     "build",
     "coverage",
     ".next",
     ".nuxt",
     ".cache",
+
+    // Logs and environment files
+    "*.log",
+    ".env",
+    ".env.*",
   ]
 }
 
 /**
  * Check if a file path matches any ignore pattern
- * Uses simple glob-style matching compatible with .gitignore
+ * Uses minimatch for .gitignore-compatible pattern matching
  */
 export function shouldIgnore(
   filePath: string,
   patterns: string[],
-  basePath: string = ""
+  _basePath: string = ""
 ): boolean {
-  // Normalize path separators
+  // Normalize path separators to forward slashes
   const normalizedPath = filePath.replace(/\\/g, "/")
-  const relativePath = basePath
-    ? normalizedPath.replace(basePath.replace(/\\/g, "/"), "").replace(/^\//, "")
-    : normalizedPath
+
+  let ignored = false
 
   for (const pattern of patterns) {
     // Handle negation patterns (!)
     const isNegation = pattern.startsWith("!")
     const actualPattern = isNegation ? pattern.slice(1) : pattern
 
-    if (matchPattern(relativePath, actualPattern)) {
-      return !isNegation
+    if (matchPattern(normalizedPath, actualPattern)) {
+      // Negation patterns can override previous matches
+      ignored = !isNegation
     }
   }
 
-  return false
+  return ignored
 }
 
 /**
- * Match a file path against a glob pattern
- * Supports:
- * - * (any characters except /)
- * - ** (any characters including /)
- * - ? (single character)
- * - [abc] (character class)
- * - / prefix or suffix for directory matching
+ * Match a file path against a glob pattern using minimatch
+ * Follows .gitignore specification:
+ * - Pattern without / matches basename or any path component
+ * - Pattern with / matches from root or subdirectories
+ * - Pattern ending with / matches directories only
+ * - ** matches zero or more directories
  */
 function matchPattern(path: string, pattern: string): boolean {
-  // Directory-only pattern (ends with /)
-  if (pattern.endsWith("/")) {
-    const dirPattern = pattern.slice(0, -1)
-    return path.split("/").some(segment => matchGlob(segment, dirPattern))
+  // minimatch options for .gitignore-style matching
+  const options = {
+    dot: true,        // Match files starting with .
+    matchBase: false, // Don't match basename by default
+    nocase: false,    // Case-sensitive matching
   }
 
-  // Exact match or glob match
+  // Pattern contains / - match from root
   if (pattern.includes("/")) {
-    // Pattern contains path separator - match full path
-    return matchGlob(path, pattern)
+    // Remove leading ./ if present
+    const cleanPattern = pattern.replace(/^\.\//, "")
+
+    // Try exact match first
+    if (minimatch(path, cleanPattern, options)) {
+      return true
+    }
+
+    // Also try matching as subdirectory pattern (with ** prefix)
+    // This makes "src/generated" match both "src/generated" and "src/generated/file.ts"
+    if (minimatch(path, `${cleanPattern}/**`, options)) {
+      return true
+    }
+
+    return false
   }
 
-  // Pattern without / - match any segment in the path
-  return path.split("/").some(segment => matchGlob(segment, pattern))
-}
-
-/**
- * Simple glob pattern matcher
- */
-function matchGlob(text: string, pattern: string): boolean {
-  // Convert glob pattern to regex
-  const regexPattern = pattern
-    .replace(/\./g, "\\.")
-    .replace(/\*/g, ".*")
-    .replace(/\?/g, ".")
-    .replace(/\[([^\]]+)\]/g, "[$1]")
-
-  const regex = new RegExp(`^${regexPattern}$`)
-  return regex.test(text)
+  // Pattern without / - match basename or any path component
+  // This means the pattern can match anywhere in the path
+  const pathSegments = path.split("/")
+  return pathSegments.some(segment => minimatch(segment, pattern, options))
 }

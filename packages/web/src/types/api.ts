@@ -185,3 +185,60 @@ export interface ListModelsResponse {
   count: number
   providers: string[]
 }
+
+// Upload Directory Management types
+export interface UploadDirectory {
+  id: number
+  name: string
+  path: string
+  model_name: string
+  description: string | null
+  last_synced_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CreateUploadDirectoryRequest {
+  name: string
+  path: string
+  model_name?: string
+  description?: string
+}
+
+export interface CreateUploadDirectoryResponse {
+  id: number
+  message: string
+}
+
+export interface UpdateUploadDirectoryRequest {
+  name?: string
+  model_name?: string
+  description?: string
+}
+
+export interface UploadDirectoryListResponse {
+  directories: UploadDirectory[]
+  count: number
+}
+
+export interface SyncUploadDirectoryResponse {
+  directory_id: number
+  files_processed: number
+  files_created: number
+  files_updated: number
+  files_failed: number
+  files: string[]
+  message: string
+}
+
+// File System types
+export interface DirectoryEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+}
+
+export interface ListDirectoryResponse {
+  path: string
+  entries: DirectoryEntry[]
+}

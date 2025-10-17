@@ -26,6 +26,12 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
     }
   })
 
+  // Reset to page 1 when filters change
+  const handleFilterChange = useCallback(<K extends keyof typeof filters>(key: K, value: typeof filters[K]) => {
+    updateFilter(key, value)
+    pagination.setPage(1)
+  }, [updateFilter, pagination])
+
   const { data, isLoading, error } = useEmbeddings({
     page: pagination.page,
     limit: pagination.limit,
@@ -143,7 +149,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               <Input
                 placeholder="Enter URI to filter..."
                 value={filters.uri}
-                onChange={(e) => updateFilter('uri', e.target.value)}
+                onChange={(e) => handleFilterChange('uri', e.target.value)}
               />
             </div>
             <div>
@@ -151,7 +157,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               <Input
                 placeholder="Enter model name..."
                 value={filters.modelName}
-                onChange={(e) => updateFilter('modelName', e.target.value)}
+                onChange={(e) => handleFilterChange('modelName', e.target.value)}
               />
             </div>
             <div>

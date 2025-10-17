@@ -95,3 +95,30 @@ export { DatabaseService } from './shared/database/connection'
 
 // Export observability system
 export * from './shared/observability/index'
+
+// Export upload directory management
+export {
+  UploadDirectoryRepository,
+  UploadDirectoryRepositoryLive,
+  type UploadDirectory,
+  type UploadDirectoryData,
+  type CreateUploadDirectoryResult,
+} from './entities/upload-directory/repository/upload-directory-repository'
+
+export {
+  CreateUploadDirectoryRequestSchema,
+  UpdateUploadDirectoryRequestSchema,
+  IdParamSchema as UploadDirectoryIdParamSchema,
+  UploadDirectorySchema,
+  CreateUploadDirectoryResponseSchema,
+  UploadDirectoryListResponseSchema,
+  SyncUploadDirectoryResponseSchema,
+  DeleteUploadDirectoryResponseSchema,
+} from './entities/upload-directory/model/openapi'
+
+// Export file system service
+export {
+  FileSystemService,
+  FileSystemServiceLive,
+  type DirectoryEntry,
+} from './entities/file-system/api/file-system'

@@ -63,6 +63,7 @@
     "ai": "^5.0.45",
     "drizzle-orm": "^0.44.5",
     "effect": "^3.17.13",
+    "minimatch": "^10.0.3",
     "pino": "^9.11.0",
     "pino-pretty": "^13.1.1",
     "prom-client": "^15.1.3",

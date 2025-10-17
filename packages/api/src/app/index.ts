@@ -1,5 +1,6 @@
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import { streamSSE } from "hono/streaming"
 import { Effect } from "effect"
 import { createPinoLogger, createLoggerConfig } from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
@@ -18,8 +19,18 @@ import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
+import {
+  createUploadDirectoryRoute,
+  listUploadDirectoriesRoute,
+  getUploadDirectoryRoute,
+  updateUploadDirectoryRoute,
+  deleteUploadDirectoryRoute,
+  syncUploadDirectoryRoute,
+} from "@/features/upload-directory"
+import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
-import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId } from "@/shared/route-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService } from "@/shared/route-handler"
+import { AppLayer } from "@/app/providers/main"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
   requestLoggingMiddleware,
@@ -342,6 +353,529 @@ app.openapi(listModelsRoute, async (c) => {
 registerListTaskTypesRoutes(app)
 
 /**
+ * Upload Directory Management Endpoints
+ */
+
+/**
+ * Create upload directory endpoint
+ * Register a new directory path for document management
+ */
+app.use("/upload-directories", security.rateLimits.general)
+app.openapi(createUploadDirectoryRoute, async (c) => {
+  const { name, path, model_name, description } = c.req.valid("json")
+
+  return executeEffectHandler(c, "createUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        // Check if path already exists
+        const existing = yield* repository.findByPath(path)
+        if (existing) {
+          return yield* Effect.fail(new Error("Directory path already registered"))
+        }
+
+        const result = yield* repository.create({
+          name,
+          path,
+          modelName: model_name,
+          description,
+        })
+
+        return {
+          id: result.id,
+          message: "Upload directory created successfully",
+        }
+      })
+    )
+  ) as never
+})
+
+/**
+ * List upload directories endpoint
+ * Retrieve all registered upload directories
+ */
+app.openapi(listUploadDirectoriesRoute, async (c) => {
+  return executeEffectHandler(c, "listUploadDirectories",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directories = yield* repository.findAll()
+
+        return {
+          directories: directories.map((dir: {
+            id: number
+            name: string
+            path: string
+            modelName: string
+            description: string | null
+            lastSyncedAt: string | null
+            createdAt: string | null
+            updatedAt: string | null
+          }) => ({
+            id: dir.id,
+            name: dir.name,
+            path: dir.path,
+            model_name: dir.modelName,
+            description: dir.description,
+            last_synced_at: dir.lastSyncedAt,
+            created_at: dir.createdAt,
+            updated_at: dir.updatedAt,
+          })),
+          count: directories.length,
+        }
+      })
+    )
+  ) as never
+})
+
+/**
+ * Get upload directory by ID endpoint
+ * Retrieve a specific upload directory
+ */
+app.openapi(getUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "getUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directory = yield* repository.findById(id)
+
+        if (!directory) {
+          return null
+        }
+
+        return {
+          id: directory.id,
+          name: directory.name,
+          path: directory.path,
+          model_name: directory.modelName,
+          description: directory.description,
+          last_synced_at: directory.lastSyncedAt,
+          created_at: directory.createdAt,
+          updated_at: directory.updatedAt,
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Update upload directory endpoint
+ * Update directory metadata (name, model, description)
+ */
+app.openapi(updateUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const updates = c.req.valid("json")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "updateUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const updated = yield* repository.update(id, {
+          ...(updates.name && { name: updates.name }),
+          ...(updates.model_name && { modelName: updates.model_name }),
+          ...(updates.description !== undefined && { description: updates.description }),
+        })
+
+        if (!updated) {
+          return null
+        }
+
+        const directory = yield* repository.findById(id)
+        if (!directory) {
+          return null
+        }
+
+        return {
+          id: directory.id,
+          name: directory.name,
+          path: directory.path,
+          model_name: directory.modelName,
+          description: directory.description,
+          last_synced_at: directory.lastSyncedAt,
+          created_at: directory.createdAt,
+          updated_at: directory.updatedAt,
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Delete upload directory endpoint
+ * Remove a directory from the system
+ */
+app.openapi(deleteUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "deleteUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const deleted = yield* repository.deleteById(id)
+
+        if (!deleted) {
+          return null
+        }
+
+        return {
+          message: "Upload directory deleted successfully",
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Sync upload directory endpoint
+ * Scan directory and process all files
+ */
+app.openapi(syncUploadDirectoryRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "syncUploadDirectory",
+    withUploadDirectoryRepository(repository =>
+      Effect.gen(function* () {
+        const directory = yield* repository.findById(id)
+
+        if (!directory) {
+          return null
+        }
+
+        const appService = yield* withEmbeddingService(service => Effect.succeed(service))
+
+        // Import necessary modules
+        const { collectFilesFromDirectory, processFile } = yield* Effect.promise(() => import("@ees/core"))
+        const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
+
+        // Collect all files from directory
+        logger.info({ operation: "syncUploadDirectory", path: directory.path }, "Collecting files from directory")
+        const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+        logger.info({
+          operation: "syncUploadDirectory",
+          path: directory.path,
+          filesCount: collectedFiles.length,
+          files: collectedFiles.map(f => f.relativePath)
+        }, "Collected files from directory")
+
+        // Track statistics
+        let filesCreated = 0
+        let filesUpdated = 0
+        let filesFailed = 0
+
+        // Process each file
+        for (const collectedFile of collectedFiles) {
+          try {
+            // Read file content
+            const buffer = yield* Effect.tryPromise({
+              try: () => readFile(collectedFile.absolutePath),
+              catch: (error) => new Error(`Failed to read file: ${String(error)}`)
+            })
+
+            // Create a File object from buffer (convert Buffer to Uint8Array)
+            const file = new File([new Uint8Array(buffer)], collectedFile.relativePath, {
+              type: "application/octet-stream"
+            })
+
+            // Process file to extract text
+            const fileResult = yield* processFile(file).pipe(
+              Effect.catchAll((error) => {
+                logger.error({
+                  operation: "syncUploadDirectory",
+                  file: collectedFile.absolutePath,
+                  error: error.message
+                }, "Failed to process file")
+                filesFailed++
+                return Effect.fail(error)
+              })
+            )
+
+            // Create embedding for file content
+            yield* appService.createEmbedding({
+              uri: collectedFile.relativePath,
+              text: fileResult.content,
+              modelName: directory.modelName,
+              originalContent: fileResult.originalContent,
+              convertedFormat: fileResult.convertedFormat,
+            })
+
+            filesCreated++
+          } catch (error) {
+            logger.error({
+              operation: "syncUploadDirectory",
+              file: collectedFile.absolutePath,
+              error: error instanceof Error ? error.message : String(error)
+            }, "Failed to create embedding for file")
+            filesFailed++
+          }
+        }
+
+        // Update last_synced_at timestamp
+        yield* repository.updateLastSynced(id)
+
+        return {
+          directory_id: id,
+          files_processed: collectedFiles.length,
+          files_created: filesCreated,
+          files_updated: filesUpdated,
+          files_failed: filesFailed,
+          files: collectedFiles.map(f => f.relativePath),
+          message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`,
+        }
+      })
+    ),
+    "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Sync upload directory with SSE endpoint
+ * Provides real-time progress updates via Server-Sent Events
+ */
+app.get("/upload-directories/:id/sync/stream", async (c) => {
+  const { id: idStr } = c.req.param()
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return streamSSE(c, async (stream) => {
+    try {
+      await Effect.runPromise(
+        withUploadDirectoryRepository(repository =>
+          Effect.gen(function* () {
+            const directory = yield* repository.findById(id)
+
+            if (!directory) {
+              yield* Effect.promise(() => stream.writeSSE({
+                data: JSON.stringify({ type: "error", message: "Upload directory not found" }),
+                event: "error"
+              }))
+              return
+            }
+
+            const appService = yield* withEmbeddingService(service => Effect.succeed(service))
+
+            // Import necessary modules
+            const { collectFilesFromDirectory, processFile } = yield* Effect.promise(() => import("@ees/core"))
+            const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
+
+            // Send start event
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({ type: "start", directory_id: id }),
+              event: "progress"
+            }))
+
+            // Collect all files from directory
+            logger.info({ operation: "syncUploadDirectorySSE", path: directory.path }, "Collecting files from directory")
+            const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+
+            const totalFiles = collectedFiles.length
+
+            // Send collected event with total count
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({
+                type: "collected",
+                total_files: totalFiles,
+                files: collectedFiles.map(f => f.relativePath)
+              }),
+              event: "progress"
+            }))
+
+            // Track statistics
+            let filesCreated = 0
+            let filesUpdated = 0
+            let filesFailed = 0
+            let currentIndex = 0
+
+            // Process each file
+            for (const collectedFile of collectedFiles) {
+              currentIndex++
+
+              try {
+                // Send processing event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "processing",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+
+                // Read file content
+                const buffer = yield* Effect.tryPromise({
+                  try: () => readFile(collectedFile.absolutePath),
+                  catch: (error) => new Error(`Failed to read file: ${String(error)}`)
+                })
+
+                // Create a File object from buffer
+                const file = new File([new Uint8Array(buffer)], collectedFile.relativePath, {
+                  type: "application/octet-stream"
+                })
+
+                // Process file to extract text
+                const fileResult = yield* processFile(file).pipe(
+                  Effect.catchAll((error) => {
+                    logger.error({
+                      operation: "syncUploadDirectorySSE",
+                      file: collectedFile.absolutePath,
+                      error: error.message
+                    }, "Failed to process file")
+                    filesFailed++
+                    return Effect.fail(error)
+                  })
+                )
+
+                // Create embedding for file content
+                yield* appService.createEmbedding({
+                  uri: collectedFile.relativePath,
+                  text: fileResult.content,
+                  modelName: directory.modelName,
+                  originalContent: fileResult.originalContent,
+                  convertedFormat: fileResult.convertedFormat,
+                })
+
+                filesCreated++
+
+                // Send file completed event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "file_completed",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    status: "success",
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+              } catch (error) {
+                logger.error({
+                  operation: "syncUploadDirectorySSE",
+                  file: collectedFile.absolutePath,
+                  error: error instanceof Error ? error.message : String(error)
+                }, "Failed to create embedding for file")
+                filesFailed++
+
+                // Send file failed event
+                yield* Effect.promise(() => stream.writeSSE({
+                  data: JSON.stringify({
+                    type: "file_failed",
+                    current: currentIndex,
+                    total: totalFiles,
+                    file: collectedFile.relativePath,
+                    status: "failed",
+                    error: error instanceof Error ? error.message : String(error),
+                    created: filesCreated,
+                    updated: filesUpdated,
+                    failed: filesFailed
+                  }),
+                  event: "progress"
+                }))
+              }
+            }
+
+            // Update last_synced_at timestamp
+            yield* repository.updateLastSynced(id)
+
+            // Send completion event
+            yield* Effect.promise(() => stream.writeSSE({
+              data: JSON.stringify({
+                type: "completed",
+                directory_id: id,
+                files_processed: totalFiles,
+                files_created: filesCreated,
+                files_updated: filesUpdated,
+                files_failed: filesFailed,
+                message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`
+              }),
+              event: "progress"
+            }))
+          })
+        ).pipe(Effect.provide(AppLayer))
+      )
+    } catch (error) {
+      logger.error({
+        operation: "syncUploadDirectorySSE",
+        error: error instanceof Error ? error.message : String(error)
+      }, "Failed to sync directory")
+
+      await stream.writeSSE({
+        data: JSON.stringify({
+          type: "error",
+          message: error instanceof Error ? error.message : String(error)
+        }),
+        event: "error"
+      })
+    } finally {
+      await stream.close()
+    }
+  })
+})
+
+/**
+ * File System Endpoints
+ */
+
+/**
+ * List directory contents endpoint
+ * Returns subdirectories for directory picker
+ */
+app.openapi(listDirectoryRoute, async (c) => {
+  const { path } = c.req.valid("query")
+
+  return executeEffectHandler(c, "listDirectory",
+    withFileSystemService(service =>
+      Effect.gen(function* () {
+        const entries = yield* service.listDirectory(path)
+
+        return {
+          path,
+          entries,
+        }
+      })
+    )
+  ) as never
+})
+
+/**
  * OpenAPI specification endpoint
  * Provides machine-readable API documentation in OpenAPI 3.0 format
  */
@@ -379,6 +913,14 @@ app.doc("/openapi.json", {
     {
       name: "Providers",
       description: "Provider management and status endpoints",
+    },
+    {
+      name: "Upload Directories",
+      description: "Upload directory management and synchronization endpoints",
+    },
+    {
+      name: "File System",
+      description: "File system browsing endpoints for directory picker",
     },
   ],
 })
