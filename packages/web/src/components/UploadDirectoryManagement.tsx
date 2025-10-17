@@ -29,6 +29,23 @@ export function UploadDirectoryManagement() {
   })
   const [syncingDirectories, setSyncingDirectories] = useState<Set<number>>(new Set())
   const [showDirectoryPicker, setShowDirectoryPicker] = useState(false)
+  const [syncProgress, setSyncProgress] = useState<Record<number, {
+    current: number
+    total: number
+    file: string
+    created: number
+    updated: number
+    failed: number
+  }>>({})
+  const [lastSyncResult, setLastSyncResult] = useState<{
+    directory_id: number
+    files_processed: number
+    files_created: number
+    files_updated: number
+    files_failed: number
+    files: string[]
+    message: string
+  } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,8 +79,98 @@ export function UploadDirectoryManagement() {
 
   const handleSync = async (id: number) => {
     setSyncingDirectories(prev => new Set(prev).add(id))
+    setLastSyncResult(null)
+
+    // Initialize progress
+    setSyncProgress(prev => ({
+      ...prev,
+      [id]: {
+        current: 0,
+        total: 0,
+        file: '',
+        created: 0,
+        updated: 0,
+        failed: 0
+      }
+    }))
+
     try {
-      await syncMutation.mutateAsync(id)
+      // Use Server-Sent Events for real-time progress
+      const eventSource = new EventSource(`http://localhost:3000/upload-directories/${id}/sync/stream`)
+
+      eventSource.addEventListener('progress', (event) => {
+        const data = JSON.parse(event.data)
+
+        if (data.type === 'collected') {
+          setSyncProgress(prev => ({
+            ...prev,
+            [id]: {
+              ...prev[id],
+              total: data.total_files
+            }
+          }))
+        } else if (data.type === 'processing' || data.type === 'file_completed' || data.type === 'file_failed') {
+          setSyncProgress(prev => ({
+            ...prev,
+            [id]: {
+              current: data.current,
+              total: data.total,
+              file: data.file,
+              created: data.created,
+              updated: data.updated,
+              failed: data.failed
+            }
+          }))
+        } else if (data.type === 'completed') {
+          setLastSyncResult({
+            directory_id: data.directory_id,
+            files_processed: data.files_processed,
+            files_created: data.files_created,
+            files_updated: data.files_updated,
+            files_failed: data.files_failed,
+            files: [],
+            message: data.message
+          })
+          eventSource.close()
+        }
+      })
+
+      eventSource.addEventListener('error', (event) => {
+        console.error('SSE error:', event)
+        eventSource.close()
+      })
+
+      eventSource.onerror = () => {
+        eventSource.close()
+        setSyncingDirectories(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(id)
+          return newSet
+        })
+        setSyncProgress(prev => {
+          const newProgress = { ...prev }
+          delete newProgress[id]
+          return newProgress
+        })
+      }
+
+      // Wait for completion
+      await new Promise<void>((resolve) => {
+        const checkComplete = setInterval(() => {
+          if (!syncingDirectories.has(id) || lastSyncResult?.directory_id === id) {
+            clearInterval(checkComplete)
+            resolve()
+          }
+        }, 100)
+
+        eventSource.addEventListener('progress', (event) => {
+          const data = JSON.parse(event.data)
+          if (data.type === 'completed') {
+            clearInterval(checkComplete)
+            resolve()
+          }
+        })
+      })
     } catch (error) {
       console.error('Failed to sync directory:', error)
     } finally {
@@ -71,6 +178,11 @@ export function UploadDirectoryManagement() {
         const newSet = new Set(prev)
         newSet.delete(id)
         return newSet
+      })
+      setSyncProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[id]
+        return newProgress
       })
     }
   }
@@ -282,29 +394,44 @@ export function UploadDirectoryManagement() {
                   </div>
 
                   {/* Progress indicator during sync */}
-                  {syncingDirectories.has(directory.id) && syncMutation.isPending && (
+                  {syncingDirectories.has(directory.id) && syncProgress[directory.id] && (
                     <div className="border-t pt-3 space-y-2 bg-blue-50 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
                       <div className="flex items-center justify-between text-sm pt-1">
                         <span className="text-blue-700 font-medium flex items-center gap-2">
                           <div className="h-4 w-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
-                          Syncing directory...
+                          Processing files...
+                        </span>
+                        <span className="text-blue-700 font-semibold">
+                          {syncProgress[directory.id].current} / {syncProgress[directory.id].total}
                         </span>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-blue-600">
-                          <span>Scanning files and generating embeddings</span>
-                          <span className="font-medium">In progress</span>
+                          <span className="font-medium truncate" title={syncProgress[directory.id].file}>
+                            {syncProgress[directory.id].file || 'Collecting files...'}
+                          </span>
+                          <span className="font-medium ml-2">
+                            {syncProgress[directory.id].total > 0
+                              ? `${Math.round((syncProgress[directory.id].current / syncProgress[directory.id].total) * 100)}%`
+                              : '0%'}
+                          </span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200">
                           <div
-                            className="h-full bg-blue-600 transition-all duration-500 ease-out animate-pulse"
-                            style={{ width: '100%' }}
+                            className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                            style={{
+                              width: syncProgress[directory.id].total > 0
+                                ? `${(syncProgress[directory.id].current / syncProgress[directory.id].total) * 100}%`
+                                : '0%'
+                            }}
                           />
                         </div>
                       </div>
-                      <p className="text-xs text-blue-600 italic">
-                        Processing all files in the directory. This may take a while depending on the number of files.
-                      </p>
+                      <div className="flex gap-4 text-xs text-blue-600">
+                        <span>Created: <span className="font-semibold">{syncProgress[directory.id].created}</span></span>
+                        <span>Updated: <span className="font-semibold">{syncProgress[directory.id].updated}</span></span>
+                        <span>Failed: <span className="font-semibold text-red-600">{syncProgress[directory.id].failed}</span></span>
+                      </div>
                     </div>
                   )}
 
@@ -333,7 +460,7 @@ export function UploadDirectoryManagement() {
       </Card>
 
       {/* Sync Success Message */}
-      {syncMutation.isSuccess && syncMutation.data && (
+      {lastSyncResult && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-green-700 mb-4">
@@ -341,7 +468,7 @@ export function UploadDirectoryManagement() {
               <div className="flex-1">
                 <p className="font-medium">Directory synced successfully!</p>
                 <p className="text-sm">
-                  {syncMutation.data.message || 'Files have been processed and embeddings updated.'}
+                  {lastSyncResult.message || 'Files have been processed and embeddings updated.'}
                 </p>
               </div>
             </div>
@@ -352,24 +479,24 @@ export function UploadDirectoryManagement() {
               <div className="bg-white rounded-lg p-4 border border-green-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-muted-foreground">Total Files</span>
-                  <span className="text-2xl font-bold text-green-700">{syncMutation.data.files_processed}</span>
+                  <span className="text-2xl font-bold text-green-700">{lastSyncResult.files_processed}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-green-100">
                   <div
                     className="h-full bg-green-600 transition-all"
                     style={{
-                      width: `${syncMutation.data.files_processed > 0
-                        ? ((syncMutation.data.files_created + syncMutation.data.files_updated) / syncMutation.data.files_processed) * 100
+                      width: `${lastSyncResult.files_processed > 0
+                        ? ((lastSyncResult.files_created + lastSyncResult.files_updated) / lastSyncResult.files_processed) * 100
                         : 0}%`
                     }}
                   />
                 </div>
                 <div className="mt-2 flex justify-between text-xs text-muted-foreground">
                   <span>
-                    {syncMutation.data.files_created + syncMutation.data.files_updated} completed
+                    {lastSyncResult.files_created + lastSyncResult.files_updated} completed
                   </span>
                   <span>
-                    {syncMutation.data.files_failed} failed
+                    {lastSyncResult.files_failed} failed
                   </span>
                 </div>
               </div>
@@ -378,36 +505,18 @@ export function UploadDirectoryManagement() {
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-xl font-semibold text-green-700">{syncMutation.data.files_created}</p>
+                  <p className="text-xl font-semibold text-green-700">{lastSyncResult.files_created}</p>
                 </div>
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Updated</p>
-                  <p className="text-xl font-semibold text-green-700">{syncMutation.data.files_updated}</p>
+                  <p className="text-xl font-semibold text-green-700">{lastSyncResult.files_updated}</p>
                 </div>
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Failed</p>
-                  <p className="text-xl font-semibold text-red-600">{syncMutation.data.files_failed}</p>
+                  <p className="text-xl font-semibold text-red-600">{lastSyncResult.files_failed}</p>
                 </div>
               </div>
             </div>
-
-            {/* File List */}
-            {syncMutation.data.files && syncMutation.data.files.length > 0 && (
-              <details className="text-sm">
-                <summary className="cursor-pointer font-medium text-green-700 hover:text-green-800">
-                  Files processed ({syncMutation.data.files.length})
-                </summary>
-                <div className="mt-2 max-h-60 overflow-y-auto bg-white rounded border border-green-200 p-3">
-                  <ul className="list-disc list-inside space-y-1">
-                    {syncMutation.data.files.map((file, index) => (
-                      <li key={index} className="text-muted-foreground break-all">
-                        {file}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            )}
           </CardContent>
         </Card>
       )}
