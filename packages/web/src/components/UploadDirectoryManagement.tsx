@@ -3,7 +3,6 @@ import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Se
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Progress } from '@/components/ui/Progress'
 import { DirectoryPickerModal } from '@/components/DirectoryPickerModal'
 import {
   useUploadDirectories,
@@ -284,16 +283,27 @@ export function UploadDirectoryManagement() {
 
                   {/* Progress indicator during sync */}
                   {syncingDirectories.has(directory.id) && syncMutation.isPending && (
-                    <div className="border-t pt-3 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground font-medium">Syncing files...</span>
-                        <span className="text-xs text-muted-foreground">
-                          Processing directory
+                    <div className="border-t pt-3 space-y-2 bg-blue-50 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
+                      <div className="flex items-center justify-between text-sm pt-1">
+                        <span className="text-blue-700 font-medium flex items-center gap-2">
+                          <div className="h-4 w-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+                          Syncing directory...
                         </span>
                       </div>
-                      <Progress value={50} max={100} className="h-2" />
-                      <p className="text-xs text-muted-foreground italic">
-                        Please wait while files are being processed and embeddings are generated.
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-blue-600">
+                          <span>Scanning files and generating embeddings</span>
+                          <span className="font-medium">In progress</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200">
+                          <div
+                            className="h-full bg-blue-600 transition-all duration-500 ease-out animate-pulse"
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-blue-600 italic">
+                        Processing all files in the directory. This may take a while depending on the number of files.
                       </p>
                     </div>
                   )}
@@ -337,22 +347,47 @@ export function UploadDirectoryManagement() {
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-4 gap-4 mb-4 text-sm">
-              <div className="bg-white rounded p-2 border border-green-200">
-                <p className="text-muted-foreground">Processed</p>
-                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_processed}</p>
+            <div className="space-y-3 mb-4">
+              {/* Summary card */}
+              <div className="bg-white rounded-lg p-4 border border-green-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Total Files</span>
+                  <span className="text-2xl font-bold text-green-700">{syncMutation.data.files_processed}</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-green-100">
+                  <div
+                    className="h-full bg-green-600 transition-all"
+                    style={{
+                      width: `${syncMutation.data.files_processed > 0
+                        ? ((syncMutation.data.files_created + syncMutation.data.files_updated) / syncMutation.data.files_processed) * 100
+                        : 0}%`
+                    }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {syncMutation.data.files_created + syncMutation.data.files_updated} completed
+                  </span>
+                  <span>
+                    {syncMutation.data.files_failed} failed
+                  </span>
+                </div>
               </div>
-              <div className="bg-white rounded p-2 border border-green-200">
-                <p className="text-muted-foreground">Created</p>
-                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_created}</p>
-              </div>
-              <div className="bg-white rounded p-2 border border-green-200">
-                <p className="text-muted-foreground">Updated</p>
-                <p className="text-lg font-semibold text-green-700">{syncMutation.data.files_updated}</p>
-              </div>
-              <div className="bg-white rounded p-2 border border-green-200">
-                <p className="text-muted-foreground">Failed</p>
-                <p className="text-lg font-semibold text-red-600">{syncMutation.data.files_failed}</p>
+
+              {/* Detailed statistics */}
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="bg-white rounded p-3 border border-green-200">
+                  <p className="text-muted-foreground text-xs">Created</p>
+                  <p className="text-xl font-semibold text-green-700">{syncMutation.data.files_created}</p>
+                </div>
+                <div className="bg-white rounded p-3 border border-green-200">
+                  <p className="text-muted-foreground text-xs">Updated</p>
+                  <p className="text-xl font-semibold text-green-700">{syncMutation.data.files_updated}</p>
+                </div>
+                <div className="bg-white rounded p-3 border border-green-200">
+                  <p className="text-muted-foreground text-xs">Failed</p>
+                  <p className="text-xl font-semibold text-red-600">{syncMutation.data.files_failed}</p>
+                </div>
               </div>
             </div>
 
