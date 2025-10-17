@@ -574,7 +574,14 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
         const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
 
         // Collect all files from directory
+        logger.info({ operation: "syncUploadDirectory", path: directory.path }, "Collecting files from directory")
         const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+        logger.info({
+          operation: "syncUploadDirectory",
+          path: directory.path,
+          filesCount: collectedFiles.length,
+          files: collectedFiles.map(f => f.relativePath)
+        }, "Collected files from directory")
 
         // Track statistics
         let filesCreated = 0
