@@ -94,54 +94,98 @@ export function UploadDirectoryManagement() {
       }
     }))
 
-    try {
-      // Use Server-Sent Events for real-time progress
-      const eventSource = new EventSource(`http://localhost:3000/upload-directories/${id}/sync/stream`)
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Use Server-Sent Events for real-time progress
+        const eventSource = new EventSource(`http://localhost:3000/upload-directories/${id}/sync/stream`)
 
-      eventSource.addEventListener('progress', (event) => {
-        const data = JSON.parse(event.data)
+        eventSource.addEventListener('progress', (event) => {
+          const data = JSON.parse(event.data)
 
-        if (data.type === 'collected') {
-          setSyncProgress(prev => ({
-            ...prev,
-            [id]: {
-              ...prev[id],
-              total: data.total_files
-            }
-          }))
-        } else if (data.type === 'processing' || data.type === 'file_completed' || data.type === 'file_failed') {
-          setSyncProgress(prev => ({
-            ...prev,
-            [id]: {
-              current: data.current,
-              total: data.total,
-              file: data.file,
-              created: data.created,
-              updated: data.updated,
-              failed: data.failed
-            }
-          }))
-        } else if (data.type === 'completed') {
-          setLastSyncResult({
-            directory_id: data.directory_id,
-            files_processed: data.files_processed,
-            files_created: data.files_created,
-            files_updated: data.files_updated,
-            files_failed: data.files_failed,
-            files: [],
-            message: data.message
-          })
+          if (data.type === 'collected') {
+            setSyncProgress(prev => ({
+              ...prev,
+              [id]: {
+                ...prev[id],
+                total: data.total_files
+              }
+            }))
+          } else if (data.type === 'processing' || data.type === 'file_completed' || data.type === 'file_failed') {
+            setSyncProgress(prev => ({
+              ...prev,
+              [id]: {
+                current: data.current,
+                total: data.total,
+                file: data.file,
+                created: data.created,
+                updated: data.updated,
+                failed: data.failed
+              }
+            }))
+          } else if (data.type === 'completed') {
+            setLastSyncResult({
+              directory_id: data.directory_id,
+              files_processed: data.files_processed,
+              files_created: data.files_created,
+              files_updated: data.files_updated,
+              files_failed: data.files_failed,
+              files: [],
+              message: data.message
+            })
+            eventSource.close()
+
+            // Clean up
+            setSyncingDirectories(prev => {
+              const newSet = new Set(prev)
+              newSet.delete(id)
+              return newSet
+            })
+            setSyncProgress(prev => {
+              const newProgress = { ...prev }
+              delete newProgress[id]
+              return newProgress
+            })
+
+            resolve()
+          }
+        })
+
+        eventSource.addEventListener('error', (event) => {
+          console.error('SSE error:', event)
           eventSource.close()
+
+          setSyncingDirectories(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(id)
+            return newSet
+          })
+          setSyncProgress(prev => {
+            const newProgress = { ...prev }
+            delete newProgress[id]
+            return newProgress
+          })
+
+          reject(new Error('SSE connection failed'))
+        })
+
+        eventSource.onerror = () => {
+          eventSource.close()
+
+          setSyncingDirectories(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(id)
+            return newSet
+          })
+          setSyncProgress(prev => {
+            const newProgress = { ...prev }
+            delete newProgress[id]
+            return newProgress
+          })
+
+          reject(new Error('SSE connection error'))
         }
-      })
-
-      eventSource.addEventListener('error', (event) => {
-        console.error('SSE error:', event)
-        eventSource.close()
-      })
-
-      eventSource.onerror = () => {
-        eventSource.close()
+      } catch (error) {
+        console.error('Failed to sync directory:', error)
         setSyncingDirectories(prev => {
           const newSet = new Set(prev)
           newSet.delete(id)
@@ -152,39 +196,9 @@ export function UploadDirectoryManagement() {
           delete newProgress[id]
           return newProgress
         })
+        reject(error)
       }
-
-      // Wait for completion
-      await new Promise<void>((resolve) => {
-        const checkComplete = setInterval(() => {
-          if (!syncingDirectories.has(id) || lastSyncResult?.directory_id === id) {
-            clearInterval(checkComplete)
-            resolve()
-          }
-        }, 100)
-
-        eventSource.addEventListener('progress', (event) => {
-          const data = JSON.parse(event.data)
-          if (data.type === 'completed') {
-            clearInterval(checkComplete)
-            resolve()
-          }
-        })
-      })
-    } catch (error) {
-      console.error('Failed to sync directory:', error)
-    } finally {
-      setSyncingDirectories(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(id)
-        return newSet
-      })
-      setSyncProgress(prev => {
-        const newProgress = { ...prev }
-        delete newProgress[id]
-        return newProgress
-      })
-    }
+    })
   }
 
   const formatDate = (dateString: string | null) => {

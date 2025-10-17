@@ -30,6 +30,7 @@ import {
 import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
 import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService } from "@/shared/route-handler"
+import { AppLayer } from "@/app/providers/main"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
   requestLoggingMiddleware,
@@ -828,7 +829,7 @@ app.get("/upload-directories/:id/sync/stream", async (c) => {
               event: "progress"
             }))
           })
-        )
+        ).pipe(Effect.provide(AppLayer))
       )
     } catch (error) {
       logger.error({
