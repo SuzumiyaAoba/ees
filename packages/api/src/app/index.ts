@@ -18,6 +18,7 @@ import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
+import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
 import {
   createUploadDirectoryRoute,
@@ -29,7 +30,7 @@ import {
 } from "@/features/upload-directory"
 import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
-import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService } from "@/shared/route-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService, withVisualizationService } from "@/shared/route-handler"
 import { AppLayer } from "@/app/providers/main"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
@@ -177,6 +178,21 @@ app.openapi(searchEmbeddingsRoute, async (c) => {
   return executeEffectHandler(c, "searchEmbeddings",
     withEmbeddingService(appService =>
       appService.searchEmbeddings(request)
+    )
+  ) as never
+})
+
+/**
+ * Visualize embeddings endpoint
+ * Performs dimensionality reduction (PCA, t-SNE, or UMAP) for 2D/3D visualization
+ */
+app.use("/embeddings/visualize", security.rateLimits.general)
+app.openapi(visualizeEmbeddingsRoute, async (c) => {
+  const request = c.req.valid("json")
+
+  return executeEffectHandler(c, "visualizeEmbeddings",
+    withVisualizationService(visualizationService =>
+      visualizationService.visualizeEmbeddings(request)
     )
   ) as never
 })

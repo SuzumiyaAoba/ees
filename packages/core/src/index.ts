@@ -122,3 +122,26 @@ export {
   FileSystemServiceLive,
   type DirectoryEntry,
 } from './entities/file-system/api/file-system'
+
+// Export visualization service
+export {
+  VisualizationService,
+  VisualizationServiceLive,
+  type VisualizationError,
+} from './entities/visualization/api/visualization-service'
+
+export type {
+  VisualizeEmbeddingRequest,
+  VisualizeEmbeddingResponse,
+  VisualizationPoint,
+  ReductionMethod,
+  VisualizationDimensions,
+} from './entities/visualization/model/visualization'
+
+export {
+  VisualizeEmbeddingRequestSchema,
+  VisualizeEmbeddingResponseSchema,
+  VisualizationPointSchema,
+  ReductionMethodSchema,
+  VisualizationDimensionsSchema,
+} from './entities/visualization/model/openapi'

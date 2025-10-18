@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, Database, ArrowLeftRight, Plus, FolderOpen } from 'lucide-react'
+import { Search, List, Upload, Settings, Database, ArrowLeftRight, Plus, FolderOpen, Eye } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
@@ -9,6 +9,7 @@ import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
+import { EmbeddingVisualization } from '@/components/EmbeddingVisualization'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/services/api'
@@ -24,7 +25,7 @@ const queryClient = new QueryClient({
   },
 })
 
-type TabType = 'search' | 'list' | 'create' | 'upload' | 'directories' | 'migration' | 'config'
+type TabType = 'search' | 'list' | 'create' | 'upload' | 'directories' | 'visualize' | 'migration' | 'config'
 
 interface TabItem {
   id: TabType
@@ -38,11 +39,12 @@ const tabs: TabItem[] = [
   { id: 'create', label: 'Create', icon: Plus },
   { id: 'upload', label: 'Upload', icon: Upload },
   { id: 'directories', label: 'Directories', icon: FolderOpen },
+  { id: 'visualize', label: 'Visualize', icon: Eye },
   { id: 'migration', label: 'Migration', icon: ArrowLeftRight },
   { id: 'config', label: 'Config', icon: Settings },
 ]
 
-const VALID_TABS: TabType[] = ['search', 'list', 'create', 'upload', 'directories', 'migration', 'config']
+const VALID_TABS: TabType[] = ['search', 'list', 'create', 'upload', 'directories', 'visualize', 'migration', 'config']
 
 function AppContent() {
   // Get initial tab from URL hash or default to 'search'
@@ -128,6 +130,8 @@ function AppContent() {
         return <FileUpload />
       case 'directories':
         return <UploadDirectoryManagement />
+      case 'visualize':
+        return <EmbeddingVisualization />
       case 'migration':
         return <ModelMigration onMigrationComplete={(result) => {
           console.log('Migration completed:', result)
