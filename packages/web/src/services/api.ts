@@ -22,6 +22,8 @@ import type {
   UploadDirectoryListResponse,
   SyncUploadDirectoryResponse,
   ListDirectoryResponse,
+  VisualizeEmbeddingRequest,
+  VisualizeEmbeddingResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -279,6 +281,14 @@ class ApiClient {
     searchParams.set('path', path)
 
     return this.request<ListDirectoryResponse>(`/file-system/list?${searchParams.toString()}`)
+  }
+
+  // Visualization operations
+  async visualizeEmbeddings(data: VisualizeEmbeddingRequest): Promise<VisualizeEmbeddingResponse> {
+    return this.request<VisualizeEmbeddingResponse>('/embeddings/visualize', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   }
 }
 

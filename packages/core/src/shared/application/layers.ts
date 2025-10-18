@@ -14,6 +14,7 @@ import { MetricsLayer } from "@/shared/observability/metrics"
 import { CacheServiceLiveDefault } from "@/shared/cache"
 import { UploadDirectoryRepositoryLive } from "@/entities/upload-directory/repository/upload-directory-repository"
 import { FileSystemServiceLive } from "@/entities/file-system/api/file-system"
+import { VisualizationServiceLive } from "@/entities/visualization/api/visualization-service"
 
 /**
  * Core application layer including all business logic services
@@ -23,7 +24,8 @@ export const CoreApplicationLayer = Layer.mergeAll(
   ModelManagerLive,
   EmbeddingApplicationServiceLive,
   UploadDirectoryRepositoryLive,
-  FileSystemServiceLive
+  FileSystemServiceLive,
+  VisualizationServiceLive
 ).pipe(
   Layer.provide(EmbeddingServiceLive)  // EmbeddingService provides dependencies for Application Service
 )
