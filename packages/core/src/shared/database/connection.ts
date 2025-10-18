@@ -220,4 +220,8 @@ const make = Effect.gen(function* () {
   return { db, client }
 })
 
+/**
+ * Database service layer
+ * Creates database connection with automatic schema initialization
+ */
 export const DatabaseServiceLive = Layer.effect(DatabaseService, make)
