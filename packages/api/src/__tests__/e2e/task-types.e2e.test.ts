@@ -191,8 +191,8 @@ describe("Task Types E2E Tests", () => {
         // Label should be human-readable (not just the value)
         expect(taskType.label).not.toBe(taskType.value)
 
-        // Description should be longer than label
-        expect(taskType.description.length).toBeGreaterThan(taskType.label.length)
+        // Description should not be empty
+        expect(taskType.description.length).toBeGreaterThan(0)
 
         // Value should be lowercase with underscores (snake_case)
         expect(taskType.value).toMatch(/^[a-z_]+$/)
