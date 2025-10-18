@@ -3,6 +3,7 @@ import { Search, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
@@ -261,9 +262,9 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{result.uri}</h4>
-                    <span className="text-sm font-mono bg-primary text-primary-foreground px-2 py-1 rounded">
+                    <Badge variant="default" className="font-mono">
                       {formatSimilarity(result.similarity)}
-                    </span>
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
                     {result.text}

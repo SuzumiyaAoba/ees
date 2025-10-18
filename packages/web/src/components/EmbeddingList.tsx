@@ -2,6 +2,7 @@ import { List, Trash2, Eye, Edit, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
@@ -252,9 +253,9 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                               {formatUri(embedding.uri)}
                             </h4>
                             {embedding.converted_format && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              <Badge variant="secondary">
                                 org → {embedding.converted_format}
-                              </span>
+                              </Badge>
                             )}
                           </div>
                           <div className="flex gap-4 text-sm text-muted-foreground mt-1">

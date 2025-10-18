@@ -9,6 +9,8 @@ import { ProviderManagement } from '@/components/ProviderManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
+import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/services/api'
 import type { Embedding, SearchResult } from '@/types/api'
 
@@ -139,17 +141,20 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b">
+      <header className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center gap-3">
-              <Database className="h-8 w-8 text-primary" />
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                <Database className="h-6 w-6 text-primary" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold">EES Dashboard</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-2xl font-bold tracking-tight">EES Dashboard</h1>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
                   Embedding Engine Service Management
+                  <Badge variant="secondary" className="text-xs">v1.0.0</Badge>
                 </p>
               </div>
             </div>
@@ -158,41 +163,44 @@ function AppContent() {
       </header>
 
       {/* Navigation */}
-      <nav className="border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              )
-            })}
-          </div>
+      <div className="border-b bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <Tabs>
+            <TabsList className="inline-flex h-auto p-1 bg-muted/50">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    active={activeTab === tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className="gap-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </TabsTrigger>
+                )
+              })}
+            </TabsList>
+          </Tabs>
         </div>
-      </nav>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderActiveTab()}
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center text-sm text-muted-foreground">
-            <p>EES Dashboard - Embedding Engine Service Management Interface</p>
-            <p>Built with React + TypeScript</p>
+      <footer className="border-t mt-auto bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <p>EES Dashboard - Embedding Engine Service Management</p>
+              <Badge variant="outline" className="text-xs">Powered by shadcn/ui</Badge>
+            </div>
+            <p>Built with React + TypeScript + Tailwind CSS</p>
           </div>
         </div>
       </footer>

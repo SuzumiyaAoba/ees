@@ -1,6 +1,9 @@
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { Zap } from 'lucide-react'
 import type { Embedding } from '@/types/api'
 
 interface EmbeddingDetailModalProps {
@@ -33,7 +36,10 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
   return (
     <Dialog open={open} onClose={onClose} className="w-full max-w-4xl">
       <DialogHeader onClose={onClose}>
-        <DialogTitle>Embedding Details</DialogTitle>
+        <div className="flex items-center gap-3">
+          <DialogTitle>Embedding Details</DialogTitle>
+          <Badge variant="secondary">{embedding.model_name}</Badge>
+        </div>
       </DialogHeader>
 
       <DialogContent className="space-y-6">
@@ -41,11 +47,11 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground">ID</label>
-            <p className="mt-1 font-mono">{embedding.id}</p>
+            <p className="mt-1 font-mono text-sm">{embedding.id}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Model</label>
-            <p className="mt-1">{embedding.model_name}</p>
+            <label className="text-sm font-medium text-muted-foreground">Dimensions</label>
+            <p className="mt-1 font-medium">{embedding.embedding.length}</p>
           </div>
         </div>
 
@@ -58,16 +64,12 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
 
         {/* Conversion Information */}
         {embedding.converted_format && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Converted from org-mode to {embedding.converted_format}
-              </span>
-            </div>
-          </div>
+          <Alert variant="success">
+            <Zap className="h-4 w-4" />
+            <AlertDescription>
+              Converted from org-mode to {embedding.converted_format}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Text Content */}
