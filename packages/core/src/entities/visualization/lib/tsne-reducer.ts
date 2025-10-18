@@ -1,4 +1,4 @@
-import TSNE from "tsne-js"
+import { TSNE } from "@keckelt/tsne"
 import { Effect } from "effect"
 import type { VisualizationDimensions } from "@/entities/visualization/model/visualization"
 
@@ -47,7 +47,7 @@ export const reduceTSNE = (
         )
       }
 
-      const model = new TSNE({
+      const tsne = new TSNE({
         dim: dimensions,
         perplexity: perplexity,
         earlyExaggeration: 4.0,
@@ -56,14 +56,13 @@ export const reduceTSNE = (
         metric: "euclidean",
       })
 
-      model.init({
-        data: vectors,
-        type: "dense",
-      })
+      tsne.initDataRaw(vectors)
 
-      model.run()
+      for (let i = 0; i < 1000; i++) {
+        tsne.step()
+      }
 
-      const output = model.getOutput()
+      const output = tsne.getSolution()
       return {
         coordinates: output,
       }
