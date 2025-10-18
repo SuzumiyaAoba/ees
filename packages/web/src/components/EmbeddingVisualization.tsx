@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Plot from 'react-plotly.js'
-import { Eye, RefreshCw, Loader2 } from 'lucide-react'
+import type { PlotMouseEvent } from 'plotly.js'
+import Plotly from 'plotly.js'
+import { Eye, RefreshCw, Loader2, X, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Alert } from '@/components/ui/Alert'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/services/api'
 import type {
@@ -12,6 +14,7 @@ import type {
   VisualizationDimensions,
   VisualizeEmbeddingResponse,
   VisualizationPoint,
+  Embedding,
 } from '@/types/api'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 
@@ -57,6 +60,11 @@ export function EmbeddingVisualization() {
   const [data, setData] = useState<VisualizeEmbeddingResponse | null>(null)
   const [availableModels, setAvailableModels] = useState<string[]>([])
 
+  // Side panel state for displaying embedding details
+  const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const plotDivRef = useRef<HTMLElement | null>(null)
+
   // Load available models from DB on mount
   useEffect(() => {
     const loadModels = async () => {
@@ -70,6 +78,7 @@ export function EmbeddingVisualization() {
 
     loadModels()
   }, [])
+
 
   const handleVisualize = async () => {
     setLoading(true)
@@ -91,6 +100,36 @@ export function EmbeddingVisualization() {
       setError(e instanceof Error ? e.message : 'Failed to visualize embeddings')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePointClick = async (event: Readonly<PlotMouseEvent>) => {
+    if (!data || !event.points || event.points.length === 0) {
+      return
+    }
+
+    const firstPoint = event.points[0]
+    // 2D uses pointIndex, 3D uses pointNumber
+    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
+
+    if (pointIndex === undefined || pointIndex === null) {
+      return
+    }
+
+    const point = data.points[pointIndex]
+    if (!point) {
+      return
+    }
+
+    setLoadingDetail(true)
+    try {
+      const embedding = await apiClient.getEmbedding(point.uri, point.model_name)
+      setSelectedEmbedding(embedding)
+    } catch (e) {
+      console.error('Failed to load embedding details:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load embedding details')
+    } finally {
+      setLoadingDetail(false)
     }
   }
 
@@ -126,6 +165,16 @@ export function EmbeddingVisualization() {
           layout={layout}
           config={{ responsive: true }}
           style={{ width: '100%', height: '600px' }}
+          onInitialized={(_figure, graphDiv) => {
+            plotDivRef.current = graphDiv
+
+            // Add native Plotly event listeners (react-plotly.js onClick doesn't work reliably)
+            const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
+
+            plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
+              handlePointClick(eventData)
+            })
+          }}
         />
       </div>
     )
@@ -384,40 +433,141 @@ export function EmbeddingVisualization() {
             </Button>
           </div>
 
-          {/* Plot */}
-          {renderPlot()}
+          {/* Grid Layout: Plot + Detail Panel */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Plot Area */}
+            <div className={selectedEmbedding ? "lg:col-span-2" : "lg:col-span-3"}>
+              {renderPlot()}
 
-          {/* Parameters Info */}
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-            <h4 className="text-sm font-semibold mb-2">Parameters Used</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-              <div>
-                <span className="text-muted-foreground">Method:</span>{' '}
-                <span className="font-medium">{data.method.toUpperCase()}</span>
+              {/* Parameters Info */}
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-semibold mb-2">Parameters Used</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Method:</span>{' '}
+                    <span className="font-medium">{data.method.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Dimensions:</span>{' '}
+                    <span className="font-medium">{data.dimensions}D</span>
+                  </div>
+                  {data.parameters.perplexity !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">Perplexity:</span>{' '}
+                      <span className="font-medium">{data.parameters.perplexity}</span>
+                    </div>
+                  )}
+                  {data.parameters.n_neighbors !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">N Neighbors:</span>{' '}
+                      <span className="font-medium">{data.parameters.n_neighbors}</span>
+                    </div>
+                  )}
+                  {data.parameters.min_dist !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">Min Distance:</span>{' '}
+                      <span className="font-medium">{data.parameters.min_dist}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <span className="text-muted-foreground">Dimensions:</span>{' '}
-                <span className="font-medium">{data.dimensions}D</span>
-              </div>
-              {data.parameters.perplexity !== undefined && (
-                <div>
-                  <span className="text-muted-foreground">Perplexity:</span>{' '}
-                  <span className="font-medium">{data.parameters.perplexity}</span>
-                </div>
-              )}
-              {data.parameters.n_neighbors !== undefined && (
-                <div>
-                  <span className="text-muted-foreground">N Neighbors:</span>{' '}
-                  <span className="font-medium">{data.parameters.n_neighbors}</span>
-                </div>
-              )}
-              {data.parameters.min_dist !== undefined && (
-                <div>
-                  <span className="text-muted-foreground">Min Distance:</span>{' '}
-                  <span className="font-medium">{data.parameters.min_dist}</span>
-                </div>
-              )}
             </div>
+
+            {/* Detail Side Panel */}
+            {selectedEmbedding && (
+              <div className="lg:col-span-1">
+                <Card className="p-4 sticky top-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm">Document Details</h4>
+                      <Badge variant="secondary" className="text-xs">{selectedEmbedding.model_name}</Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedEmbedding(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                    {/* Basic Info */}
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">ID</label>
+                        <p className="mt-0.5 font-mono text-xs">{selectedEmbedding.id}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">URI</label>
+                        <p className="mt-0.5 font-mono text-xs break-all">{selectedEmbedding.uri}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Dimensions</label>
+                        <p className="mt-0.5 font-medium text-xs">{selectedEmbedding.embedding.length}</p>
+                      </div>
+                    </div>
+
+                    {/* Conversion Info */}
+                    {selectedEmbedding.converted_format && (
+                      <Alert variant="success" className="py-2">
+                        <Zap className="h-3 w-3" />
+                        <AlertDescription className="text-xs">
+                          Converted from org-mode to {selectedEmbedding.converted_format}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Text Content */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        {selectedEmbedding.converted_format ? 'Converted Content' : 'Text Content'}
+                      </label>
+                      <Card className="mt-1 p-3 bg-muted/30">
+                        <p className="text-xs whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+                          {selectedEmbedding.text}
+                        </p>
+                      </Card>
+                    </div>
+
+                    {/* Original Content */}
+                    {selectedEmbedding.original_content && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Original Content</label>
+                        <Card className="mt-1 p-3 bg-muted/30">
+                          <p className="text-xs whitespace-pre-wrap break-words max-h-32 overflow-y-auto font-mono">
+                            {selectedEmbedding.original_content}
+                          </p>
+                        </Card>
+                      </div>
+                    )}
+
+                    {/* Embedding Vector */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Embedding Vector</label>
+                      <Card className="mt-1 p-2 bg-muted/30">
+                        <code className="text-xs font-mono block overflow-x-auto">
+                          [{selectedEmbedding.embedding.slice(0, 5).map(v => v.toFixed(4)).join(', ')}...]
+                        </code>
+                      </Card>
+                    </div>
+
+                    {/* Timestamps */}
+                    <div className="pt-2 border-t space-y-1">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Created</label>
+                        <p className="mt-0.5 text-xs">{new Date(selectedEmbedding.created_at).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Updated</label>
+                        <p className="mt-0.5 text-xs">{new Date(selectedEmbedding.updated_at).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -434,6 +584,16 @@ export function EmbeddingVisualization() {
             </p>
           </div>
         </Alert>
+      )}
+
+      {/* Loading Detail Indicator */}
+      {loadingDetail && (
+        <div className="fixed bottom-4 right-4 bg-background p-4 rounded-lg shadow-lg border z-50">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <p className="text-sm text-muted-foreground">Loading embedding details...</p>
+          </div>
+        </div>
       )}
     </div>
   )
