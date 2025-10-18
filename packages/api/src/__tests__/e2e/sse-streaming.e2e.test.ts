@@ -212,23 +212,24 @@ describe("SSE Streaming E2E Tests", () => {
       }).filter(d => d !== null)
 
       // Check for expected event types
-      const eventTypes = eventData.map(d => d.type)
+      const eventTypes = eventData.map(d => (d as Record<string, unknown>)["type"])
 
       // Should have start event
       expect(eventTypes).toContain('start')
 
       // Should have collected event
-      const collectedEvents = eventData.filter(d => d.type === 'collected')
+      const collectedEvents = eventData.filter(d => (d as Record<string, unknown>)["type"] === 'collected')
       if (collectedEvents.length > 0) {
         expect(collectedEvents[0]).toHaveProperty('total_files')
       }
 
       // Should have completed event (if service is available)
-      const completedEvents = eventData.filter(d => d.type === 'completed')
+      const completedEvents = eventData.filter(d => (d as Record<string, unknown>)["type"] === 'completed')
       if (completedEvents.length > 0) {
-        expect(completedEvents[0]).toHaveProperty('directory_id')
-        expect(completedEvents[0]).toHaveProperty('files_processed')
-        expect(completedEvents[0]).toHaveProperty('message')
+        const firstCompleted = completedEvents[0]
+        expect(firstCompleted).toHaveProperty('directory_id')
+        expect(firstCompleted).toHaveProperty('files_processed')
+        expect(firstCompleted).toHaveProperty('message')
       }
     })
 
@@ -279,9 +280,10 @@ describe("SSE Streaming E2E Tests", () => {
       }).filter(d => d !== null)
 
       // Should have completed event with 0 files
-      const completedEvents = eventData.filter(d => d.type === 'completed')
+      const completedEvents = eventData.filter(d => (d as Record<string, unknown>)["type"] === 'completed')
       if (completedEvents.length > 0) {
-        expect(completedEvents[0]["files_processed"]).toBe(0)
+        const firstCompleted = completedEvents[0] as Record<string, unknown>
+        expect(firstCompleted["files_processed"]).toBe(0)
       }
     })
 
@@ -356,9 +358,10 @@ describe("SSE Streaming E2E Tests", () => {
       }).filter(d => d !== null)
 
       // Check for processing events
-      const processingEvents = eventData.filter(d =>
-        d.type === 'processing' || d.type === 'file_completed' || d.type === 'file_failed'
-      )
+      const processingEvents = eventData.filter(d => {
+        const eventType = (d as Record<string, unknown>)["type"]
+        return eventType === 'processing' || eventType === 'file_completed' || eventType === 'file_failed'
+      })
 
       if (processingEvents.length > 0) {
         // Verify processing event structure
