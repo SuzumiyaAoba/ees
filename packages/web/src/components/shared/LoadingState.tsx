@@ -1,9 +1,10 @@
 /**
  * Reusable loading state component
- * Displays loading indicator with optional message
+ * Displays loading indicator with optional message using shadcn/ui styling
  */
 
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/utils/cn'
 
 export interface LoadingStateProps {
   message?: string
@@ -19,13 +20,15 @@ const sizeClasses = {
 
 export function LoadingState({
   message = 'Loading...',
-  className = '',
+  className,
   size = 'md'
 }: LoadingStateProps) {
   return (
-    <div className={`flex items-center justify-center py-8 ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-primary`} />
-      {message && <span className="ml-2">{message}</span>}
+    <div className={cn("flex items-center justify-center py-8", className)}>
+      <Loader2 className={cn(sizeClasses[size], "animate-spin text-primary")} />
+      {message && (
+        <span className="ml-3 text-sm text-muted-foreground">{message}</span>
+      )}
     </div>
   )
 }

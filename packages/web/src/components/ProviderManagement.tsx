@@ -19,6 +19,8 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
 import {
   useProviders,
   useProviderModels,
@@ -35,20 +37,17 @@ function ProviderStatusBadge({ status, className = '' }: ProviderStatusBadgeProp
   const statusConfig = {
     online: {
       icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      variant: 'success' as const,
       text: 'Online',
     },
     offline: {
       icon: XCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
+      variant: 'destructive' as const,
       text: 'Offline',
     },
     unknown: {
       icon: AlertCircle,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
+      variant: 'warning' as const,
       text: 'Unknown',
     },
   }
@@ -57,10 +56,10 @@ function ProviderStatusBadge({ status, className = '' }: ProviderStatusBadgeProp
   const Icon = config.icon
 
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.color} ${className}`}>
-      <Icon className="h-3 w-3" />
+    <Badge variant={config.variant} className={className}>
+      <Icon className="h-3 w-3 mr-1" />
       {config.text}
-    </div>
+    </Badge>
   )
 }
 
@@ -100,9 +99,9 @@ function ModelCard({ model, onDelete }: ModelCardProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <h4 className="font-medium truncate">{model.displayName || model.name}</h4>
-              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+              <Badge variant="secondary">
                 {model.provider}
-              </span>
+              </Badge>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
@@ -291,22 +290,22 @@ export function ProviderManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4 text-blue-600" />
+            <Alert>
+              <Zap className="h-4 w-4" />
+              <AlertDescription>
                 <span className="font-medium">Active Provider: {currentProvider.provider}</span>
-              </div>
-              {currentProvider.configuration && (
-                <div className="space-y-2 text-sm">
-                  {Object.entries(currentProvider.configuration).map(([key, value]) => (
-                    <div key={key}>
-                      <span className="capitalize text-muted-foreground">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
-                      <div className="font-mono text-foreground mt-0.5 break-all">{String(value)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                {currentProvider.configuration && (
+                  <div className="space-y-2 text-sm mt-2">
+                    {Object.entries(currentProvider.configuration).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="capitalize text-muted-foreground">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
+                        <div className="font-mono text-foreground mt-0.5 break-all">{String(value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       )}
@@ -378,12 +377,9 @@ export function ProviderManagement() {
                   <h4 className="font-medium mb-2">Available Models</h4>
                   <div className="flex flex-wrap gap-2">
                     {ollamaStatus.models.map((modelName) => (
-                      <span
-                        key={modelName}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm"
-                      >
+                      <Badge key={modelName} variant="secondary">
                         {modelName}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
