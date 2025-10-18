@@ -332,7 +332,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const updateResponse = await app.request(`/upload-directories/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })
@@ -371,7 +371,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const updateResponse = await app.request(`/upload-directories/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })
@@ -410,7 +410,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const updateResponse = await app.request(`/upload-directories/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })
@@ -451,7 +451,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const updateResponse = await app.request(`/upload-directories/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })
@@ -470,7 +470,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const response = await app.request("/upload-directories/999999", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })
@@ -732,7 +732,7 @@ describe("Upload Directory Management E2E Tests", () => {
       }
 
       const updateResponse = await app.request(`/upload-directories/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       })

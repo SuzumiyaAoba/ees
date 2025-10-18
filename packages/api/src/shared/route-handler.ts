@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Effect, Runtime, Layer, Scope } from "effect"
 import type { Context } from "hono"
 import { AppLayer } from "@/app/providers/main"
 import { handleErrorResponse } from "@/shared/error-handler"
@@ -9,8 +9,40 @@ import type { UploadDirectoryRepository as UploadDirectoryRepositoryType } from 
 import type { FileSystemService as FileSystemServiceType } from "@ees/core"
 
 /**
+ * Shared runtime for test environment to ensure database persistence
+ * In test mode with in-memory database, we need to share the same Layer instance
+ * across all Effect program executions to maintain data consistency.
+ */
+let testRuntime: Runtime.Runtime<never> | null = null
+
+/**
+ * Initialize shared runtime for test environment
+ * This ensures the same in-memory database is used across all requests
+ */
+async function getTestRuntime(): Promise<Runtime.Runtime<never>> {
+  if (testRuntime) {
+    return testRuntime
+  }
+
+  // Create a long-lived scope for the test runtime
+  const scope = await Effect.runPromise(Scope.make())
+
+  // Build the runtime with the AppLayer in the shared scope
+  testRuntime = await Effect.runPromise(
+    Layer.toRuntime(AppLayer).pipe(
+      Scope.extend(scope)
+    )
+  )
+
+  return testRuntime
+}
+
+/**
  * Generic route handler that abstracts the common Effect execution pattern
  * Eliminates duplicate code across all OpenAPI route handlers
+ *
+ * CRITICAL FIX: In test environment, uses a shared runtime to ensure
+ * the same in-memory database is used across all requests.
  */
 export async function executeEffectHandler<T>(
   c: Context,
@@ -18,11 +50,23 @@ export async function executeEffectHandler<T>(
   effectProgram: Effect.Effect<T, unknown, unknown>
 ): Promise<Response> {
   try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      effectProgram.pipe(Effect.provide(AppLayer))
-    )
+    let result: T
+
+    if (process.env["NODE_ENV"] === "test") {
+      // Use shared runtime in test mode to maintain database state
+      const runtime = await getTestRuntime()
+      result = await Runtime.runPromise(runtime)(
+        // @ts-expect-error - Effect.provide changes requirements to 'never'
+        effectProgram
+      )
+    } else {
+      // Normal execution for production/development
+      result = await Effect.runPromise(
+        // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
+        // This is a known limitation in Effect-TypeScript integration with generic functions
+        effectProgram.pipe(Effect.provide(AppLayer))
+      )
+    }
 
     return c.json(result, 200)
   } catch (error) {
@@ -85,6 +129,9 @@ export function withFileSystemService<T, E, R>(
 /**
  * Helper for handling conditional responses (e.g., 404 when resource not found)
  * Common pattern in GET and DELETE endpoints
+ *
+ * CRITICAL FIX: In test environment, uses shared runtime to ensure
+ * the same in-memory database is used across all requests.
  */
 export async function executeEffectHandlerWithConditional<T>(
   c: Context,
@@ -93,11 +140,23 @@ export async function executeEffectHandlerWithConditional<T>(
   notFoundMessage: string = "Resource not found"
 ): Promise<Response> {
   try {
-    const result = await Effect.runPromise(
-      // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
-      // This is a known limitation in Effect-TypeScript integration with generic functions
-      effectProgram.pipe(Effect.provide(AppLayer))
-    )
+    let result: T | null
+
+    if (process.env["NODE_ENV"] === "test") {
+      // Use shared runtime in test mode to maintain database state
+      const runtime = await getTestRuntime()
+      result = await Runtime.runPromise(runtime)(
+        // @ts-expect-error - Effect.provide changes requirements to 'never'
+        effectProgram
+      )
+    } else {
+      // Normal execution for production/development
+      result = await Effect.runPromise(
+        // @ts-expect-error - Effect.provide changes requirements to 'never' but Effect.gen infers 'any'
+        // This is a known limitation in Effect-TypeScript integration with generic functions
+        effectProgram.pipe(Effect.provide(AppLayer))
+      )
+    }
 
     if (!result) {
       return c.json({ error: notFoundMessage }, 404)

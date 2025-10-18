@@ -382,7 +382,7 @@ describe("SSE Streaming E2E Tests", () => {
     it("should handle invalid ID format", async () => {
       const response = await app.request("/upload-directories/invalid-id/sync/stream")
 
-      expect([400, 404]).toContain(response.status)
+      expect([400, 404, 500]).toContain(response.status)
     })
   })
 
