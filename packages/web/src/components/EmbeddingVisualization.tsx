@@ -137,7 +137,7 @@ export function EmbeddingVisualization() {
       y: points.map(p => p.coordinates[1]),
       mode: 'markers' as const,
       type: 'scatter' as const,
-      text: points.map(p => `${p.uri}\n${p.text_preview || ''}`),
+      text: points.map(p => `ID: ${p.id}`),
       marker: {
         size: 8,
         color: points.map((_, i) => i),
@@ -155,7 +155,7 @@ export function EmbeddingVisualization() {
       z: points.map(p => p.coordinates[2]),
       mode: 'markers' as const,
       type: 'scatter3d' as const,
-      text: points.map(p => `${p.uri}\n${p.text_preview || ''}`),
+      text: points.map(p => `ID: ${p.id}`),
       marker: {
         size: 5,
         color: points.map((_, i) => i),
