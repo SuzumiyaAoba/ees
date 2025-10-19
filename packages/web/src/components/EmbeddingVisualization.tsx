@@ -187,6 +187,7 @@ export function EmbeddingVisualization() {
       // Find the input point in the visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
 
+      // Log full response details
       console.log('[Debug] Visualization response:', {
         tempUri,
         modelName,
@@ -200,10 +201,16 @@ export function EmbeddingVisualization() {
         totalPoints: updatedResponse.points.length,
         requestedLimit: limit,
         foundInput: !!inputPoint,
-        allUris: updatedResponse.points.map(p => p.uri),
         firstUri: updatedResponse.points[0]?.uri,
         lastUri: updatedResponse.points[updatedResponse.points.length - 1]?.uri,
       })
+      
+      // Log all URIs separately for debugging
+      console.log('[Debug] All URIs in visualization:', updatedResponse.points.map(p => p.uri))
+      
+      // Check if temp URI is in the list
+      const tempUriFound = updatedResponse.points.some(p => p.uri === tempUri)
+      console.log('[Debug] Temp URI found in points:', tempUriFound)
 
       if (inputPoint) {
         // Successfully found the input point

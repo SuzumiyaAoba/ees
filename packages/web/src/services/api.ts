@@ -285,10 +285,19 @@ class ApiClient {
 
   // Visualization operations
   async visualizeEmbeddings(data: VisualizeEmbeddingRequest): Promise<VisualizeEmbeddingResponse> {
-    return this.request<VisualizeEmbeddingResponse>('/embeddings/visualize', {
+    console.log('[API] Visualization request:', data)
+    const response = await this.request<VisualizeEmbeddingResponse>('/embeddings/visualize', {
       method: 'POST',
       body: JSON.stringify(data),
     })
+    console.log('[API] Visualization response:', {
+      totalPoints: response.points.length,
+      method: response.method,
+      dimensions: response.dimensions,
+      hasIncludeUris: !!data.include_uris,
+      includeUrisCount: data.include_uris?.length ?? 0,
+    })
+    return response
   }
 }
 
