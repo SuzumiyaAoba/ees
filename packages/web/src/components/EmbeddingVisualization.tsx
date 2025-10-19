@@ -219,16 +219,16 @@ export function EmbeddingVisualization() {
   }, [data, inputPoints, hoverDelayMs, inputTextContent, dimensions])
 
   const handlePlotUnhover = useCallback(() => {
-    // Clear any existing timeout
+    console.log('[3D Debug] Unhover event')
+
+    // Clear any existing unhover timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
     }
 
-    // Clear hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-      hoverTimeoutRef.current = null
-    }
+    // DON'T clear hover timeout - let it complete even after unhover
+    // This allows the document fetch to complete for quick cursor movements
+    // The timeout will be cleared when hovering over a different point instead
 
     // Clear last hovered URI so next hover will trigger
     lastHoveredUriRef.current = null
