@@ -62,7 +62,6 @@ export function EmbeddingVisualization() {
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
-  const [plotInitialized, setPlotInitialized] = useState(false)
   
   // Hover info state for fixed position display
   const [hoverInfo, setHoverInfo] = useState<{
@@ -73,10 +72,11 @@ export function EmbeddingVisualization() {
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastHoveredUriRef = useRef<string | null>(null)
   
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
-  const [hoverDelayMs, setHoverDelayMs] = useState(500) // 500ms default
+  const [hoverDelayMs, setHoverDelayMs] = useState(200) // 200ms default for more responsive loading
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -112,12 +112,6 @@ export function EmbeddingVisualization() {
       unhoverTimeoutRef.current = null
     }
 
-    // Clear any pending hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-      hoverTimeoutRef.current = null
-    }
-
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
@@ -136,9 +130,49 @@ export function EmbeddingVisualization() {
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
-        const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+        // 2D uses pointIndex, 3D uses pointNumber
+        const pointIndex = point.pointIndex ?? point.pointNumber
+
+        console.log('[3D Debug] Hover event:', {
+          pointIndex,
+          pointNumber: point.pointNumber,
+          pointIndexDirect: point.pointIndex,
+          curveNumber,
+          dataPointsCount: data.points.length,
+          dimensions
+        })
+
+        // Validate pointIndex exists
+        if (pointIndex === undefined || pointIndex === null) {
+          console.warn('Could not determine point index from hover event:', point)
+          return
+        }
+
         const dataPoint = data.points[pointIndex]
+        console.log('[3D Debug] Data point lookup:', {
+          pointIndex,
+          found: !!dataPoint,
+          uri: dataPoint?.uri,
+          model_name: dataPoint?.model_name
+        })
+
         if (dataPoint) {
+          // If hovering over the same point, keep the existing timeout and skip
+          if (lastHoveredUriRef.current === dataPoint.uri) {
+            console.log('[3D Debug] Same point - keeping existing timeout:', dataPoint.uri)
+            return
+          }
+
+          // Different point: clear any existing timeout before starting new one
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
+            console.log('[3D Debug] Cleared timeout for previous point')
+          }
+
+          lastHoveredUriRef.current = dataPoint.uri
+          console.log('[3D Debug] New hover target:', dataPoint.uri)
+
           // Set basic hover info immediately
           setHoverInfo({
             uri: dataPoint.uri,
@@ -146,34 +180,52 @@ export function EmbeddingVisualization() {
             isInputPoint: false,
           })
 
+          // Capture dataPoint values in local variables for closure
+          const uri = dataPoint.uri
+          const modelName = dataPoint.model_name
+
           // Schedule fetching original document after delay
+          console.log('[3D Debug] Scheduling fetch in', hoverDelayMs, 'ms')
           hoverTimeoutRef.current = setTimeout(async () => {
+            console.log('[3D Debug] Fetching document for:', uri, modelName)
             try {
-              const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
-              setHoverInfo(prev => prev ? {
+              const embedding = await apiClient.getEmbedding(uri, modelName)
+              console.log('[3D Debug] Document fetched successfully:', {
+                uri: embedding.uri,
+                hasOriginalContent: !!embedding.original_content,
+                hasText: !!embedding.text,
+                contentLength: (embedding.original_content || embedding.text)?.length
+              })
+              // Safety check: only update if still hovering over the same point
+              setHoverInfo(prev => prev && prev.uri === uri ? {
                 ...prev,
                 originalDocument: embedding.original_content || embedding.text
-              } : null)
+              } : prev)
             } catch (error) {
-              console.error('Failed to fetch original document:', error)
+              console.error('[3D Debug] Failed to fetch document:', error)
             }
           }, hoverDelayMs)
+        } else {
+          console.warn('[3D Debug] No data point at index:', pointIndex)
         }
       }
     }
-  }, [data, inputPoints, hoverDelayMs, inputTextContent])
+  }, [data, inputPoints, hoverDelayMs, inputTextContent, dimensions])
 
   const handlePlotUnhover = useCallback(() => {
-    // Clear any existing timeout
+    console.log('[3D Debug] Unhover event')
+
+    // Clear any existing unhover timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
     }
 
-    // Clear hover timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-      hoverTimeoutRef.current = null
-    }
+    // DON'T clear hover timeout - let it complete even after unhover
+    // This allows the document fetch to complete for quick cursor movements
+    // The timeout will be cleared when hovering over a different point instead
+
+    // DON'T clear lastHoveredUriRef - keep it so that returning to the same point
+    // won't trigger a new fetch if one is already in progress or completed
 
     // Don't clear hover info immediately - keep it visible until next hover
     // This allows users to read the information even after moving cursor away
@@ -234,31 +286,8 @@ export function EmbeddingVisualization() {
   }, [data, inputTextContent])
 
 
-  // Setup event listeners when hoverDelayMs changes or plot is initialized
+  // Cleanup timeouts on unmount
   useEffect(() => {
-    if (!plotInitialized || !plotDivRef.current) return
-
-    const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
-
-    // Remove existing listeners
-    plotlyDiv.removeAllListeners?.('plotly_hover')
-    plotlyDiv.removeAllListeners?.('plotly_unhover')
-    plotlyDiv.removeAllListeners?.('plotly_click')
-
-    // Add event listeners with current handlers
-    plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
-      handlePointClick(eventData)
-    })
-
-    plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
-      handlePlotHover(eventData)
-    })
-
-    plotlyDiv.on('plotly_unhover', () => {
-      handlePlotUnhover()
-    })
-
-    // Cleanup function
     return () => {
       if (unhoverTimeoutRef.current) {
         clearTimeout(unhoverTimeoutRef.current)
@@ -266,15 +295,8 @@ export function EmbeddingVisualization() {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
       }
-      // Clean up Plotly event listeners
-      if (plotDivRef.current) {
-        const div = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
-        div.removeAllListeners?.('plotly_hover')
-        div.removeAllListeners?.('plotly_unhover')
-        div.removeAllListeners?.('plotly_click')
-      }
     }
-  }, [plotInitialized, handlePlotHover, handlePlotUnhover, handlePointClick])
+  }, [])
 
 
   const handleVisualize = async () => {
@@ -457,6 +479,7 @@ export function EmbeddingVisualization() {
       hoverdistance: 20,
       autosize: true,
       margin: { t: 20, r: 20, b: 40, l: 40 },
+      uirevision: 'true', // Preserve zoom/pan state across updates
       ...(dimensions === 3 && {
         scene: {
           xaxis: { title: { text: 'Component 1' } },
@@ -487,8 +510,21 @@ export function EmbeddingVisualization() {
           useResizeHandler={true}
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
-            setPlotInitialized(true)
-            // Event listeners are managed by useEffect to allow updates when handlers change
+
+            // Set up event listeners directly on the graphDiv
+            const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
+
+            plotlyDiv.on?.('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
+              handlePointClick(eventData)
+            })
+
+            plotlyDiv.on?.('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
+              handlePlotHover(eventData)
+            })
+
+            plotlyDiv.on?.('plotly_unhover', () => {
+              handlePlotUnhover()
+            })
           }}
         />
       </div>
