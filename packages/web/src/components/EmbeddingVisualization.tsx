@@ -283,21 +283,28 @@ export function EmbeddingVisualization() {
     return {
       x: points.map(p => p.coordinates[0]),
       y: points.map(p => p.coordinates[1]),
-      mode: 'markers' as const,
+      mode: 'markers+text' as 'markers',
       type: 'scatter' as const,
       name: 'Your Input',
-      text: points.map(() => 'Your Input'),
-      marker: {
-        size: 15,
-        color: 'red',
-        symbol: 'star',
-        line: {
-          color: 'darkred',
-          width: 2,
-        },
+      text: points.map(() => '⭐ Your Input'),
+      textposition: 'top center' as 'top center',
+      textfont: {
+        size: 14,
+        color: '#ff6b00',
+        family: 'Arial, sans-serif',
       },
-      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
-    } as const
+      marker: {
+        size: 20,
+        color: '#ff6b00',
+        symbol: 'star' as 'star',
+        line: {
+          color: '#ffffff',
+          width: 3,
+        },
+        opacity: 1,
+      },
+      hovertemplate: '<b>⭐ Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+    }
   }
 
   const render3DInputPlot = (points: VisualizationPoint[]) => {
@@ -305,21 +312,28 @@ export function EmbeddingVisualization() {
       x: points.map(p => p.coordinates[0]),
       y: points.map(p => p.coordinates[1]),
       z: points.map(p => p.coordinates[2]),
-      mode: 'markers' as const,
+      mode: 'markers+text' as 'markers',
       type: 'scatter3d' as const,
       name: 'Your Input',
-      text: points.map(() => 'Your Input'),
-      marker: {
-        size: 10,
-        color: 'red',
-        symbol: 'diamond',
-        line: {
-          color: 'darkred',
-          width: 2,
-        },
+      text: points.map(() => '⭐ Your Input'),
+      textposition: 'top center' as 'top center',
+      textfont: {
+        size: 12,
+        color: '#ff6b00',
+        family: 'Arial, sans-serif',
       },
-      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
-    } as const
+      marker: {
+        size: 15,
+        color: '#ff6b00',
+        symbol: 'diamond' as 'diamond',
+        line: {
+          color: '#ffffff',
+          width: 3,
+        },
+        opacity: 1,
+      },
+      hovertemplate: '<b>⭐ Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+    }
   }
 
   return (
