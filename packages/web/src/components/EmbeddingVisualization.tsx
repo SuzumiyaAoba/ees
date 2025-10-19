@@ -65,6 +65,11 @@ export function EmbeddingVisualization() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
 
+  // Free text input state
+  const [inputText, setInputText] = useState<string>('')
+  const [inputPoints, setInputPoints] = useState<VisualizationPoint[]>([])
+  const [loadingInput, setLoadingInput] = useState(false)
+
   // Load available models from DB on mount
   useEffect(() => {
     const loadModels = async () => {
@@ -83,6 +88,7 @@ export function EmbeddingVisualization() {
   const handleVisualize = async () => {
     setLoading(true)
     setError(null)
+    setInputPoints([]) // Clear previous input points
 
     try {
       const response = await apiClient.visualizeEmbeddings({
@@ -100,6 +106,54 @@ export function EmbeddingVisualization() {
       setError(e instanceof Error ? e.message : 'Failed to visualize embeddings')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePlotText = async () => {
+    if (!inputText.trim() || !data) {
+      return
+    }
+
+    setLoadingInput(true)
+    setError(null)
+
+    try {
+      // Create temporary embedding with unique URI
+      const tempUri = `temp://input-${Date.now()}`
+      const currentModel = modelName !== 'all' ? modelName : availableModels[0]
+
+      const embedding = await apiClient.createEmbedding({
+        uri: tempUri,
+        text: inputText,
+        model_name: currentModel,
+      })
+
+      // Re-visualize with the new embedding included
+      const updatedResponse = await apiClient.visualizeEmbeddings({
+        method,
+        dimensions,
+        model_name: modelName !== 'all' ? modelName : undefined,
+        limit: limit + 1, // Include one more for the input
+        perplexity: method === 'tsne' ? perplexity : undefined,
+        n_neighbors: method === 'umap' ? nNeighbors : undefined,
+        min_dist: method === 'umap' ? minDist : undefined,
+      })
+
+      // Find the input point in the new visualization
+      const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
+      if (inputPoint) {
+        setInputPoints([inputPoint])
+      }
+
+      setData(updatedResponse)
+
+      // Clean up temporary embedding
+      await apiClient.deleteEmbedding(embedding.id)
+    } catch (e) {
+      console.error('Failed to plot text:', e)
+      setError(e instanceof Error ? e.message : 'Failed to plot text')
+    } finally {
+      setLoadingInput(false)
     }
   }
 
@@ -136,7 +190,17 @@ export function EmbeddingVisualization() {
   const renderPlot = () => {
     if (!data) return null
 
-    const trace = dimensions === 2 ? render2DPlot(data.points) : render3DPlot(data.points)
+    const traces = []
+
+    // Main trace with all points
+    const mainTrace = dimensions === 2 ? render2DPlot(data.points) : render3DPlot(data.points)
+    traces.push(mainTrace)
+
+    // Add input points trace if exists
+    if (inputPoints.length > 0) {
+      const inputTrace = dimensions === 2 ? render2DInputPlot(inputPoints) : render3DInputPlot(inputPoints)
+      traces.push(inputTrace)
+    }
 
     const layout = {
       title: {
@@ -161,7 +225,7 @@ export function EmbeddingVisualization() {
     return (
       <div className="w-full">
         <Plot
-          data={[trace]}
+          data={traces}
           layout={layout}
           config={{ responsive: true }}
           style={{ width: '100%', height: '600px' }}
@@ -213,6 +277,49 @@ export function EmbeddingVisualization() {
       },
       hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
     }
+  }
+
+  const render2DInputPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      mode: 'markers' as const,
+      type: 'scatter' as const,
+      name: 'Your Input',
+      text: points.map(() => 'Your Input'),
+      marker: {
+        size: 15,
+        color: 'red',
+        symbol: 'star',
+        line: {
+          color: 'darkred',
+          width: 2,
+        },
+      },
+      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+    } as const
+  }
+
+  const render3DInputPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      z: points.map(p => p.coordinates[2]),
+      mode: 'markers' as const,
+      type: 'scatter3d' as const,
+      name: 'Your Input',
+      text: points.map(() => 'Your Input'),
+      marker: {
+        size: 10,
+        color: 'red',
+        symbol: 'diamond',
+        line: {
+          color: 'darkred',
+          width: 2,
+        },
+      },
+      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+    } as const
   }
 
   return (
@@ -514,6 +621,53 @@ export function EmbeddingVisualization() {
                 </Card>
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Text Input Section */}
+      {data && !loading && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Plot Custom Text</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Enter your own text to see where it would be positioned in the current visualization
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="input-text" className="block text-sm font-medium mb-2">
+                Your Text
+              </label>
+              <textarea
+                id="input-text"
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Enter text to visualize its position among the existing embeddings..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={loadingInput}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The text will be embedded using {modelName !== 'all' ? modelName : availableModels[0]} and plotted on the graph
+              </p>
+            </div>
+
+            <Button
+              onClick={handlePlotText}
+              disabled={loadingInput || !inputText.trim()}
+              className="w-full"
+            >
+              {loadingInput ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Plotting Text...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Plot Text on Graph
+                </>
+              )}
+            </Button>
           </div>
         </Card>
       )}
