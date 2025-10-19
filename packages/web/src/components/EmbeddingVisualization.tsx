@@ -141,7 +141,14 @@ export function EmbeddingVisualization() {
 
       // Find the input point in the new visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
-      if (inputPoint) {
+
+      if (!inputPoint) {
+        // Try to find the newest point (should be the one we just created)
+        const newestPoint = updatedResponse.points[updatedResponse.points.length - 1]
+        if (newestPoint) {
+          setInputPoints([newestPoint])
+        }
+      } else {
         setInputPoints([inputPoint])
       }
 
@@ -286,7 +293,7 @@ export function EmbeddingVisualization() {
       mode: 'markers+text' as 'markers',
       type: 'scatter' as const,
       name: 'Your Input',
-      text: points.map(() => '⭐ Your Input'),
+      text: points.map(() => 'Your Input'),
       textposition: 'top center' as 'top center',
       textfont: {
         size: 14,
@@ -303,7 +310,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<b>⭐ Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
     }
   }
 
@@ -315,24 +322,24 @@ export function EmbeddingVisualization() {
       mode: 'markers+text' as 'markers',
       type: 'scatter3d' as const,
       name: 'Your Input',
-      text: points.map(() => '⭐ Your Input'),
+      text: points.map(() => 'Your Input'),
       textposition: 'top center' as 'top center',
       textfont: {
-        size: 12,
+        size: 10,
         color: '#ff6b00',
         family: 'Arial, sans-serif',
       },
       marker: {
-        size: 15,
+        size: 5,
         color: '#ff6b00',
         symbol: 'diamond' as 'diamond',
         line: {
           color: '#ffffff',
-          width: 3,
+          width: 2,
         },
         opacity: 1,
       },
-      hovertemplate: '<b>⭐ Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
     }
   }
 
