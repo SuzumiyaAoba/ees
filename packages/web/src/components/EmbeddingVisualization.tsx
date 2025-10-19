@@ -101,8 +101,6 @@ export function EmbeddingVisualization() {
 
   // Handle hover events
   const handlePlotHover = (eventData: Readonly<Plotly.PlotMouseEvent>) => {
-    console.log('[Hover Event]', eventData)
-    
     // Clear any pending unhover timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -112,7 +110,6 @@ export function EmbeddingVisualization() {
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
-      console.log('[Hover] curveNumber:', curveNumber, 'inputPoints.length:', inputPoints.length)
       
       // curveNumber 0: data points
       // curveNumber 1: input points (if exists)
@@ -120,35 +117,27 @@ export function EmbeddingVisualization() {
       
       if (curveNumber === 1 && inputPoints.length > 0) {
         // Hovering over input point
-        console.log('[Hover] Input point detected')
-        const newHoverInfo = {
+        setHoverInfo({
           uri: inputPoints[0].uri,
           coordinates: inputPoints[0].coordinates,
           isInputPoint: true,
-        }
-        console.log('[Hover] Setting hoverInfo:', newHoverInfo)
-        setHoverInfo(newHoverInfo)
+        })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
         const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
         const dataPoint = data.points[pointIndex]
-        console.log('[Hover] Data point detected, index:', pointIndex, 'point:', dataPoint)
         if (dataPoint) {
-          const newHoverInfo = {
+          setHoverInfo({
             uri: dataPoint.uri,
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
-          }
-          console.log('[Hover] Setting hoverInfo:', newHoverInfo)
-          setHoverInfo(newHoverInfo)
+          })
         }
       }
     }
   }
 
   const handlePlotUnhover = () => {
-    console.log('[Unhover Event] - scheduling clear')
-    
     // Clear any existing timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -156,16 +145,10 @@ export function EmbeddingVisualization() {
     
     // Delay clearing hover info to prevent flickering
     unhoverTimeoutRef.current = setTimeout(() => {
-      console.log('[Unhover Event] - actually clearing hoverInfo')
       setHoverInfo(null)
       unhoverTimeoutRef.current = null
     }, 100)
   }
-
-  // Debug: Log hoverInfo state changes
-  useEffect(() => {
-    console.log('[HoverInfo State Changed]:', hoverInfo)
-  }, [hoverInfo])
 
   // Cleanup timeout on unmount
   useEffect(() => {
