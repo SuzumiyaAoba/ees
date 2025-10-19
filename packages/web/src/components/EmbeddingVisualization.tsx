@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
-import { Eye, RefreshCw, Loader2, X, Zap } from 'lucide-react'
+import { Eye, RefreshCw, Loader2, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { Alert } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/services/api'
 import type {
@@ -493,76 +493,22 @@ export function EmbeddingVisualization() {
                   </div>
 
                   <div className="space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-                    {/* Basic Info */}
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">ID</label>
-                        <p className="mt-0.5 font-mono text-xs">{selectedEmbedding.id}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">URI</label>
-                        <p className="mt-0.5 font-mono text-xs break-all">{selectedEmbedding.uri}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Dimensions</label>
-                        <p className="mt-0.5 font-medium text-xs">{selectedEmbedding.embedding.length}</p>
-                      </div>
-                    </div>
-
-                    {/* Conversion Info */}
-                    {selectedEmbedding.converted_format && (
-                      <Alert variant="success" className="py-2">
-                        <Zap className="h-3 w-3" />
-                        <AlertDescription className="text-xs">
-                          Converted from org-mode to {selectedEmbedding.converted_format}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {/* Text Content */}
+                    {/* URI */}
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        {selectedEmbedding.converted_format ? 'Converted Content' : 'Text Content'}
-                      </label>
-                      <Card className="mt-1 p-3 bg-muted/30">
-                        <p className="text-xs whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                          {selectedEmbedding.text}
-                        </p>
-                      </Card>
+                      <label className="text-xs font-medium text-muted-foreground">URI</label>
+                      <p className="mt-1 font-mono text-sm break-all">{selectedEmbedding.uri}</p>
                     </div>
 
                     {/* Original Content */}
-                    {selectedEmbedding.original_content && (
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Original Content</label>
-                        <Card className="mt-1 p-3 bg-muted/30">
-                          <p className="text-xs whitespace-pre-wrap break-words max-h-32 overflow-y-auto font-mono">
-                            {selectedEmbedding.original_content}
-                          </p>
-                        </Card>
-                      </div>
-                    )}
-
-                    {/* Embedding Vector */}
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">Embedding Vector</label>
-                      <Card className="mt-1 p-2 bg-muted/30">
-                        <code className="text-xs font-mono block overflow-x-auto">
-                          [{selectedEmbedding.embedding.slice(0, 5).map(v => v.toFixed(4)).join(', ')}...]
-                        </code>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        {selectedEmbedding.original_content ? 'Original Content' : 'Text Content'}
+                      </label>
+                      <Card className="mt-1 p-3 bg-muted/30">
+                        <p className="text-sm whitespace-pre-wrap break-words overflow-y-auto">
+                          {selectedEmbedding.original_content || selectedEmbedding.text}
+                        </p>
                       </Card>
-                    </div>
-
-                    {/* Timestamps */}
-                    <div className="pt-2 border-t space-y-1">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Created</label>
-                        <p className="mt-0.5 text-xs">{new Date(selectedEmbedding.created_at).toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Updated</label>
-                        <p className="mt-0.5 text-xs">{new Date(selectedEmbedding.updated_at).toLocaleString()}</p>
-                      </div>
                     </div>
                   </div>
                 </Card>
