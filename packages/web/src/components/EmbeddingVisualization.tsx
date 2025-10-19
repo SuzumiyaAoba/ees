@@ -121,9 +121,6 @@ export function EmbeddingVisualization() {
       hoverTimeoutRef.current = null
     }
     
-    // Clear any existing hover info when moving to a new point
-    setHoverInfo(null)
-    
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
