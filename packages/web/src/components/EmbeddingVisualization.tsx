@@ -62,6 +62,7 @@ export function EmbeddingVisualization() {
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
+  const [plotInitialized, setPlotInitialized] = useState(false)
   
   // Hover info state for fixed position display
   const [hoverInfo, setHoverInfo] = useState<{
@@ -167,20 +168,97 @@ export function EmbeddingVisualization() {
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
     }
-    
+
     // Clear hover timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
+
     // Don't clear hover info immediately - keep it visible until next hover
     // This allows users to read the information even after moving cursor away
   }, [])
 
+  const handlePointClick = useCallback(async (event: Readonly<PlotMouseEvent>) => {
+    if (!event.points || event.points.length === 0) {
+      return
+    }
 
-  // Cleanup timeouts and event listeners on unmount
+    const firstPoint = event.points[0]
+    const curveNumber = firstPoint.curveNumber
+
+    // Check if clicked on input point (second trace)
+    if (curveNumber === 1 && inputTextContent) {
+      // Display locally stored input text content
+      setSelectedEmbedding({
+        id: 0,
+        uri: inputTextContent.uri,
+        text: inputTextContent.text,
+        model_name: inputTextContent.modelName,
+        embedding: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        original_content: undefined,
+        converted_format: undefined,
+      })
+      return
+    }
+
+    // Handle normal data points
+    if (!data) {
+      return
+    }
+
+    // 2D uses pointIndex, 3D uses pointNumber
+    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
+
+    if (pointIndex === undefined || pointIndex === null) {
+      return
+    }
+
+    const point = data.points[pointIndex]
+    if (!point) {
+      return
+    }
+
+    setLoadingDetail(true)
+    try {
+      const embedding = await apiClient.getEmbedding(point.uri, point.model_name)
+      setSelectedEmbedding(embedding)
+    } catch (e) {
+      console.error('Failed to load embedding details:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load embedding details')
+    } finally {
+      setLoadingDetail(false)
+    }
+  }, [data, inputTextContent])
+
+
+  // Setup event listeners when hoverDelayMs changes or plot is initialized
   useEffect(() => {
+    if (!plotInitialized || !plotDivRef.current) return
+
+    const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+
+    // Remove existing listeners
+    plotlyDiv.removeAllListeners?.('plotly_hover')
+    plotlyDiv.removeAllListeners?.('plotly_unhover')
+    plotlyDiv.removeAllListeners?.('plotly_click')
+
+    // Add event listeners with current handlers
+    plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
+      handlePointClick(eventData)
+    })
+
+    plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
+      handlePlotHover(eventData)
+    })
+
+    plotlyDiv.on('plotly_unhover', () => {
+      handlePlotUnhover()
+    })
+
+    // Cleanup function
     return () => {
       if (unhoverTimeoutRef.current) {
         clearTimeout(unhoverTimeoutRef.current)
@@ -190,13 +268,13 @@ export function EmbeddingVisualization() {
       }
       // Clean up Plotly event listeners
       if (plotDivRef.current) {
-        const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
-        plotlyDiv.removeAllListeners?.('plotly_hover')
-        plotlyDiv.removeAllListeners?.('plotly_unhover')
-        plotlyDiv.removeAllListeners?.('plotly_click')
+        const div = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+        div.removeAllListeners?.('plotly_hover')
+        div.removeAllListeners?.('plotly_unhover')
+        div.removeAllListeners?.('plotly_click')
       }
     }
-  }, [])
+  }, [plotInitialized, handlePlotHover, handlePlotUnhover, handlePointClick])
 
 
   const handleVisualize = async () => {
@@ -336,60 +414,6 @@ export function EmbeddingVisualization() {
     }
   }
 
-  const handlePointClick = async (event: Readonly<PlotMouseEvent>) => {
-    if (!event.points || event.points.length === 0) {
-      return
-    }
-
-    const firstPoint = event.points[0]
-    const curveNumber = firstPoint.curveNumber
-    
-    // Check if clicked on input point (second trace)
-    if (curveNumber === 1 && inputTextContent) {
-      // Display locally stored input text content
-      setSelectedEmbedding({
-        id: 0,
-        uri: inputTextContent.uri,
-        text: inputTextContent.text,
-        model_name: inputTextContent.modelName,
-        embedding: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        original_content: undefined,
-        converted_format: undefined,
-      })
-      return
-    }
-
-    // Handle normal data points
-    if (!data) {
-      return
-    }
-
-    // 2D uses pointIndex, 3D uses pointNumber
-    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
-
-    if (pointIndex === undefined || pointIndex === null) {
-      return
-    }
-
-    const point = data.points[pointIndex]
-    if (!point) {
-      return
-    }
-
-    setLoadingDetail(true)
-    try {
-      const embedding = await apiClient.getEmbedding(point.uri, point.model_name)
-      setSelectedEmbedding(embedding)
-    } catch (e) {
-      console.error('Failed to load embedding details:', e)
-      setError(e instanceof Error ? e.message : 'Failed to load embedding details')
-    } finally {
-      setLoadingDetail(false)
-    }
-  }
-
   const renderPlot = () => {
     if (!data) return null
 
@@ -463,21 +487,8 @@ export function EmbeddingVisualization() {
           useResizeHandler={true}
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
-
-            // Add event listeners manually (react-plotly.js props don't work reliably)
-            const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
-
-            plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
-              handlePointClick(eventData)
-            })
-
-            plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
-              handlePlotHover(eventData)
-            })
-
-            plotlyDiv.on('plotly_unhover', () => {
-              handlePlotUnhover()
-            })
+            setPlotInitialized(true)
+            // Event listeners are managed by useEffect to allow updates when handlers change
           }}
         />
       </div>
