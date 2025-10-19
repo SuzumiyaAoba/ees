@@ -86,7 +86,8 @@ const makeVisualizationService = Effect.gen(function* () {
 
       const listResult = yield* embeddingRepo.findAll(options)
 
-      // If include_uris is specified, fetch those embeddings separately and merge
+      // If include_uris is specified, fetch those embeddings separately and add them
+      // Note: include_uris embeddings are added on top of the limit (not counted against it)
       let allEmbeddings = listResult.embeddings
       if (request.include_uris && request.include_uris.length > 0) {
         const modelName = request.model_name ?? allEmbeddings[0]?.model_name
@@ -107,12 +108,10 @@ const makeVisualizationService = Effect.gen(function* () {
             (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
           )
 
-          // Merge: include_uris embeddings + existing embeddings (trimmed if over limit)
+          // Add include_uris embeddings on top of the existing list
+          // This allows limit + include_uris.length total embeddings
           if (newEmbeddings.length > 0) {
-            const limit = request.limit ?? allEmbeddings.length
-            const remainingSlots = Math.max(0, limit - newEmbeddings.length)
-            const trimmedExisting = allEmbeddings.slice(0, remainingSlots)
-            allEmbeddings = [...newEmbeddings, ...trimmedExisting]
+            allEmbeddings = [...newEmbeddings, ...allEmbeddings]
           }
         }
       }

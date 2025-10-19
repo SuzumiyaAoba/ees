@@ -160,7 +160,7 @@ export function EmbeddingVisualization() {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       // Re-visualize with include_uris to ensure the input text is included
-      // This guarantees the temporary embedding will be in the result
+      // include_uris are added on top of limit, so this will show limit + 1 points
       const updatedResponse = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
@@ -169,7 +169,7 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
-        include_uris: [tempUri], // Ensure the temporary embedding is included
+        include_uris: [tempUri], // Adds input text on top of limit
       })
 
       // Find the input point in the visualization

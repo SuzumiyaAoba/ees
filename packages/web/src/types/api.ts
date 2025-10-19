@@ -264,7 +264,7 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
-  include_uris?: string[]
+  include_uris?: string[] // URIs added on top of limit (e.g., limit=100 + 1 URI = 101 total)
 }
 
 export interface VisualizeEmbeddingResponse {
