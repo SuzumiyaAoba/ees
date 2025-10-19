@@ -344,7 +344,7 @@ const make = Effect.gen(function* () {
   ): Effect.Effect<ListEmbeddingsResult, DatabaseQueryError> =>
     Effect.gen(function* () {
       const page = options?.page ?? 1
-      const limit = Math.min(options?.limit ?? 10, 100) // Max 100 items per page
+      const limit = Math.min(options?.limit ?? 10, 10000) // Max 10000 items per page (for visualization)
       const offset = (page - 1) * limit
 
       // Build where conditions based on filters
