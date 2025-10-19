@@ -70,8 +70,14 @@ export function EmbeddingVisualization() {
     uri: string
     coordinates: number[]
     isInputPoint: boolean
+    originalDocument?: string
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Settings state
+  const [showSettings, setShowSettings] = useState(false)
+  const [hoverDelayMs, setHoverDelayMs] = useState(2000) // 2 seconds default
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -107,6 +113,12 @@ export function EmbeddingVisualization() {
       unhoverTimeoutRef.current = null
     }
     
+    // Clear any pending hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
@@ -127,11 +139,25 @@ export function EmbeddingVisualization() {
         const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
         const dataPoint = data.points[pointIndex]
         if (dataPoint) {
+          // Set basic hover info immediately
           setHoverInfo({
             uri: dataPoint.uri,
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
           })
+          
+          // Schedule fetching original document after delay
+          hoverTimeoutRef.current = setTimeout(async () => {
+            try {
+              const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
+              setHoverInfo(prev => prev ? {
+                ...prev,
+                originalDocument: embedding.original_content || embedding.text
+              } : null)
+            } catch (error) {
+              console.error('Failed to fetch original document:', error)
+            }
+          }, hoverDelayMs)
         }
       }
     }
@@ -143,6 +169,12 @@ export function EmbeddingVisualization() {
       clearTimeout(unhoverTimeoutRef.current)
     }
     
+    // Clear hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    
     // Delay clearing hover info to prevent flickering
     unhoverTimeoutRef.current = setTimeout(() => {
       setHoverInfo(null)
@@ -150,11 +182,14 @@ export function EmbeddingVisualization() {
     }, 100)
   }
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (unhoverTimeoutRef.current) {
         clearTimeout(unhoverTimeoutRef.current)
+      }
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
       }
     }
   }, [])
@@ -579,12 +614,47 @@ export function EmbeddingVisualization() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight mb-2">Embedding Visualization</h2>
-        <p className="text-muted-foreground">
-          Visualize embeddings using dimensionality reduction techniques (PCA, t-SNE, UMAP)
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight mb-2">Embedding Visualization</h2>
+          <p className="text-muted-foreground">
+            Visualize embeddings using dimensionality reduction techniques (PCA, t-SNE, UMAP)
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          ⚙️ Settings
+        </Button>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Hover Settings</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Document Load Delay (ms)
+              </label>
+              <Input
+                type="number"
+                value={hoverDelayMs}
+                onChange={(e) => setHoverDelayMs(Number(e.target.value))}
+                min="100"
+                max="10000"
+                step="100"
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                How long to hover before loading the original document (100-10000ms)
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Controls */}
       <Card className="p-6">
@@ -822,6 +892,16 @@ export function EmbeddingVisualization() {
                     {hoverInfo.isInputPoint && (
                       <div className="text-xs text-primary font-medium">
                         ✨ This is your input text
+                      </div>
+                    )}
+                    {hoverInfo.originalDocument && (
+                      <div>
+                        <span className="text-xs text-muted-foreground">Original Document:</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {hoverInfo.originalDocument}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
