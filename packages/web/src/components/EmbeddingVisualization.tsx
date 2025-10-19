@@ -73,6 +73,7 @@ export function EmbeddingVisualization() {
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastHoveredUriRef = useRef<string | null>(null)
   
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
@@ -139,8 +140,6 @@ export function EmbeddingVisualization() {
         // 2D uses pointIndex, 3D uses pointNumber
         const pointIndex = point.pointIndex ?? point.pointNumber
 
-        console.log('Hover event:', { pointIndex, point, dataPointsCount: data.points.length })
-
         // Validate pointIndex exists
         if (pointIndex === undefined || pointIndex === null) {
           console.warn('Could not determine point index from hover event:', point)
@@ -148,9 +147,15 @@ export function EmbeddingVisualization() {
         }
 
         const dataPoint = data.points[pointIndex]
-        console.log('Data point:', { pointIndex, dataPoint: dataPoint ? { uri: dataPoint.uri, model_name: dataPoint.model_name } : null })
 
         if (dataPoint) {
+          // Debounce: ignore if we're already hovering over the same point
+          if (lastHoveredUriRef.current === dataPoint.uri && hoverTimeoutRef.current) {
+            return
+          }
+
+          lastHoveredUriRef.current = dataPoint.uri
+
           // Set basic hover info immediately
           setHoverInfo({
             uri: dataPoint.uri,
@@ -158,14 +163,10 @@ export function EmbeddingVisualization() {
             isInputPoint: false,
           })
 
-          console.log('Scheduling document fetch after', hoverDelayMs, 'ms for', dataPoint.uri)
-
           // Schedule fetching original document after delay
           hoverTimeoutRef.current = setTimeout(async () => {
-            console.log('Fetching document for', dataPoint.uri, dataPoint.model_name)
             try {
               const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
-              console.log('Document fetched:', { uri: embedding.uri, hasOriginalContent: !!embedding.original_content, hasText: !!embedding.text })
               setHoverInfo(prev => prev ? {
                 ...prev,
                 originalDocument: embedding.original_content || embedding.text
@@ -174,8 +175,6 @@ export function EmbeddingVisualization() {
               console.error('Failed to fetch original document:', error)
             }
           }, hoverDelayMs)
-        } else {
-          console.warn('No data point found at index', pointIndex)
         }
       }
     }
@@ -192,6 +191,9 @@ export function EmbeddingVisualization() {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
+
+    // Clear last hovered URI so next hover will trigger
+    lastHoveredUriRef.current = null
 
     // Don't clear hover info immediately - keep it visible until next hover
     // This allows users to read the information even after moving cursor away
