@@ -131,12 +131,14 @@ export function EmbeddingVisualization() {
         model_name: modelName,
       })
 
-      // Re-visualize with the new embedding included
+      // Re-visualize with same limit as original visualization
+      // Note: Backend limits findAll to max 100 embeddings, so we can't guarantee
+      // the new embedding will be included if there are many existing embeddings
       const updatedResponse = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
         model_name: modelName,
-        limit: limit + 1, // Include one more for the input
+        limit, // Use same limit as current visualization
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
@@ -145,17 +147,13 @@ export function EmbeddingVisualization() {
       // Find the input point in the new visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
 
-      if (!inputPoint) {
-        // Try to find the newest point (should be the one we just created)
-        const newestPoint = updatedResponse.points[updatedResponse.points.length - 1]
-        if (newestPoint) {
-          setInputPoints([newestPoint])
-        }
-      } else {
+      if (inputPoint) {
         setInputPoints([inputPoint])
+        setData(updatedResponse)
+      } else {
+        // Input point not found - this can happen if there are more embeddings than the limit
+        setError(`Input text could not be visualized. The visualization is limited to ${limit} points. Try increasing the limit in the visualization parameters.`)
       }
-
-      setData(updatedResponse)
 
       // Clean up temporary embedding
       await apiClient.deleteEmbedding(embedding.id)
