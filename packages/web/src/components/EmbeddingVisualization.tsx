@@ -164,10 +164,16 @@ export function EmbeddingVisualization() {
         })
 
         if (dataPoint) {
-          // Debounce: ignore if we're already hovering over the same point
-          if (lastHoveredUriRef.current === dataPoint.uri && hoverTimeoutRef.current) {
+          // Debounce: ignore if we're already processing the same point
+          if (lastHoveredUriRef.current === dataPoint.uri) {
             console.log('[3D Debug] Debounced - same point:', dataPoint.uri)
             return
+          }
+
+          // Clear any existing timeout before starting new one
+          if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
           }
 
           lastHoveredUriRef.current = dataPoint.uri
@@ -180,22 +186,27 @@ export function EmbeddingVisualization() {
             isInputPoint: false,
           })
 
+          // Capture dataPoint values in local variables for closure
+          const uri = dataPoint.uri
+          const modelName = dataPoint.model_name
+
           // Schedule fetching original document after delay
           console.log('[3D Debug] Scheduling fetch in', hoverDelayMs, 'ms')
           hoverTimeoutRef.current = setTimeout(async () => {
-            console.log('[3D Debug] Fetching document for:', dataPoint.uri, dataPoint.model_name)
+            console.log('[3D Debug] Fetching document for:', uri, modelName)
             try {
-              const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
+              const embedding = await apiClient.getEmbedding(uri, modelName)
               console.log('[3D Debug] Document fetched successfully:', {
                 uri: embedding.uri,
                 hasOriginalContent: !!embedding.original_content,
                 hasText: !!embedding.text,
                 contentLength: (embedding.original_content || embedding.text)?.length
               })
-              setHoverInfo(prev => prev ? {
+              // Safety check: only update if still hovering over the same point
+              setHoverInfo(prev => prev && prev.uri === uri ? {
                 ...prev,
                 originalDocument: embedding.original_content || embedding.text
-              } : null)
+              } : prev)
             } catch (error) {
               console.error('[3D Debug] Failed to fetch document:', error)
             }
