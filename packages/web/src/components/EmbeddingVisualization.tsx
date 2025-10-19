@@ -105,21 +105,29 @@ export function EmbeddingVisualization() {
     const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
 
     const handleHover = (eventData: Plotly.PlotMouseEvent) => {
+      console.log('[Hover Event]', eventData)
       if (eventData.points && eventData.points.length > 0) {
         const point = eventData.points[0]
         const curveNumber = point.curveNumber
+        console.log('[Hover] curveNumber:', curveNumber, 'inputPoints.length:', inputPoints.length)
+        
+        // curveNumber 0: data points
+        // curveNumber 1: input points (if exists)
+        // curveNumber 2: highlight point (if exists)
         
         if (curveNumber === 1 && inputPoints.length > 0) {
           // Hovering over input point
+          console.log('[Hover] Input point detected')
           setHoverInfo({
             uri: inputPoints[0].uri,
             coordinates: inputPoints[0].coordinates,
             isInputPoint: true,
           })
-        } else if (data) {
+        } else if (curveNumber === 0 && data) {
           // Hovering over data point
           const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
           const dataPoint = data.points[pointIndex]
+          console.log('[Hover] Data point detected, index:', pointIndex, 'point:', dataPoint)
           if (dataPoint) {
             setHoverInfo({
               uri: dataPoint.uri,
