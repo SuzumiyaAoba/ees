@@ -110,27 +110,28 @@ export function EmbeddingVisualization() {
       clearTimeout(unhoverTimeoutRef.current)
       unhoverTimeoutRef.current = null
     }
-    
+
     // Clear any pending hover timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
+
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
-      
+
       // curveNumber 0: data points
       // curveNumber 1: input points (if exists)
       // curveNumber 2: highlight point (if exists)
-      
+
       if (curveNumber === 1 && inputPoints.length > 0) {
         // Hovering over input point
         setHoverInfo({
           uri: inputPoints[0].uri,
           coordinates: inputPoints[0].coordinates,
           isInputPoint: true,
+          originalDocument: inputTextContent?.text,
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
@@ -143,7 +144,7 @@ export function EmbeddingVisualization() {
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
           })
-          
+
           // Schedule fetching original document after delay
           hoverTimeoutRef.current = setTimeout(async () => {
             try {
@@ -159,7 +160,7 @@ export function EmbeddingVisualization() {
         }
       }
     }
-  }, [data, inputPoints, hoverDelayMs])
+  }, [data, inputPoints, hoverDelayMs, inputTextContent])
 
   const handlePlotUnhover = useCallback(() => {
     // Clear any existing timeout
@@ -178,7 +179,7 @@ export function EmbeddingVisualization() {
   }, [])
 
 
-  // Cleanup timeouts on unmount
+  // Cleanup timeouts and event listeners on unmount
   useEffect(() => {
     return () => {
       if (unhoverTimeoutRef.current) {
@@ -186,6 +187,13 @@ export function EmbeddingVisualization() {
       }
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
+      }
+      // Clean up Plotly event listeners
+      if (plotDivRef.current) {
+        const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+        plotlyDiv.removeAllListeners?.('plotly_hover')
+        plotlyDiv.removeAllListeners?.('plotly_unhover')
+        plotlyDiv.removeAllListeners?.('plotly_click')
       }
     }
   }, [])
@@ -456,15 +464,21 @@ export function EmbeddingVisualization() {
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
-            // Add click event listener
+            // Add event listeners manually (react-plotly.js props don't work reliably)
             const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
 
             plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
               handlePointClick(eventData)
             })
+
+            plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
+              handlePlotHover(eventData)
+            })
+
+            plotlyDiv.on('plotly_unhover', () => {
+              handlePlotUnhover()
+            })
           }}
-          onHover={handlePlotHover}
-          onUnhover={handlePlotUnhover}
         />
       </div>
     )
@@ -918,10 +932,51 @@ export function EmbeddingVisualization() {
 
           {/* Visualization */}
           {data && !loading && (
-            <div className="flex-1 overflow-auto">
-              <div className="h-full p-4">{renderPlot()}
+            <div className="flex-1 overflow-auto relative">
+              <div className="h-full p-4">{renderPlot()}</div>
 
-              </div>
+              {/* Floating Hover Info - Visible when right panel is closed */}
+              {hoverInfo && !showDetailPanel && (
+                <div className="absolute top-4 right-4 w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in slide-in-from-right-2 duration-200">
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    {hoverInfo.isInputPoint && <span>🎯</span>}
+                    Hover Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                      <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
+                      <p className="font-mono text-xs mt-1">
+                        {hoverInfo.coordinates.map((c, i) =>
+                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                        ).join(' | ')}
+                      </p>
+                    </div>
+                    {hoverInfo.isInputPoint && (
+                      <div className="text-xs text-primary font-medium">
+                        ✨ This is your input text
+                      </div>
+                    )}
+                    {hoverInfo.originalDocument ? (
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
+                          <p className="text-xs whitespace-pre-wrap break-words">
+                            {hoverInfo.originalDocument}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground italic">
+                        Hover for {hoverDelayMs}ms to load document...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -980,7 +1035,7 @@ export function EmbeddingVisualization() {
                         ✨ This is your input text
                       </div>
                     )}
-                    {hoverInfo.originalDocument && (
+                    {hoverInfo.originalDocument ? (
                       <div>
                         <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
                         <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
@@ -988,6 +1043,10 @@ export function EmbeddingVisualization() {
                             {hoverInfo.originalDocument}
                           </p>
                         </div>
+                      </div>
+                    ) : !hoverInfo.isInputPoint && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Hover for {hoverDelayMs}ms to load document...
                       </div>
                     )}
                   </div>
