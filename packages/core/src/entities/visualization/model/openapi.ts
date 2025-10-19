@@ -102,5 +102,21 @@ export const VisualizeEmbeddingResponseSchema = z
       .openapi({
         description: "Parameters used for dimensionality reduction",
       }),
+    debug_info: z
+      .object({
+        include_uris_requested: z.array(z.string()).optional().openapi({
+          description: "URIs that were requested to be included",
+        }),
+        include_uris_found: z.number().optional().openapi({
+          description: "Number of requested URIs that were found",
+        }),
+        include_uris_failed: z.array(z.string()).optional().openapi({
+          description: "URIs that failed to be fetched",
+        }),
+      })
+      .optional()
+      .openapi({
+        description: "Debug information for troubleshooting",
+      }),
   })
   .openapi("VisualizeEmbeddingResponse")

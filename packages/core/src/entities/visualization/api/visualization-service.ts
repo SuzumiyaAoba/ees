@@ -86,10 +86,18 @@ const makeVisualizationService = Effect.gen(function* () {
 
       const listResult = yield* embeddingRepo.findAll(options)
 
+      // Track debug information for include_uris
+      const debugInfo: {
+        include_uris_requested?: string[]
+        include_uris_found?: number
+        include_uris_failed?: string[]
+      } = {}
+
       // If include_uris is specified, fetch those embeddings separately and add them
       // Note: include_uris embeddings are added on top of the limit (not counted against it)
       let allEmbeddings = listResult.embeddings
       if (request.include_uris && request.include_uris.length > 0) {
+        debugInfo.include_uris_requested = request.include_uris
         // Use explicitly provided model_name or fall back to first embedding's model
         const modelName = request.model_name ?? allEmbeddings[0]?.model_name
         
@@ -119,6 +127,9 @@ const makeVisualizationService = Effect.gen(function* () {
         const failedUris = request.include_uris.filter(
           (_uri, idx) => includeEmbeddings[idx] === null
         )
+        
+        debugInfo.include_uris_found = successfulFetches.length
+        debugInfo.include_uris_failed = failedUris
         
         console.log('[Visualization] include_uris fetch results:', {
           requested: request.include_uris,
@@ -205,6 +216,7 @@ const makeVisualizationService = Effect.gen(function* () {
         dimensions: request.dimensions,
         total_points: points.length,
         parameters,
+        ...(debugInfo.include_uris_requested && { debug_info: debugInfo }),
       }
     })
 

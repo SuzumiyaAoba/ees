@@ -207,6 +207,13 @@ export function EmbeddingVisualization() {
         lastUri: updatedResponse.points[updatedResponse.points.length - 1]?.uri,
       })
       
+      // Log server-side debug information (most important!)
+      if (updatedResponse.debug_info) {
+        console.log('[Debug] Server debug info:', updatedResponse.debug_info)
+      } else {
+        console.warn('[Debug] No debug_info in response - server may not have include_uris support')
+      }
+      
       // Log all URIs separately for debugging
       console.log('[Debug] All URIs in visualization:', updatedResponse.points.map(p => p.uri))
       
@@ -229,7 +236,22 @@ export function EmbeddingVisualization() {
         })
       } else {
         // This should not happen with include_uris, but handle it gracefully
-        setError(`Input text could not be visualized. The embedding may have been created with a different model.`)
+        const debugInfo = updatedResponse.debug_info
+        let errorMessage = 'Input text could not be visualized.'
+        
+        if (debugInfo) {
+          if (debugInfo.include_uris_found === 0 && debugInfo.include_uris_failed && debugInfo.include_uris_failed.length > 0) {
+            errorMessage = `Failed to fetch embedding for: ${debugInfo.include_uris_failed.join(', ')}. The embedding may not be stored in the database.`
+          } else if (debugInfo.include_uris_found === 0) {
+            errorMessage = 'Input embedding not found in database. Please try again.'
+          } else {
+            errorMessage = 'Input embedding was fetched but not included in visualization. This is unexpected.'
+          }
+        } else {
+          errorMessage = 'Input text could not be visualized. The server may need to be restarted to apply updates.'
+        }
+        
+        setError(errorMessage)
       }
 
       // Clean up temporary embedding

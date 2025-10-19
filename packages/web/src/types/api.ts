@@ -277,4 +277,9 @@ export interface VisualizeEmbeddingResponse {
     n_neighbors?: number
     min_dist?: number
   }
+  debug_info?: {
+    include_uris_requested?: string[]
+    include_uris_found?: number
+    include_uris_failed?: string[]
+  }
 }
