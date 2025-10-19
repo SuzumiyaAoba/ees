@@ -312,6 +312,14 @@ export function EmbeddingVisualization() {
         showscale: true,
       },
       hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+      hoverlabel: {
+        bgcolor: 'rgba(255, 255, 255, 0.95)',
+        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        font: {
+          color: 'black',
+          size: 12,
+        },
+      },
     }
   }
 
@@ -330,6 +338,14 @@ export function EmbeddingVisualization() {
         showscale: true,
       },
       hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+      hoverlabel: {
+        bgcolor: 'rgba(255, 255, 255, 0.95)',
+        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        font: {
+          color: 'black',
+          size: 12,
+        },
+      },
     }
   }
 
@@ -357,7 +373,16 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+      hovertemplate: '<b>🎯 Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+      hoverlabel: {
+        bgcolor: 'rgba(255, 107, 0, 0.95)',
+        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        font: {
+          color: 'white',
+          size: 13,
+          family: 'Arial, sans-serif',
+        },
+      },
     }
   }
 
@@ -366,18 +391,11 @@ export function EmbeddingVisualization() {
       x: points.map(p => p.coordinates[0]),
       y: points.map(p => p.coordinates[1]),
       z: points.map(p => p.coordinates[2]),
-      mode: 'markers+text' as 'markers',
+      mode: 'markers' as const,
       type: 'scatter3d' as const,
       name: 'Your Input',
-      text: points.map(() => 'Your Input'),
-      textposition: 'top center' as 'top center',
-      textfont: {
-        size: 10,
-        color: '#ff6b00',
-        family: 'Arial, sans-serif',
-      },
       marker: {
-        size: 5,
+        size: 12,
         color: '#ff6b00',
         symbol: 'diamond' as 'diamond',
         line: {
@@ -386,7 +404,16 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<b>Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+      hovertemplate: '<b>🎯 Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+      hoverlabel: {
+        bgcolor: 'rgba(255, 107, 0, 0.95)',
+        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        font: {
+          color: 'white',
+          size: 13,
+          family: 'Arial, sans-serif',
+        },
+      },
     }
   }
 
