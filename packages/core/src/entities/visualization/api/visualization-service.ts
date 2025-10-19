@@ -90,29 +90,48 @@ const makeVisualizationService = Effect.gen(function* () {
       // Note: include_uris embeddings are added on top of the limit (not counted against it)
       let allEmbeddings = listResult.embeddings
       if (request.include_uris && request.include_uris.length > 0) {
+        // Use explicitly provided model_name or fall back to first embedding's model
         const modelName = request.model_name ?? allEmbeddings[0]?.model_name
         
-        if (modelName) {
-          // Fetch embeddings by URIs that must be included
-          const includeEmbeddings = yield* Effect.all(
-            request.include_uris.map((uri) =>
-              embeddingRepo.findByUri(uri, modelName).pipe(
-                Effect.catchAll(() => Effect.succeed(null))
-              )
+        if (!modelName) {
+          // If no model name available, fail with clear error
+          return yield* Effect.fail(
+            VisualizationError(
+              "Cannot process include_uris: model_name must be specified when no existing embeddings found"
             )
           )
+        }
 
-          // Filter out nulls and embeddings already in the list
-          const existingUris = new Set(allEmbeddings.map((e) => e.uri))
-          const newEmbeddings = includeEmbeddings.filter(
-            (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
+        // Fetch embeddings by URIs that must be included
+        const includeEmbeddings = yield* Effect.all(
+          request.include_uris.map((uri) =>
+            embeddingRepo.findByUri(uri, modelName).pipe(
+              Effect.catchAll((error) => {
+                // Log the error for debugging
+                console.error(`[Visualization] Failed to fetch URI ${uri}:`, error)
+                return Effect.succeed(null)
+              })
+            )
           )
+        )
 
-          // Add include_uris embeddings on top of the existing list
-          // This allows limit + include_uris.length total embeddings
-          if (newEmbeddings.length > 0) {
-            allEmbeddings = [...newEmbeddings, ...allEmbeddings]
-          }
+        console.log('[Visualization] include_uris fetch results:', {
+          requested: request.include_uris,
+          modelName,
+          found: includeEmbeddings.filter(e => e !== null).length,
+          foundUris: includeEmbeddings.filter(e => e !== null).map(e => e?.uri),
+        })
+
+        // Filter out nulls and embeddings already in the list
+        const existingUris = new Set(allEmbeddings.map((e) => e.uri))
+        const newEmbeddings = includeEmbeddings.filter(
+          (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
+        )
+
+        // Add include_uris embeddings on top of the existing list
+        // This allows limit + include_uris.length total embeddings
+        if (newEmbeddings.length > 0) {
+          allEmbeddings = [...newEmbeddings, ...allEmbeddings]
         }
       }
 

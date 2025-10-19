@@ -156,10 +156,10 @@ function AppContent() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">EES Dashboard</h1>
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
                   Embedding Engine Service Management
                   <Badge variant="secondary" className="text-xs">v1.0.0</Badge>
-                </p>
+                </div>
               </div>
             </div>
           </div>
