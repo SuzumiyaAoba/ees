@@ -20,6 +20,7 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
+  include_uris?: string[] // URIs that must be included (added on top of limit)
 }
 
 export interface VisualizeEmbeddingResponse {
@@ -31,5 +32,10 @@ export interface VisualizeEmbeddingResponse {
     perplexity?: number
     n_neighbors?: number
     min_dist?: number
+  }
+  debug_info?: {
+    include_uris_requested?: string[]
+    include_uris_found?: number
+    include_uris_failed?: string[]
   }
 }

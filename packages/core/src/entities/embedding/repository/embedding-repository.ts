@@ -3,7 +3,7 @@
  * Separates database operations from business logic
  */
 
-import { and, eq, like, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, like, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import {
   DatabaseService,
@@ -344,7 +344,7 @@ const make = Effect.gen(function* () {
   ): Effect.Effect<ListEmbeddingsResult, DatabaseQueryError> =>
     Effect.gen(function* () {
       const page = options?.page ?? 1
-      const limit = Math.min(options?.limit ?? 10, 100) // Max 100 items per page
+      const limit = Math.min(options?.limit ?? 10, 10000) // Max 10000 items per page (for visualization)
       const offset = (page - 1) * limit
 
       // Build where conditions based on filters
@@ -400,7 +400,7 @@ const make = Effect.gen(function* () {
             }
           }
 
-          return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
+          return query.orderBy(desc(embeddings.createdAt)).limit(limit).offset(offset)
         },
         catch: (error) =>
           new DatabaseQueryError({

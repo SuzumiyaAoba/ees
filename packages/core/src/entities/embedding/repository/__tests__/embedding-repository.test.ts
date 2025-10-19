@@ -235,15 +235,15 @@ describe.skip("EmbeddingRepository", () => {
       expect(result.total_pages).toBeGreaterThanOrEqual(1)
     })
 
-    it("should enforce maximum limit of 100", async () => {
+    it("should enforce maximum limit of 10000", async () => {
       const result = await runTest(
         Effect.gen(function* () {
           const repo = yield* EmbeddingRepository
-          return yield* repo.findAll({ limit: 1000 })
+          return yield* repo.findAll({ limit: 20000 })
         })
       )
 
-      expect(result.limit).toBe(100)
+      expect(result.limit).toBe(10000)
     })
   })
 

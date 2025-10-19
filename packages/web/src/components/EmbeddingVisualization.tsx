@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
@@ -49,7 +49,7 @@ const methods: MethodConfig[] = [
 export function EmbeddingVisualization() {
   const [method, setMethod] = useState<ReductionMethod>('pca')
   const [dimensions, setDimensions] = useState<VisualizationDimensions>(2)
-  const [modelName, setModelName] = useState<string>('all')
+  const [modelName, setModelName] = useState<string>('')
   const [limit, setLimit] = useState<number>(100)
   const [perplexity, setPerplexity] = useState<number>(30)
   const [nNeighbors, setNNeighbors] = useState<number>(15)
@@ -64,6 +64,28 @@ export function EmbeddingVisualization() {
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
+  
+  // Hover info state for fixed position display
+  const [hoverInfo, setHoverInfo] = useState<{
+    uri: string
+    coordinates: number[]
+    isInputPoint: boolean
+    originalDocument?: string
+  } | null>(null)
+  const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Settings state
+  const [showSettings, setShowSettings] = useState(false)
+  const [hoverDelayMs, setHoverDelayMs] = useState(2000) // 2 seconds default
+
+  // Free text input state
+  const [inputText, setInputText] = useState<string>('')
+  const [inputPoints, setInputPoints] = useState<VisualizationPoint[]>([])
+  const [loadingInput, setLoadingInput] = useState(false)
+  
+  // Store input text content locally for display when clicked
+  const [inputTextContent, setInputTextContent] = useState<{uri: string, text: string, modelName: string} | null>(null)
 
   // Load available models from DB on mount
   useEffect(() => {
@@ -71,6 +93,10 @@ export function EmbeddingVisualization() {
       try {
         const response = await apiClient.getDistinctEmbeddingModels()
         setAvailableModels(response.models)
+        // Set first model as default
+        if (response.models.length > 0 && !modelName) {
+          setModelName(response.models[0])
+        }
       } catch (e) {
         console.error('Failed to load models:', e)
       }
@@ -79,16 +105,104 @@ export function EmbeddingVisualization() {
     loadModels()
   }, [])
 
+  // Handle hover events
+  const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
+    // Clear any pending unhover timeout
+    if (unhoverTimeoutRef.current) {
+      clearTimeout(unhoverTimeoutRef.current)
+      unhoverTimeoutRef.current = null
+    }
+    
+    // Clear any pending hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    
+    if (eventData.points && eventData.points.length > 0) {
+      const point = eventData.points[0]
+      const curveNumber = point.curveNumber
+      
+      // curveNumber 0: data points
+      // curveNumber 1: input points (if exists)
+      // curveNumber 2: highlight point (if exists)
+      
+      if (curveNumber === 1 && inputPoints.length > 0) {
+        // Hovering over input point
+        setHoverInfo({
+          uri: inputPoints[0].uri,
+          coordinates: inputPoints[0].coordinates,
+          isInputPoint: true,
+        })
+      } else if (curveNumber === 0 && data) {
+        // Hovering over data point
+        const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+        const dataPoint = data.points[pointIndex]
+        if (dataPoint) {
+          // Set basic hover info immediately
+          setHoverInfo({
+            uri: dataPoint.uri,
+            coordinates: dataPoint.coordinates,
+            isInputPoint: false,
+          })
+          
+          // Schedule fetching original document after delay
+          hoverTimeoutRef.current = setTimeout(async () => {
+            try {
+              const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
+              setHoverInfo(prev => prev ? {
+                ...prev,
+                originalDocument: embedding.original_content || embedding.text
+              } : null)
+            } catch (error) {
+              console.error('Failed to fetch original document:', error)
+            }
+          }, hoverDelayMs)
+        }
+      }
+    }
+  }, [data, inputPoints, hoverDelayMs])
+
+  const handlePlotUnhover = useCallback(() => {
+    // Clear any existing timeout
+    if (unhoverTimeoutRef.current) {
+      clearTimeout(unhoverTimeoutRef.current)
+    }
+    
+    // Clear hover timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    
+    // Don't clear hover info immediately - keep it visible until next hover
+    // This allows users to read the information even after moving cursor away
+  }, [])
+
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (unhoverTimeoutRef.current) {
+        clearTimeout(unhoverTimeoutRef.current)
+      }
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
+
 
   const handleVisualize = async () => {
     setLoading(true)
     setError(null)
+    setInputPoints([]) // Clear previous input points
 
     try {
       const response = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
-        model_name: modelName !== 'all' ? modelName : undefined,
+        model_name: modelName,
         limit,
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
@@ -103,12 +217,149 @@ export function EmbeddingVisualization() {
     }
   }
 
+  const handlePlotText = async () => {
+    if (!inputText.trim() || !data) {
+      return
+    }
+
+    setLoadingInput(true)
+    setError(null)
+
+    // Store input text content locally for display when clicked
+    const tempUri = `temp://input-${Date.now()}`
+    setInputTextContent({
+      uri: tempUri,
+      text: inputText,
+      modelName: modelName,
+    })
+
+    let embeddingId: number | null = null
+
+    try {
+      // Create temporary embedding with unique URI
+      const embedding = await apiClient.createEmbedding({
+        uri: tempUri,
+        text: inputText,
+        model_name: modelName,
+      })
+      
+      embeddingId = embedding.id
+
+      // Verify the embedding can be retrieved before visualization
+      // Retry up to 5 times with exponential backoff
+      let embeddingVerified = false
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await apiClient.getEmbedding(tempUri, modelName)
+          embeddingVerified = true
+          break
+        } catch (e) {
+          await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)))
+        }
+      }
+
+      if (!embeddingVerified) {
+        throw new Error('Failed to verify embedding creation')
+      }
+
+      // Wait longer to ensure database transaction is fully committed and indexed
+      // This is especially important for visualization queries that use ORDER BY
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Re-visualize with include_uris to ensure the input text is included
+      // include_uris are added on top of limit, so this will show limit + 1 points
+      const updatedResponse = await apiClient.visualizeEmbeddings({
+        method,
+        dimensions,
+        model_name: modelName,
+        limit,
+        perplexity: method === 'tsne' ? perplexity : undefined,
+        n_neighbors: method === 'umap' ? nNeighbors : undefined,
+        min_dist: method === 'umap' ? minDist : undefined,
+        include_uris: [tempUri], // Adds input text on top of limit
+      })
+
+      // Find the input point in the visualization
+      const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
+
+      if (inputPoint) {
+        // Successfully found the input point
+        // Filter out the input point from main data to avoid duplication
+        const mainPoints = updatedResponse.points.filter(p => p.uri !== tempUri)
+
+        setInputPoints([inputPoint])
+        setData({
+          method: updatedResponse.method,
+          dimensions: updatedResponse.dimensions,
+          parameters: updatedResponse.parameters,
+          points: mainPoints,
+          total_points: mainPoints.length,
+        })
+      } else {
+        // This should not happen with include_uris, but handle it gracefully
+        const debugInfo = updatedResponse.debug_info
+        let errorMessage = 'Input text could not be visualized.'
+        
+        if (debugInfo) {
+          if (debugInfo.include_uris_found === 0 && debugInfo.include_uris_failed && debugInfo.include_uris_failed.length > 0) {
+            errorMessage = `Failed to fetch embedding for: ${debugInfo.include_uris_failed.join(', ')}. The embedding may not be stored in the database.`
+          } else if (debugInfo.include_uris_found === 0) {
+            errorMessage = 'Input embedding not found in database. Please try again.'
+          } else {
+            errorMessage = 'Input embedding was fetched but not included in visualization. This is unexpected.'
+          }
+        } else {
+          errorMessage = 'Input text could not be visualized. The server may need to be restarted to apply updates.'
+        }
+        
+        setError(errorMessage)
+      }
+    } catch (e) {
+      console.error('Failed to plot text:', e)
+      setError(e instanceof Error ? e.message : 'Failed to plot text')
+    } finally {
+      // Always clean up temporary embedding
+      if (embeddingId !== null) {
+        try {
+          await apiClient.deleteEmbedding(embeddingId)
+        } catch (deleteError) {
+          console.error('Failed to delete temporary embedding:', deleteError)
+        }
+      }
+      setLoadingInput(false)
+    }
+  }
+
   const handlePointClick = async (event: Readonly<PlotMouseEvent>) => {
-    if (!data || !event.points || event.points.length === 0) {
+    if (!event.points || event.points.length === 0) {
       return
     }
 
     const firstPoint = event.points[0]
+    const curveNumber = firstPoint.curveNumber
+    
+    // Check if clicked on input point (second trace)
+    if (curveNumber === 1 && inputTextContent) {
+      // Display locally stored input text content
+      setSelectedEmbedding({
+        id: 0,
+        uri: inputTextContent.uri,
+        text: inputTextContent.text,
+        model_name: inputTextContent.modelName,
+        embedding: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        original_content: undefined,
+        converted_format: undefined,
+      })
+      return
+    }
+
+    // Handle normal data points
+    if (!data) {
+      return
+    }
+
     // 2D uses pointIndex, 3D uses pointNumber
     const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
 
@@ -136,13 +387,47 @@ export function EmbeddingVisualization() {
   const renderPlot = () => {
     if (!data) return null
 
-    const trace = dimensions === 2 ? render2DPlot(data.points) : render3DPlot(data.points)
+    const traces = []
+
+    // Main trace with all points
+    const mainTrace = dimensions === 2 ? render2DPlot(data.points) : render3DPlot(data.points)
+    traces.push(mainTrace)
+
+    // Add input points trace if exists
+    if (inputPoints.length > 0) {
+      const inputTrace = dimensions === 2 ? render2DInputPlot(inputPoints) : render3DInputPlot(inputPoints)
+      traces.push(inputTrace)
+    }
+
+    // Highlight selected point
+    if (selectedEmbedding) {
+      // Find the selected point in data or inputPoints
+      let selectedPoint: VisualizationPoint | null = null
+      
+      // Check if it's the input point
+      if (inputPoints.length > 0 && inputPoints[0].uri === selectedEmbedding.uri) {
+        selectedPoint = inputPoints[0]
+      } else {
+        // Check in main data points
+        selectedPoint = data.points.find(
+          p => p.uri === selectedEmbedding.uri && p.model_name === selectedEmbedding.model_name
+        ) || null
+      }
+
+      if (selectedPoint) {
+        const highlightTrace = dimensions === 2 
+          ? render2DHighlightPlot([selectedPoint]) 
+          : render3DHighlightPlot([selectedPoint])
+        traces.push(highlightTrace)
+      }
+    }
 
     const layout = {
       title: {
         text: `${data.method.toUpperCase()} - ${data.dimensions}D Visualization (${data.total_points} points)`,
       },
       hovermode: 'closest' as const,
+      hoverdistance: 20,
       autosize: true,
       height: 600,
       ...(dimensions === 3 && {
@@ -150,31 +435,40 @@ export function EmbeddingVisualization() {
           xaxis: { title: { text: 'Component 1' } },
           yaxis: { title: { text: 'Component 2' } },
           zaxis: { title: { text: 'Component 3' } },
+          camera: {
+            eye: { x: 1.5, y: 1.5, z: 1.5 }
+          }
         },
       }),
       ...(dimensions === 2 && {
         xaxis: { title: { text: 'Component 1' } },
         yaxis: { title: { text: 'Component 2' } },
       }),
+      hoverlabel: {
+        namelength: -1,
+        align: 'left' as const,
+      },
     }
 
     return (
       <div className="w-full">
         <Plot
-          data={[trace]}
+          data={traces}
           layout={layout}
           config={{ responsive: true }}
           style={{ width: '100%', height: '600px' }}
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
-            // Add native Plotly event listeners (react-plotly.js onClick doesn't work reliably)
+            // Add click event listener
             const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
 
             plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
               handlePointClick(eventData)
             })
           }}
+          onHover={handlePlotHover}
+          onUnhover={handlePlotUnhover}
         />
       </div>
     )
@@ -186,14 +480,14 @@ export function EmbeddingVisualization() {
       y: points.map(p => p.coordinates[1]),
       mode: 'markers' as const,
       type: 'scatter' as const,
-      text: points.map(p => p.uri),
       marker: {
         size: 8,
         color: points.map((_, i) => i),
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -204,26 +498,161 @@ export function EmbeddingVisualization() {
       z: points.map(p => p.coordinates[2]),
       mode: 'markers' as const,
       type: 'scatter3d' as const,
-      text: points.map(p => p.uri),
       marker: {
-        size: 5,
+        size: 3,
         color: points.map((_, i) => i),
         colorscale: 'Viridis' as const,
         showscale: true,
+        line: {
+          width: 0,
+        },
       },
-      hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
+    }
+  }
+
+  const render2DInputPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      mode: 'markers+text' as 'markers',
+      type: 'scatter' as const,
+      name: 'Your Input',
+      text: points.map(() => 'Your Input'),
+      textposition: 'top center' as 'top center',
+      textfont: {
+        size: 14,
+        color: '#ff6b00',
+        family: 'Arial, sans-serif',
+      },
+      marker: {
+        size: 20,
+        color: '#ff6b00',
+        symbol: 'star' as 'star',
+        line: {
+          color: '#ffffff',
+          width: 3,
+        },
+        opacity: 1,
+      },
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
+    }
+  }
+
+  const render3DInputPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      z: points.map(p => p.coordinates[2]),
+      mode: 'markers' as const,
+      type: 'scatter3d' as const,
+      name: 'Your Input',
+      marker: {
+        size: 8,
+        color: '#ff6b00',
+        symbol: 'diamond' as 'diamond',
+        line: {
+          color: '#ffffff',
+          width: 1.5,
+        },
+        opacity: 1,
+      },
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
+    }
+  }
+
+  const render2DHighlightPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      mode: 'markers' as const,
+      type: 'scatter' as const,
+      name: 'Selected',
+      marker: {
+        size: 20,
+        color: '#ef4444',
+        symbol: 'circle' as const,
+        line: {
+          color: '#ffffff',
+          width: 3,
+        },
+        opacity: 0.8,
+      },
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
+    }
+  }
+
+  const render3DHighlightPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      z: points.map(p => p.coordinates[2]),
+      mode: 'markers' as const,
+      type: 'scatter3d' as const,
+      name: 'Selected',
+      marker: {
+        size: 15,
+        color: '#ef4444',
+        symbol: 'circle' as const,
+        line: {
+          color: '#ffffff',
+          width: 2,
+        },
+        opacity: 0.8,
+      },
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight mb-2">Embedding Visualization</h2>
-        <p className="text-muted-foreground">
-          Visualize embeddings using dimensionality reduction techniques (PCA, t-SNE, UMAP)
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight mb-2">Embedding Visualization</h2>
+          <p className="text-muted-foreground">
+            Visualize embeddings using dimensionality reduction techniques (PCA, t-SNE, UMAP)
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          ⚙️ Settings
+        </Button>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Hover Settings</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Document Load Delay (ms)
+              </label>
+              <Input
+                type="number"
+                value={hoverDelayMs}
+                onChange={(e) => setHoverDelayMs(Number(e.target.value))}
+                min="100"
+                max="10000"
+                step="100"
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                How long to hover before loading the original document (100-10000ms)
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Controls */}
       <Card className="p-6">
@@ -298,7 +727,6 @@ export function EmbeddingVisualization() {
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
             >
-              <option value="all">All Models</option>
               {availableModels.map((model) => (
                 <option key={model} value={model}>
                   {model}
@@ -306,7 +734,7 @@ export function EmbeddingVisualization() {
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              Select a specific model or visualize all embeddings
+              Select the model to visualize embeddings
             </p>
           </div>
 
@@ -433,11 +861,50 @@ export function EmbeddingVisualization() {
             </Button>
           </div>
 
-          {/* Grid Layout: Plot + Detail Panel */}
+          {/* Grid Layout: Plot + Hover Info + Detail Panel */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Plot Area */}
+            {/* Plot Area with Hover Info */}
             <div className={selectedEmbedding ? "lg:col-span-2" : "lg:col-span-3"}>
               {renderPlot()}
+
+              {/* Hover Info Panel */}
+              {hoverInfo && (
+                <div className="mt-4 p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    {hoverInfo.isInputPoint && <span>🎯</span>}
+                    Hover Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-muted-foreground">URI:</span>
+                      <p className="font-mono text-sm break-all">{hoverInfo.uri}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Coordinates:</span>
+                      <p className="font-mono text-sm">
+                        {hoverInfo.coordinates.map((c, i) => 
+                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                        ).join(' | ')}
+                      </p>
+                    </div>
+                    {hoverInfo.isInputPoint && (
+                      <div className="text-xs text-primary font-medium">
+                        ✨ This is your input text
+                      </div>
+                    )}
+                    {hoverInfo.originalDocument && (
+                      <div>
+                        <span className="text-xs text-muted-foreground">Original Document:</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {hoverInfo.originalDocument}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Parameters Info */}
               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
@@ -514,6 +981,53 @@ export function EmbeddingVisualization() {
                 </Card>
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Text Input Section */}
+      {data && !loading && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Plot Custom Text</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Enter your own text to see where it would be positioned in the current visualization
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="input-text" className="block text-sm font-medium mb-2">
+                Your Text
+              </label>
+              <textarea
+                id="input-text"
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Enter text to visualize its position among the existing embeddings..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={loadingInput}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The text will be embedded using {modelName} and plotted on the graph
+              </p>
+            </div>
+
+            <Button
+              onClick={handlePlotText}
+              disabled={loadingInput || !inputText.trim()}
+              className="w-full"
+            >
+              {loadingInput ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Plotting Text...
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Plot Text on Graph
+                </>
+              )}
+            </Button>
           </div>
         </Card>
       )}

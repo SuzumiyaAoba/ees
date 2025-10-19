@@ -86,7 +86,61 @@ const makeVisualizationService = Effect.gen(function* () {
 
       const listResult = yield* embeddingRepo.findAll(options)
 
-      if (listResult.embeddings.length === 0) {
+      // Track debug information for include_uris
+      const debugInfo: {
+        include_uris_requested?: string[]
+        include_uris_found?: number
+        include_uris_failed?: string[]
+      } = {}
+
+      // If include_uris is specified, fetch those embeddings separately and add them
+      // Note: include_uris embeddings are added on top of the limit (not counted against it)
+      let allEmbeddings = listResult.embeddings
+      if (request.include_uris && request.include_uris.length > 0) {
+        debugInfo.include_uris_requested = request.include_uris
+        // Use explicitly provided model_name or fall back to first embedding's model
+        const modelName = request.model_name ?? allEmbeddings[0]?.model_name
+        
+        if (!modelName) {
+          // If no model name available, fail with clear error
+          return yield* Effect.fail(
+            VisualizationError(
+              "Cannot process include_uris: model_name must be specified when no existing embeddings found"
+            )
+          )
+        }
+
+        // Fetch embeddings by URIs that must be included
+        const includeEmbeddings = yield* Effect.all(
+          request.include_uris.map((uri) =>
+            embeddingRepo.findByUri(uri, modelName).pipe(
+              Effect.catchAll(() => Effect.succeed(null))
+            )
+          )
+        )
+
+        const successfulFetches = includeEmbeddings.filter(e => e !== null)
+        const failedUris = request.include_uris.filter(
+          (_uri, idx) => includeEmbeddings[idx] === null
+        )
+        
+        debugInfo.include_uris_found = successfulFetches.length
+        debugInfo.include_uris_failed = failedUris
+
+        // Filter out nulls and embeddings already in the list
+        const existingUris = new Set(allEmbeddings.map((e) => e.uri))
+        const newEmbeddings = includeEmbeddings.filter(
+          (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
+        )
+
+        // Add include_uris embeddings on top of the existing list
+        // This allows limit + include_uris.length total embeddings
+        if (newEmbeddings.length > 0) {
+          allEmbeddings = [...newEmbeddings, ...allEmbeddings]
+        }
+      }
+
+      if (allEmbeddings.length === 0) {
         yield* Effect.fail(
           VisualizationError("No embeddings found for visualization")
         )
@@ -98,17 +152,17 @@ const makeVisualizationService = Effect.gen(function* () {
         request
       )
 
-      if (listResult.embeddings.length < minSamplesRequired) {
+      if (allEmbeddings.length < minSamplesRequired) {
         yield* Effect.fail(
           VisualizationError(
             `Insufficient data for ${request.method.toUpperCase()} visualization. ` +
-              `Found ${listResult.embeddings.length} embeddings, need at least ${minSamplesRequired}. ` +
+              `Found ${allEmbeddings.length} embeddings, need at least ${minSamplesRequired}. ` +
               `Try reducing parameters or adding more data.`
           )
         )
       }
 
-      const vectors = listResult.embeddings.map((emb) => emb.embedding)
+      const vectors = allEmbeddings.map((emb) => emb.embedding)
 
       const reduced = yield* performReduction(
         request.method,
@@ -117,7 +171,7 @@ const makeVisualizationService = Effect.gen(function* () {
         request
       )
 
-      const points: VisualizationPoint[] = listResult.embeddings.map(
+      const points: VisualizationPoint[] = allEmbeddings.map(
         (emb, idx) => ({
           id: emb.id,
           uri: emb.uri,
@@ -141,6 +195,7 @@ const makeVisualizationService = Effect.gen(function* () {
         dimensions: request.dimensions,
         total_points: points.length,
         parameters,
+        ...(debugInfo.include_uris_requested && { debug_info: debugInfo }),
       }
     })
 

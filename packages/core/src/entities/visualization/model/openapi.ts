@@ -40,6 +40,10 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "Minimum distance for UMAP (0-1, ignored for PCA and t-SNE)",
       example: 0.1,
     }),
+    include_uris: z.array(z.string()).optional().openapi({
+      description: "URIs that must be included in the visualization. These are added on top of the limit (e.g., limit=100 + 1 include_uri = 101 total points)",
+      example: ["temp://input-123456"],
+    }),
   })
   .openapi("VisualizeEmbeddingRequest")
 
@@ -97,6 +101,22 @@ export const VisualizeEmbeddingResponseSchema = z
       })
       .openapi({
         description: "Parameters used for dimensionality reduction",
+      }),
+    debug_info: z
+      .object({
+        include_uris_requested: z.array(z.string()).optional().openapi({
+          description: "URIs that were requested to be included",
+        }),
+        include_uris_found: z.number().optional().openapi({
+          description: "Number of requested URIs that were found",
+        }),
+        include_uris_failed: z.array(z.string()).optional().openapi({
+          description: "URIs that failed to be fetched",
+        }),
+      })
+      .optional()
+      .openapi({
+        description: "Debug information for troubleshooting",
       }),
   })
   .openapi("VisualizeEmbeddingResponse")
