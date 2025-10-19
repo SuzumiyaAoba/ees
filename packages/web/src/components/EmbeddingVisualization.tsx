@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
@@ -106,7 +106,7 @@ export function EmbeddingVisualization() {
   }, [])
 
   // Handle hover events
-  const handlePlotHover = (eventData: Readonly<Plotly.PlotMouseEvent>) => {
+  const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
     // Clear any pending unhover timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -161,9 +161,9 @@ export function EmbeddingVisualization() {
         }
       }
     }
-  }
+  }, [data, inputPoints, hoverDelayMs])
 
-  const handlePlotUnhover = () => {
+  const handlePlotUnhover = useCallback(() => {
     // Clear any existing timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -180,7 +180,7 @@ export function EmbeddingVisualization() {
       setHoverInfo(null)
       unhoverTimeoutRef.current = null
     }, 100)
-  }
+  }, [])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
