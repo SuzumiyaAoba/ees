@@ -107,8 +107,6 @@ export function EmbeddingVisualization() {
 
   // Handle hover events
   const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
-    console.log('[Hover Event]', eventData)
-    
     // Clear any pending unhover timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -124,7 +122,6 @@ export function EmbeddingVisualization() {
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
-      console.log('[Hover] curveNumber:', curveNumber, 'inputPoints.length:', inputPoints.length)
       
       // curveNumber 0: data points
       // curveNumber 1: input points (if exists)
@@ -132,7 +129,6 @@ export function EmbeddingVisualization() {
       
       if (curveNumber === 1 && inputPoints.length > 0) {
         // Hovering over input point
-        console.log('[Hover] Input point detected')
         setHoverInfo({
           uri: inputPoints[0].uri,
           coordinates: inputPoints[0].coordinates,
@@ -142,21 +138,16 @@ export function EmbeddingVisualization() {
         // Hovering over data point
         const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
         const dataPoint = data.points[pointIndex]
-        console.log('[Hover] Data point detected, index:', pointIndex, 'point:', dataPoint)
         if (dataPoint) {
           // Set basic hover info immediately
-          const newHoverInfo = {
+          setHoverInfo({
             uri: dataPoint.uri,
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
-          }
-          console.log('[Hover] Setting hoverInfo:', newHoverInfo)
-          setHoverInfo(newHoverInfo)
+          })
           
           // Schedule fetching original document after delay
-          console.log('[Hover] Setting timeout for', hoverDelayMs, 'ms')
           hoverTimeoutRef.current = setTimeout(async () => {
-            console.log('[Hover] Timeout fired, fetching document')
             try {
               const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
               setHoverInfo(prev => prev ? {
@@ -173,8 +164,6 @@ export function EmbeddingVisualization() {
   }, [data, inputPoints, hoverDelayMs])
 
   const handlePlotUnhover = useCallback(() => {
-    console.log('[Unhover Event]')
-    
     // Clear any existing timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
@@ -190,10 +179,6 @@ export function EmbeddingVisualization() {
     // This allows users to read the information even after moving cursor away
   }, [])
 
-  // Debug: Log hoverInfo state changes
-  useEffect(() => {
-    console.log('[HoverInfo State Changed]:', hoverInfo)
-  }, [hoverInfo])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
