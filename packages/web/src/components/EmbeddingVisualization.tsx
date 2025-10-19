@@ -2,11 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
-import { Eye, RefreshCw, Loader2, X } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
+import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Alert } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { apiClient } from '@/services/api'
 import type {
@@ -423,13 +421,10 @@ export function EmbeddingVisualization() {
     }
 
     const layout = {
-      title: {
-        text: `${data.method.toUpperCase()} - ${data.dimensions}D Visualization (${data.total_points} points)`,
-      },
       hovermode: 'closest' as const,
       hoverdistance: 20,
       autosize: true,
-      height: 600,
+      margin: { t: 20, r: 20, b: 40, l: 40 },
       ...(dimensions === 3 && {
         scene: {
           xaxis: { title: { text: 'Component 1' } },
@@ -451,12 +446,13 @@ export function EmbeddingVisualization() {
     }
 
     return (
-      <div className="w-full">
+      <div className="w-full h-full">
         <Plot
           data={traces}
           layout={layout}
-          config={{ responsive: true }}
-          style={{ width: '100%', height: '600px' }}
+          config={{ responsive: true, displayModeBar: true }}
+          style={{ width: '100%', height: '100%' }}
+          useResizeHandler={true}
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
@@ -609,280 +605,372 @@ export function EmbeddingVisualization() {
     }
   }
 
+  // Sidebar toggle state
+  const [showControls, setShowControls] = useState(true)
+  const [showDetailPanel, setShowDetailPanel] = useState(true)
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight mb-2">Embedding Visualization</h2>
-          <p className="text-muted-foreground">
-            Visualize embeddings using dimensionality reduction techniques (PCA, t-SNE, UMAP)
-          </p>
+    <div className="flex flex-col h-[calc(100vh-7rem)]">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b bg-background/95 backdrop-blur shadow-sm">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold tracking-tight">Embedding Visualization</h2>
+          {data && (
+            <Badge variant="secondary" className="text-xs">
+              {data.total_points} points · {data.method.toUpperCase()} · {data.dimensions}D
+            </Badge>
+          )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowSettings(!showSettings)}
-        >
-          ⚙️ Settings
-        </Button>
       </div>
 
-      {/* Settings Panel */}
-      {showSettings && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Hover Settings</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Document Load Delay (ms)
-              </label>
-              <Input
-                type="number"
-                value={hoverDelayMs}
-                onChange={(e) => setHoverDelayMs(Number(e.target.value))}
-                min="100"
-                max="10000"
-                step="100"
-                className="w-32"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                How long to hover before loading the original document (100-10000ms)
-              </p>
+      {/* Main Content Area - Split Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Controls */}
+        {showControls ? (
+          <div className="w-80 border-r bg-background overflow-y-auto flex flex-col">
+            {/* Controls Header with Close Button */}
+            <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Controls</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowControls(false)}
+                className="gap-2 h-8"
+                title="Hide control panel"
+              >
+                <span className="text-xs">Hide</span>
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-        </Card>
-      )}
+            <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+              {/* Method Selection */}
+              <div>
+                <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">Method</label>
+                <div className="space-y-2">
+                  {methods.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMethod(m.id)}
+                      className={`w-full p-3 rounded-lg border transition-all text-left ${
+                        method === m.id
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${m.color}`} />
+                        <span className="font-medium text-sm">{m.label}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 leading-tight line-clamp-2">
+                        {m.description}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-      {/* Controls */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Visualization Parameters</h3>
+              {/* Dimensions */}
+              <div>
+                <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">Dimensions</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDimensions(2)}
+                    className={`flex-1 p-2 rounded-lg border transition-all text-sm font-medium ${
+                      dimensions === 2
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    2D
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDimensions(3)}
+                    className={`flex-1 p-2 rounded-lg border transition-all text-sm font-medium ${
+                      dimensions === 3
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    3D
+                  </button>
+                </div>
+              </div>
 
-        <div className="space-y-4">
-          {/* Method Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Reduction Method</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {methods.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMethod(m.id)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    method === m.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
-                  }`}
+              {/* Model Name Filter */}
+              <div>
+                <label htmlFor="model-name" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                  Model
+                </label>
+                <select
+                  id="model-name"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-3 h-3 rounded-full ${m.color}`} />
-                    <span className="font-semibold">{m.label}</span>
-                    {method === m.id && <Badge variant="secondary" className="ml-auto">Selected</Badge>}
+                  {availableModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Limit */}
+              <div>
+                <label htmlFor="limit" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                  Max Points
+                </label>
+                <Input
+                  id="limit"
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  className="h-9"
+                />
+              </div>
+
+              {/* Method-specific parameters */}
+              {method === 'tsne' && (
+                <div>
+                  <label htmlFor="perplexity" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                    Perplexity
+                  </label>
+                  <Input
+                    id="perplexity"
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={perplexity}
+                    onChange={(e) => setPerplexity(Number(e.target.value))}
+                    className="h-9"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">5-50</p>
+                </div>
+              )}
+
+              {method === 'umap' && (
+                <>
+                  <div>
+                    <label htmlFor="n-neighbors" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                      Neighbors
+                    </label>
+                    <Input
+                      id="n-neighbors"
+                      type="number"
+                      min="2"
+                      max="100"
+                      value={nNeighbors}
+                      onChange={(e) => setNNeighbors(Number(e.target.value))}
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">2-100</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{m.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Dimensions */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Dimensions</label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setDimensions(2)}
-                className={`flex-1 p-3 rounded-lg border-2 transition-all ${
-                  dimensions === 2
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <span className="font-semibold">2D</span>
-                <p className="text-xs text-muted-foreground">Two-dimensional scatter plot</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDimensions(3)}
-                className={`flex-1 p-3 rounded-lg border-2 transition-all ${
-                  dimensions === 3
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <span className="font-semibold">3D</span>
-                <p className="text-xs text-muted-foreground">Three-dimensional scatter plot</p>
-              </button>
-            </div>
-          </div>
+                  <div>
+                    <label htmlFor="min-dist" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                      Min Distance
+                    </label>
+                    <Input
+                      id="min-dist"
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={minDist}
+                      onChange={(e) => setMinDist(Number(e.target.value))}
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">0.0-1.0</p>
+                  </div>
+                </>
+              )}
 
-          {/* Model Name Filter */}
-          <div>
-            <label htmlFor="model-name" className="block text-sm font-medium mb-2">
-              Model Name
-            </label>
-            <select
-              id="model-name"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-            >
-              {availableModels.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Select the model to visualize embeddings
-            </p>
-          </div>
-
-          {/* Limit */}
-          <div>
-            <label htmlFor="limit" className="block text-sm font-medium mb-2">
-              Maximum Points (1-10000)
-            </label>
-            <Input
-              id="limit"
-              type="number"
-              min="1"
-              max="10000"
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-            />
-          </div>
-
-          {/* Method-specific parameters */}
-          {method === 'tsne' && (
-            <div>
-              <label htmlFor="perplexity" className="block text-sm font-medium mb-2">
-                Perplexity (5-50)
-              </label>
-              <Input
-                id="perplexity"
-                type="number"
-                min="5"
-                max="50"
-                value={perplexity}
-                onChange={(e) => setPerplexity(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Controls the balance between local and global structure preservation
-              </p>
-            </div>
-          )}
-
-          {method === 'umap' && (
-            <>
-              <div>
-                <label htmlFor="n-neighbors" className="block text-sm font-medium mb-2">
-                  Number of Neighbors (2-100)
-                </label>
-                <Input
-                  id="n-neighbors"
-                  type="number"
-                  min="2"
-                  max="100"
-                  value={nNeighbors}
-                  onChange={(e) => setNNeighbors(Number(e.target.value))}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Larger values result in more global structure preservation
-                </p>
+              <div className="border-t pt-4">
+                {/* Visualize Button */}
+                <Button
+                  onClick={handleVisualize}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Visualize
+                    </>
+                  )}
+                </Button>
               </div>
 
-              <div>
-                <label htmlFor="min-dist" className="block text-sm font-medium mb-2">
-                  Minimum Distance (0.0-1.0)
-                </label>
-                <Input
-                  id="min-dist"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={minDist}
-                  onChange={(e) => setMinDist(Number(e.target.value))}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Controls how tightly points are packed in the low-dimensional space
-                </p>
-              </div>
-            </>
-          )}
+              {/* Text Input Section - Compact */}
+              {data && !loading && (
+                <div className="border-t pt-4 space-y-3">
+                  <label className="block text-xs font-medium text-muted-foreground uppercase">
+                    Plot Custom Text
+                  </label>
+                  <textarea
+                    id="input-text"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Enter text to plot..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    disabled={loadingInput}
+                  />
+                  <Button
+                    onClick={handlePlotText}
+                    disabled={loadingInput || !inputText.trim()}
+                    className="w-full"
+                    size="sm"
+                  >
+                    {loadingInput ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        Plotting...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3 mr-2" />
+                        Plot Text
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
 
-          {/* Visualize Button */}
-          <Button
-            onClick={handleVisualize}
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating Visualization...
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                Visualize Embeddings
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
+              {/* Settings */}
+              {showSettings && (
+                <div className="border-t pt-4 space-y-3">
+                  <label className="block text-xs font-medium text-muted-foreground uppercase">
+                    Hover Delay (ms)
+                  </label>
+                  <Input
+                    type="number"
+                    value={hoverDelayMs}
+                    onChange={(e) => setHoverDelayMs(Number(e.target.value))}
+                    min="100"
+                    max="10000"
+                    step="100"
+                    className="h-9"
+                  />
+                  <p className="text-xs text-muted-foreground">100-10000ms</p>
+                </div>
+              )}
 
-      {/* Error Display */}
-      {error && (
-        <ErrorCard
-          title="Visualization Error"
-          error={error}
-        />
-      )}
-
-      {/* Results */}
-      {data && !loading && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold">Visualization Result</h3>
-              <p className="text-sm text-muted-foreground">
-                {data.total_points} points reduced using {data.method.toUpperCase()} to {data.dimensions}D
-              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                className="w-full"
+              >
+                ⚙️ {showSettings ? 'Hide' : 'Show'} Settings
+              </Button>
             </div>
+          </div>
+        ) : (
+          /* Collapsed Left Panel Toggle */
+          <div className="relative">
             <Button
-              onClick={handleVisualize}
               variant="outline"
               size="sm"
+              onClick={() => setShowControls(true)}
+              className="absolute top-4 left-0 z-10 rounded-l-none rounded-r-md border-l-0 h-16 px-2 shadow-md hover:shadow-lg transition-shadow"
+              title="Show control panel"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              <PanelLeftOpen className="h-4 w-4" />
             </Button>
           </div>
+        )}
 
-          {/* Grid Layout: Plot + Hover Info + Detail Panel */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Plot Area with Hover Info */}
-            <div className={selectedEmbedding ? "lg:col-span-2" : "lg:col-span-3"}>
-              {renderPlot()}
+        {/* Center - Visualization Area */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Error Display */}
+          {error && (
+            <div className="p-4 border-b">
+              <ErrorCard
+                title="Visualization Error"
+                error={error}
+              />
+            </div>
+          )}
 
-              {/* Hover Info Panel */}
+          {/* No Data State */}
+          {!data && !loading && !error && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center max-w-md">
+                <Eye className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Ready to Visualize</h3>
+                <p className="text-sm text-muted-foreground">
+                  Configure your parameters in the left panel and click "Visualize" to generate
+                  a 2D or 3D scatter plot of your embeddings.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Visualization */}
+          {data && !loading && (
+            <div className="flex-1 overflow-auto">
+              <div className="h-full p-4">{renderPlot()}
+
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Generating visualization...</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Panel - Information */}
+        {data && !loading && (
+          showDetailPanel ? (
+            <div className="w-96 border-l bg-background overflow-y-auto flex flex-col">
+              {/* Info Header with Close Button */}
+              <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Information</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetailPanel(false)}
+                  className="gap-2 h-8"
+                  title="Hide information panel"
+                >
+                  <span className="text-xs">Hide</span>
+                  <PanelRightClose className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+              {/* Hover Info */}
               {hoverInfo && (
-                <div className="mt-4 p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <div className="p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     {hoverInfo.isInputPoint && <span>🎯</span>}
                     Hover Information
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div>
-                      <span className="text-xs text-muted-foreground">URI:</span>
-                      <p className="font-mono text-sm break-all">{hoverInfo.uri}</p>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                      <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Coordinates:</span>
-                      <p className="font-mono text-sm">
-                        {hoverInfo.coordinates.map((c, i) => 
+                      <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
+                      <p className="font-mono text-xs mt-1">
+                        {hoverInfo.coordinates.map((c, i) =>
                           `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
                         ).join(' | ')}
                       </p>
@@ -894,9 +982,9 @@ export function EmbeddingVisualization() {
                     )}
                     {hoverInfo.originalDocument && (
                       <div>
-                        <span className="text-xs text-muted-foreground">Original Document:</span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
                         <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
-                          <p className="text-sm whitespace-pre-wrap break-words">
+                          <p className="text-xs whitespace-pre-wrap break-words">
                             {hoverInfo.originalDocument}
                           </p>
                         </div>
@@ -906,152 +994,107 @@ export function EmbeddingVisualization() {
                 </div>
               )}
 
-              {/* Parameters Info */}
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                <h4 className="text-sm font-semibold mb-2">Parameters Used</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Method:</span>{' '}
-                    <span className="font-medium">{data.method.toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Dimensions:</span>{' '}
-                    <span className="font-medium">{data.dimensions}D</span>
-                  </div>
-                  {data.parameters.perplexity !== undefined && (
-                    <div>
-                      <span className="text-muted-foreground">Perplexity:</span>{' '}
-                      <span className="font-medium">{data.parameters.perplexity}</span>
-                    </div>
-                  )}
-                  {data.parameters.n_neighbors !== undefined && (
-                    <div>
-                      <span className="text-muted-foreground">N Neighbors:</span>{' '}
-                      <span className="font-medium">{data.parameters.n_neighbors}</span>
-                    </div>
-                  )}
-                  {data.parameters.min_dist !== undefined && (
-                    <div>
-                      <span className="text-muted-foreground">Min Distance:</span>{' '}
-                      <span className="font-medium">{data.parameters.min_dist}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Detail Side Panel */}
-            {selectedEmbedding && (
-              <div className="lg:col-span-1">
-                <Card className="p-4 sticky top-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">Document Details</h4>
-                      <Badge variant="secondary" className="text-xs">{selectedEmbedding.model_name}</Badge>
-                    </div>
+              {/* Selected Embedding Details */}
+              {selectedEmbedding && (
+                <div className="p-4 bg-muted/30 border rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm">Selected Point</h4>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedEmbedding(null)}
                       className="h-6 w-6 p-0"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3" />
                     </Button>
                   </div>
 
-                  <div className="space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-                    {/* URI */}
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">URI</label>
-                      <p className="mt-1 font-mono text-sm break-all">{selectedEmbedding.uri}</p>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                      <p className="font-mono text-xs break-all mt-1">{selectedEmbedding.uri}</p>
                     </div>
 
-                    {/* Original Content */}
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        {selectedEmbedding.original_content ? 'Original Content' : 'Text Content'}
-                      </label>
-                      <Card className="mt-1 p-3 bg-muted/30">
-                        <p className="text-sm whitespace-pre-wrap break-words overflow-y-auto">
+                      <span className="text-xs font-medium text-muted-foreground uppercase">Model</span>
+                      <Badge variant="secondary" className="text-xs mt-1">{selectedEmbedding.model_name}</Badge>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">
+                        {selectedEmbedding.original_content ? 'Original Content' : 'Text'}
+                      </span>
+                      <div className="mt-1 p-3 bg-background rounded border max-h-64 overflow-y-auto">
+                        <p className="text-xs whitespace-pre-wrap break-words">
                           {selectedEmbedding.original_content || selectedEmbedding.text}
                         </p>
-                      </Card>
+                      </div>
                     </div>
                   </div>
-                </Card>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Text Input Section */}
-      {data && !loading && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Plot Custom Text</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Enter your own text to see where it would be positioned in the current visualization
-          </p>
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="input-text" className="block text-sm font-medium mb-2">
-                Your Text
-              </label>
-              <textarea
-                id="input-text"
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Enter text to visualize its position among the existing embeddings..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                disabled={loadingInput}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                The text will be embedded using {modelName} and plotted on the graph
-              </p>
-            </div>
-
-            <Button
-              onClick={handlePlotText}
-              disabled={loadingInput || !inputText.trim()}
-              className="w-full"
-            >
-              {loadingInput ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Plotting Text...
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Plot Text on Graph
-                </>
+                </div>
               )}
-            </Button>
-          </div>
-        </Card>
-      )}
 
-      {/* Info Alert */}
-      {!data && !loading && !error && (
-        <Alert>
-          <Eye className="h-4 w-4" />
-          <div className="ml-3">
-            <h4 className="font-semibold">Getting Started</h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure your visualization parameters above and click "Visualize Embeddings" to generate
-              a 2D or 3D scatter plot of your embedding data.
-            </p>
-          </div>
-        </Alert>
-      )}
+              {/* Parameters Info */}
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <h4 className="text-sm font-semibold mb-3">Parameters</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Method:</span>
+                    <span className="font-medium">{data.method.toUpperCase()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Dimensions:</span>
+                    <span className="font-medium">{data.dimensions}D</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Points:</span>
+                    <span className="font-medium">{data.total_points}</span>
+                  </div>
+                  {data.parameters.perplexity !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Perplexity:</span>
+                      <span className="font-medium">{data.parameters.perplexity}</span>
+                    </div>
+                  )}
+                  {data.parameters.n_neighbors !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Neighbors:</span>
+                      <span className="font-medium">{data.parameters.n_neighbors}</span>
+                    </div>
+                  )}
+                  {data.parameters.min_dist !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Min Dist:</span>
+                      <span className="font-medium">{data.parameters.min_dist}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            </div>
+          ) : (
+            /* Collapsed Right Panel Toggle */
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDetailPanel(true)}
+                className="absolute top-4 right-0 z-10 rounded-r-none rounded-l-md border-r-0 h-16 px-2 shadow-md hover:shadow-lg transition-shadow"
+                title="Show information panel"
+              >
+                <PanelRightOpen className="h-4 w-4" />
+              </Button>
+            </div>
+          )
+        )}
+      </div>
 
       {/* Loading Detail Indicator */}
       {loadingDetail && (
         <div className="fixed bottom-4 right-4 bg-background p-4 rounded-lg shadow-lg border z-50">
           <div className="flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin" />
-            <p className="text-sm text-muted-foreground">Loading embedding details...</p>
+            <p className="text-sm text-muted-foreground">Loading details...</p>
           </div>
         </div>
       )}

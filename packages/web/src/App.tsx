@@ -144,20 +144,23 @@ function AppContent() {
     }
   }
 
+  // Check if current tab should use full width
+  const isFullWidthTab = activeTab === 'visualize'
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
-                <Database className="h-6 w-6 text-primary" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <Database className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">EES Dashboard</h1>
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  Embedding Engine Service Management
+                <h1 className="text-xl font-bold tracking-tight">EES Dashboard</h1>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  Embedding Engine Service
                   <Badge variant="secondary" className="text-xs">v1.0.0</Badge>
                 </div>
               </div>
@@ -167,8 +170,8 @@ function AppContent() {
       </header>
 
       {/* Navigation */}
-      <div className="border-b bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="border-b bg-background sticky top-0 z-10">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-2">
           <Tabs>
             <TabsList className="inline-flex h-auto p-1 bg-muted/50">
               {tabs.map((tab) => {
@@ -192,22 +195,24 @@ function AppContent() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
         {renderActiveTab()}
       </main>
 
       {/* Footer */}
-      <footer className="border-t mt-auto bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <p>EES Dashboard - Embedding Engine Service Management</p>
-              <Badge variant="outline" className="text-xs">Powered by shadcn/ui</Badge>
+      {!isFullWidthTab && (
+        <footer className="border-t mt-auto bg-card">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <p>EES Dashboard - Embedding Engine Service Management</p>
+                <Badge variant="outline" className="text-xs">Powered by shadcn/ui</Badge>
+              </div>
+              <p>Built with React + TypeScript + Tailwind CSS</p>
             </div>
-            <p>Built with React + TypeScript + Tailwind CSS</p>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Embedding Detail Modal */}
       <EmbeddingDetailModal
