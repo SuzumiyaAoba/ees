@@ -62,6 +62,7 @@ export function EmbeddingVisualization() {
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
+  const [plotInitialized, setPlotInitialized] = useState(false)
   
   // Hover info state for fixed position display
   const [hoverInfo, setHoverInfo] = useState<{
@@ -75,7 +76,7 @@ export function EmbeddingVisualization() {
   
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
-  const [hoverDelayMs, setHoverDelayMs] = useState(2000) // 2 seconds default
+  const [hoverDelayMs, setHoverDelayMs] = useState(500) // 500ms default
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -110,27 +111,28 @@ export function EmbeddingVisualization() {
       clearTimeout(unhoverTimeoutRef.current)
       unhoverTimeoutRef.current = null
     }
-    
+
     // Clear any pending hover timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
+
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
-      
+
       // curveNumber 0: data points
       // curveNumber 1: input points (if exists)
       // curveNumber 2: highlight point (if exists)
-      
+
       if (curveNumber === 1 && inputPoints.length > 0) {
         // Hovering over input point
         setHoverInfo({
           uri: inputPoints[0].uri,
           coordinates: inputPoints[0].coordinates,
           isInputPoint: true,
+          originalDocument: inputTextContent?.text,
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
@@ -143,7 +145,7 @@ export function EmbeddingVisualization() {
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
           })
-          
+
           // Schedule fetching original document after delay
           hoverTimeoutRef.current = setTimeout(async () => {
             try {
@@ -159,27 +161,104 @@ export function EmbeddingVisualization() {
         }
       }
     }
-  }, [data, inputPoints, hoverDelayMs])
+  }, [data, inputPoints, hoverDelayMs, inputTextContent])
 
   const handlePlotUnhover = useCallback(() => {
     // Clear any existing timeout
     if (unhoverTimeoutRef.current) {
       clearTimeout(unhoverTimeoutRef.current)
     }
-    
+
     // Clear hover timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
+
     // Don't clear hover info immediately - keep it visible until next hover
     // This allows users to read the information even after moving cursor away
   }, [])
 
+  const handlePointClick = useCallback(async (event: Readonly<PlotMouseEvent>) => {
+    if (!event.points || event.points.length === 0) {
+      return
+    }
 
-  // Cleanup timeouts on unmount
+    const firstPoint = event.points[0]
+    const curveNumber = firstPoint.curveNumber
+
+    // Check if clicked on input point (second trace)
+    if (curveNumber === 1 && inputTextContent) {
+      // Display locally stored input text content
+      setSelectedEmbedding({
+        id: 0,
+        uri: inputTextContent.uri,
+        text: inputTextContent.text,
+        model_name: inputTextContent.modelName,
+        embedding: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        original_content: undefined,
+        converted_format: undefined,
+      })
+      return
+    }
+
+    // Handle normal data points
+    if (!data) {
+      return
+    }
+
+    // 2D uses pointIndex, 3D uses pointNumber
+    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
+
+    if (pointIndex === undefined || pointIndex === null) {
+      return
+    }
+
+    const point = data.points[pointIndex]
+    if (!point) {
+      return
+    }
+
+    setLoadingDetail(true)
+    try {
+      const embedding = await apiClient.getEmbedding(point.uri, point.model_name)
+      setSelectedEmbedding(embedding)
+    } catch (e) {
+      console.error('Failed to load embedding details:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load embedding details')
+    } finally {
+      setLoadingDetail(false)
+    }
+  }, [data, inputTextContent])
+
+
+  // Setup event listeners when hoverDelayMs changes or plot is initialized
   useEffect(() => {
+    if (!plotInitialized || !plotDivRef.current) return
+
+    const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+
+    // Remove existing listeners
+    plotlyDiv.removeAllListeners?.('plotly_hover')
+    plotlyDiv.removeAllListeners?.('plotly_unhover')
+    plotlyDiv.removeAllListeners?.('plotly_click')
+
+    // Add event listeners with current handlers
+    plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
+      handlePointClick(eventData)
+    })
+
+    plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
+      handlePlotHover(eventData)
+    })
+
+    plotlyDiv.on('plotly_unhover', () => {
+      handlePlotUnhover()
+    })
+
+    // Cleanup function
     return () => {
       if (unhoverTimeoutRef.current) {
         clearTimeout(unhoverTimeoutRef.current)
@@ -187,8 +266,15 @@ export function EmbeddingVisualization() {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current)
       }
+      // Clean up Plotly event listeners
+      if (plotDivRef.current) {
+        const div = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+        div.removeAllListeners?.('plotly_hover')
+        div.removeAllListeners?.('plotly_unhover')
+        div.removeAllListeners?.('plotly_click')
+      }
     }
-  }, [])
+  }, [plotInitialized, handlePlotHover, handlePlotUnhover, handlePointClick])
 
 
   const handleVisualize = async () => {
@@ -328,60 +414,6 @@ export function EmbeddingVisualization() {
     }
   }
 
-  const handlePointClick = async (event: Readonly<PlotMouseEvent>) => {
-    if (!event.points || event.points.length === 0) {
-      return
-    }
-
-    const firstPoint = event.points[0]
-    const curveNumber = firstPoint.curveNumber
-    
-    // Check if clicked on input point (second trace)
-    if (curveNumber === 1 && inputTextContent) {
-      // Display locally stored input text content
-      setSelectedEmbedding({
-        id: 0,
-        uri: inputTextContent.uri,
-        text: inputTextContent.text,
-        model_name: inputTextContent.modelName,
-        embedding: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        original_content: undefined,
-        converted_format: undefined,
-      })
-      return
-    }
-
-    // Handle normal data points
-    if (!data) {
-      return
-    }
-
-    // 2D uses pointIndex, 3D uses pointNumber
-    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
-
-    if (pointIndex === undefined || pointIndex === null) {
-      return
-    }
-
-    const point = data.points[pointIndex]
-    if (!point) {
-      return
-    }
-
-    setLoadingDetail(true)
-    try {
-      const embedding = await apiClient.getEmbedding(point.uri, point.model_name)
-      setSelectedEmbedding(embedding)
-    } catch (e) {
-      console.error('Failed to load embedding details:', e)
-      setError(e instanceof Error ? e.message : 'Failed to load embedding details')
-    } finally {
-      setLoadingDetail(false)
-    }
-  }
-
   const renderPlot = () => {
     if (!data) return null
 
@@ -455,16 +487,9 @@ export function EmbeddingVisualization() {
           useResizeHandler={true}
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
-
-            // Add click event listener
-            const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
-
-            plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
-              handlePointClick(eventData)
-            })
+            setPlotInitialized(true)
+            // Event listeners are managed by useEffect to allow updates when handlers change
           }}
-          onHover={handlePlotHover}
-          onUnhover={handlePlotUnhover}
         />
       </div>
     )
@@ -918,10 +943,51 @@ export function EmbeddingVisualization() {
 
           {/* Visualization */}
           {data && !loading && (
-            <div className="flex-1 overflow-auto">
-              <div className="h-full p-4">{renderPlot()}
+            <div className="flex-1 overflow-auto relative">
+              <div className="h-full p-4">{renderPlot()}</div>
 
-              </div>
+              {/* Floating Hover Info - Visible when right panel is closed */}
+              {hoverInfo && !showDetailPanel && (
+                <div className="absolute top-4 right-4 w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in slide-in-from-right-2 duration-200">
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    {hoverInfo.isInputPoint && <span>🎯</span>}
+                    Hover Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                      <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
+                      <p className="font-mono text-xs mt-1">
+                        {hoverInfo.coordinates.map((c, i) =>
+                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                        ).join(' | ')}
+                      </p>
+                    </div>
+                    {hoverInfo.isInputPoint && (
+                      <div className="text-xs text-primary font-medium">
+                        ✨ This is your input text
+                      </div>
+                    )}
+                    {hoverInfo.originalDocument ? (
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
+                          <p className="text-xs whitespace-pre-wrap break-words">
+                            {hoverInfo.originalDocument}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground italic">
+                        Hover for {hoverDelayMs}ms to load document...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -980,7 +1046,7 @@ export function EmbeddingVisualization() {
                         ✨ This is your input text
                       </div>
                     )}
-                    {hoverInfo.originalDocument && (
+                    {hoverInfo.originalDocument ? (
                       <div>
                         <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
                         <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
@@ -988,6 +1054,10 @@ export function EmbeddingVisualization() {
                             {hoverInfo.originalDocument}
                           </p>
                         </div>
+                      </div>
+                    ) : !hoverInfo.isInputPoint && (
+                      <div className="text-xs text-muted-foreground italic">
+                        Hover for {hoverDelayMs}ms to load document...
                       </div>
                     )}
                   </div>
