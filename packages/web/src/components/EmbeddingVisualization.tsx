@@ -132,8 +132,6 @@ export function EmbeddingVisualization() {
       })
 
       // Re-visualize with same limit as original visualization
-      // Note: Backend limits findAll to max 100 embeddings, so we can't guarantee
-      // the new embedding will be included if there are many existing embeddings
       const updatedResponse = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
@@ -142,6 +140,14 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+      })
+
+      console.log('[Plot Text Debug]', {
+        tempUri,
+        totalPointsReturned: updatedResponse.points.length,
+        requestedLimit: limit,
+        pointUris: updatedResponse.points.slice(0, 5).map(p => p.uri),
+        hasInputPoint: updatedResponse.points.some(p => p.uri === tempUri),
       })
 
       // Find the input point in the new visualization
