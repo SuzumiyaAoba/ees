@@ -168,8 +168,10 @@ export function EmbeddingVisualization() {
         throw new Error('Failed to verify embedding creation')
       }
 
-      // Wait a bit to ensure database transaction is committed
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Wait longer to ensure database transaction is fully committed and indexed
+      // This is especially important for visualization queries that use ORDER BY
+      console.log('[Debug] Waiting for database index update...')
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Re-visualize with include_uris to ensure the input text is included
       // include_uris are added on top of limit, so this will show limit + 1 points

@@ -115,11 +115,18 @@ const makeVisualizationService = Effect.gen(function* () {
           )
         )
 
+        const successfulFetches = includeEmbeddings.filter(e => e !== null)
+        const failedUris = request.include_uris.filter(
+          (_uri, idx) => includeEmbeddings[idx] === null
+        )
+        
         console.log('[Visualization] include_uris fetch results:', {
           requested: request.include_uris,
           modelName,
-          found: includeEmbeddings.filter(e => e !== null).length,
-          foundUris: includeEmbeddings.filter(e => e !== null).map(e => e?.uri),
+          found: successfulFetches.length,
+          foundUris: successfulFetches.map(e => e?.uri),
+          failed: failedUris.length,
+          failedUris,
         })
 
         // Filter out nulls and embeddings already in the list
@@ -128,10 +135,18 @@ const makeVisualizationService = Effect.gen(function* () {
           (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
         )
 
+        console.log('[Visualization] Merging embeddings:', {
+          existingCount: allEmbeddings.length,
+          newFromIncludeUris: newEmbeddings.length,
+          totalAfterMerge: allEmbeddings.length + newEmbeddings.length,
+        })
+
         // Add include_uris embeddings on top of the existing list
         // This allows limit + include_uris.length total embeddings
         if (newEmbeddings.length > 0) {
           allEmbeddings = [...newEmbeddings, ...allEmbeddings]
+        } else if (request.include_uris.length > 0) {
+          console.warn('[Visualization] Warning: include_uris specified but no new embeddings found')
         }
       }
 
