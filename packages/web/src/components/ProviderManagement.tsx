@@ -374,14 +374,23 @@ export function ProviderManagement() {
 
               {ollamaStatus.models && ollamaStatus.models.length > 0 && (
                 <div>
-                  <h4 className="font-medium mb-2">Available Models</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="font-medium mb-3">Available Models</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                     {ollamaStatus.models.map((modelName) => (
-                      <Badge key={modelName} variant="secondary">
-                        {modelName}
-                      </Badge>
+                      <div
+                        key={modelName}
+                        className="flex items-center gap-2 p-2 bg-secondary/50 rounded border"
+                      >
+                        <Database className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm font-mono truncate" title={modelName}>
+                          {modelName}
+                        </span>
+                      </div>
                     ))}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    See Model Management section below for detailed information
+                  </p>
                 </div>
               )}
             </div>
