@@ -49,7 +49,7 @@ const methods: MethodConfig[] = [
 export function EmbeddingVisualization() {
   const [method, setMethod] = useState<ReductionMethod>('pca')
   const [dimensions, setDimensions] = useState<VisualizationDimensions>(2)
-  const [modelName, setModelName] = useState<string>('all')
+  const [modelName, setModelName] = useState<string>('')
   const [limit, setLimit] = useState<number>(100)
   const [perplexity, setPerplexity] = useState<number>(30)
   const [nNeighbors, setNNeighbors] = useState<number>(15)
@@ -76,6 +76,10 @@ export function EmbeddingVisualization() {
       try {
         const response = await apiClient.getDistinctEmbeddingModels()
         setAvailableModels(response.models)
+        // Set first model as default
+        if (response.models.length > 0 && !modelName) {
+          setModelName(response.models[0])
+        }
       } catch (e) {
         console.error('Failed to load models:', e)
       }
@@ -94,7 +98,7 @@ export function EmbeddingVisualization() {
       const response = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
-        model_name: modelName !== 'all' ? modelName : undefined,
+        model_name: modelName,
         limit,
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
@@ -120,19 +124,18 @@ export function EmbeddingVisualization() {
     try {
       // Create temporary embedding with unique URI
       const tempUri = `temp://input-${Date.now()}`
-      const currentModel = modelName !== 'all' ? modelName : availableModels[0]
 
       const embedding = await apiClient.createEmbedding({
         uri: tempUri,
         text: inputText,
-        model_name: currentModel,
+        model_name: modelName,
       })
 
       // Re-visualize with the new embedding included
       const updatedResponse = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
-        model_name: modelName !== 'all' ? modelName : undefined,
+        model_name: modelName,
         limit: limit + 1, // Include one more for the input
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
@@ -426,7 +429,6 @@ export function EmbeddingVisualization() {
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
             >
-              <option value="all">All Models</option>
               {availableModels.map((model) => (
                 <option key={model} value={model}>
                   {model}
@@ -434,7 +436,7 @@ export function EmbeddingVisualization() {
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              Select a specific model or visualize all embeddings
+              Select the model to visualize embeddings
             </p>
           </div>
 
@@ -668,7 +670,7 @@ export function EmbeddingVisualization() {
                 disabled={loadingInput}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                The text will be embedded using {modelName !== 'all' ? modelName : availableModels[0]} and plotted on the graph
+                The text will be embedded using {modelName} and plotted on the graph
               </p>
             </div>
 
