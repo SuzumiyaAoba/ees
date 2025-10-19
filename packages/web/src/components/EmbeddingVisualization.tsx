@@ -121,6 +121,9 @@ export function EmbeddingVisualization() {
       hoverTimeoutRef.current = null
     }
     
+    // Clear any existing hover info when moving to a new point
+    setHoverInfo(null)
+    
     if (eventData.points && eventData.points.length > 0) {
       const point = eventData.points[0]
       const curveNumber = point.curveNumber
@@ -154,7 +157,9 @@ export function EmbeddingVisualization() {
           setHoverInfo(newHoverInfo)
           
           // Schedule fetching original document after delay
+          console.log('[Hover] Setting timeout for', hoverDelayMs, 'ms')
           hoverTimeoutRef.current = setTimeout(async () => {
+            console.log('[Hover] Timeout fired, fetching document')
             try {
               const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
               setHoverInfo(prev => prev ? {
@@ -184,11 +189,8 @@ export function EmbeddingVisualization() {
       hoverTimeoutRef.current = null
     }
     
-    // Delay clearing hover info to prevent flickering
-    unhoverTimeoutRef.current = setTimeout(() => {
-      setHoverInfo(null)
-      unhoverTimeoutRef.current = null
-    }, 100)
+    // Don't clear hover info immediately - keep it visible until next hover
+    // This allows users to read the information even after moving cursor away
   }, [])
 
   // Debug: Log hoverInfo state changes
@@ -476,21 +478,15 @@ export function EmbeddingVisualization() {
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
-            // Add event listeners
+            // Add click event listener
             const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
 
             plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
               handlePointClick(eventData)
             })
-
-            plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
-              handlePlotHover(eventData)
-            })
-
-            plotlyDiv.on('plotly_unhover', () => {
-              handlePlotUnhover()
-            })
           }}
+          onHover={handlePlotHover}
+          onUnhover={handlePlotUnhover}
         />
       </div>
     )
