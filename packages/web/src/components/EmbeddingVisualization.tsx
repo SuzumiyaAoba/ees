@@ -137,30 +137,77 @@ export function EmbeddingVisualization() {
         model: embedding.model_name,
       })
 
-      // Wait a moment to ensure the embedding is fully persisted
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Verify the embedding can be retrieved before visualization
+      // Retry up to 5 times with exponential backoff
+      let embeddingVerified = false
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await apiClient.getEmbedding(tempUri, modelName)
+          embeddingVerified = true
+          console.log('[Debug] Embedding verified after', attempt + 1, 'attempt(s)')
+          break
+        } catch (e) {
+          console.log('[Debug] Embedding not yet available, retry', attempt + 1)
+          await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)))
+        }
+      }
+
+      if (!embeddingVerified) {
+        throw new Error('Failed to verify embedding creation')
+      }
+
+      // Wait a bit longer to ensure database index is updated
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Re-visualize with limit + 1 to reserve space for input text
-      // This ensures we can always plot the input even when at the limit
-      const updatedResponse = await apiClient.visualizeEmbeddings({
-        method,
-        dimensions,
-        model_name: modelName,
-        limit: limit + 1, // Request one extra slot for the input text
-        perplexity: method === 'tsne' ? perplexity : undefined,
-        n_neighbors: method === 'umap' ? nNeighbors : undefined,
-        min_dist: method === 'umap' ? minDist : undefined,
-      })
+      // Retry up to 3 times if the input point is not found
+      let updatedResponse: VisualizeEmbeddingResponse | null = null
+      let inputPoint: VisualizationPoint | undefined
+      let retryCount = 0
+      const maxRetries = 3
 
-      // Find the input point in the new visualization
-      const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
+      while (retryCount < maxRetries) {
+        updatedResponse = await apiClient.visualizeEmbeddings({
+          method,
+          dimensions,
+          model_name: modelName,
+          limit: limit + 1, // Request one extra slot for the input text
+          perplexity: method === 'tsne' ? perplexity : undefined,
+          n_neighbors: method === 'umap' ? nNeighbors : undefined,
+          min_dist: method === 'umap' ? minDist : undefined,
+        })
 
+        // Find the input point in the new visualization
+        inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
+
+        if (inputPoint) {
+          // Successfully found the input point
+          break
+        }
+
+        // Not found, retry after a short delay
+        retryCount++
+        if (retryCount < maxRetries) {
+          console.log(`[Debug] Input point not found, retry ${retryCount}/${maxRetries}`)
+          await new Promise(resolve => setTimeout(resolve, 100 * retryCount))
+        }
+      }
+
+      if (!updatedResponse) {
+        throw new Error('Failed to get visualization response')
+      }
+
+      const tempUris = updatedResponse.points.filter(p => p.uri.includes('temp://'))
       console.log('[Debug] Visualization response:', {
         tempUri,
         totalPoints: updatedResponse.points.length,
         requestedLimit: limit + 1,
         foundInput: !!inputPoint,
-        allUris: updatedResponse.points.map(p => p.uri),
+        retryCount,
+        firstUri: updatedResponse.points[0]?.uri,
+        lastUri: updatedResponse.points[updatedResponse.points.length - 1]?.uri,
+        tempUrisFound: tempUris.map(p => p.uri),
+        tempUrisCount: tempUris.length,
       })
 
       if (inputPoint) {
@@ -170,12 +217,14 @@ export function EmbeddingVisualization() {
 
         setInputPoints([inputPoint])
         setData({
-          ...updatedResponse,
+          method: updatedResponse.method,
+          dimensions: updatedResponse.dimensions,
+          parameters: updatedResponse.parameters,
           points: mainPoints,
           total_points: mainPoints.length,
         })
       } else {
-        // Input point not found - this should rarely happen with limit + 1
+        // Input point not found after retries
         setError(`Input text could not be visualized. Please try again or increase the visualization limit.`)
       }
 
