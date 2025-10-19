@@ -131,6 +131,15 @@ export function EmbeddingVisualization() {
         model_name: modelName,
       })
 
+      console.log('[Debug] Created embedding:', {
+        id: embedding.id,
+        uri: embedding.uri,
+        model: embedding.model_name,
+      })
+
+      // Wait a moment to ensure the embedding is fully persisted
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       // Re-visualize with limit + 1 to reserve space for input text
       // This ensures we can always plot the input even when at the limit
       const updatedResponse = await apiClient.visualizeEmbeddings({
@@ -145,6 +154,14 @@ export function EmbeddingVisualization() {
 
       // Find the input point in the new visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
+
+      console.log('[Debug] Visualization response:', {
+        tempUri,
+        totalPoints: updatedResponse.points.length,
+        requestedLimit: limit + 1,
+        foundInput: !!inputPoint,
+        allUris: updatedResponse.points.map(p => p.uri),
+      })
 
       if (inputPoint) {
         // Successfully found the input point

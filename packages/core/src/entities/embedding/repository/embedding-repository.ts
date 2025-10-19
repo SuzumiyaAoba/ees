@@ -3,7 +3,7 @@
  * Separates database operations from business logic
  */
 
-import { and, eq, like, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, like, type SQL, sql } from "drizzle-orm"
 import { Context, Effect, Layer } from "effect"
 import {
   DatabaseService,
@@ -400,7 +400,7 @@ const make = Effect.gen(function* () {
             }
           }
 
-          return query.orderBy(embeddings.createdAt).limit(limit).offset(offset)
+          return query.orderBy(desc(embeddings.createdAt)).limit(limit).offset(offset)
         },
         catch: (error) =>
           new DatabaseQueryError({
