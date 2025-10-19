@@ -125,24 +125,10 @@ export function EmbeddingVisualization() {
       // Create temporary embedding with unique URI
       const tempUri = `temp://input-${Date.now()}`
 
-      console.log('[Debug] Creating embedding with:', {
-        uri: tempUri,
-        text: inputText.substring(0, 50) + '...',
-        model_name: modelName,
-      })
-
       const embedding = await apiClient.createEmbedding({
         uri: tempUri,
         text: inputText,
         model_name: modelName,
-      })
-
-      console.log('[Debug] Created embedding:', {
-        id: embedding.id,
-        uri: embedding.uri,
-        model: embedding.model_name,
-        requestedModel: modelName,
-        modelsMatch: embedding.model_name === modelName,
       })
 
       // Verify the embedding can be retrieved before visualization
@@ -150,16 +136,10 @@ export function EmbeddingVisualization() {
       let embeddingVerified = false
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          const retrieved = await apiClient.getEmbedding(tempUri, modelName)
+          await apiClient.getEmbedding(tempUri, modelName)
           embeddingVerified = true
-          console.log('[Debug] Embedding verified after', attempt + 1, 'attempt(s):', {
-            retrievedUri: retrieved.uri,
-            retrievedModel: retrieved.model_name,
-            matches: retrieved.uri === tempUri && retrieved.model_name === modelName,
-          })
           break
         } catch (e) {
-          console.log('[Debug] Embedding not yet available, retry', attempt + 1, 'error:', e)
           await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)))
         }
       }
@@ -170,7 +150,6 @@ export function EmbeddingVisualization() {
 
       // Wait longer to ensure database transaction is fully committed and indexed
       // This is especially important for visualization queries that use ORDER BY
-      console.log('[Debug] Waiting for database index update...')
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Re-visualize with include_uris to ensure the input text is included
@@ -188,38 +167,6 @@ export function EmbeddingVisualization() {
 
       // Find the input point in the visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
-
-      // Log full response details
-      console.log('[Debug] Visualization response:', {
-        tempUri,
-        modelName,
-        requestParams: {
-          method,
-          dimensions,
-          model_name: modelName,
-          limit,
-          include_uris: [tempUri],
-        },
-        totalPoints: updatedResponse.points.length,
-        requestedLimit: limit,
-        foundInput: !!inputPoint,
-        firstUri: updatedResponse.points[0]?.uri,
-        lastUri: updatedResponse.points[updatedResponse.points.length - 1]?.uri,
-      })
-      
-      // Log server-side debug information (most important!)
-      if (updatedResponse.debug_info) {
-        console.log('[Debug] Server debug info:', updatedResponse.debug_info)
-      } else {
-        console.warn('[Debug] No debug_info in response - server may not have include_uris support')
-      }
-      
-      // Log all URIs separately for debugging
-      console.log('[Debug] All URIs in visualization:', updatedResponse.points.map(p => p.uri))
-      
-      // Check if temp URI is in the list
-      const tempUriFound = updatedResponse.points.some(p => p.uri === tempUri)
-      console.log('[Debug] Temp URI found in points:', tempUriFound)
 
       if (inputPoint) {
         // Successfully found the input point

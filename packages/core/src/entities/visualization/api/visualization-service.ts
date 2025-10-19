@@ -114,11 +114,7 @@ const makeVisualizationService = Effect.gen(function* () {
         const includeEmbeddings = yield* Effect.all(
           request.include_uris.map((uri) =>
             embeddingRepo.findByUri(uri, modelName).pipe(
-              Effect.catchAll((error) => {
-                // Log the error for debugging
-                console.error(`[Visualization] Failed to fetch URI ${uri}:`, error)
-                return Effect.succeed(null)
-              })
+              Effect.catchAll(() => Effect.succeed(null))
             )
           )
         )
@@ -130,15 +126,6 @@ const makeVisualizationService = Effect.gen(function* () {
         
         debugInfo.include_uris_found = successfulFetches.length
         debugInfo.include_uris_failed = failedUris
-        
-        console.log('[Visualization] include_uris fetch results:', {
-          requested: request.include_uris,
-          modelName,
-          found: successfulFetches.length,
-          foundUris: successfulFetches.map(e => e?.uri),
-          failed: failedUris.length,
-          failedUris,
-        })
 
         // Filter out nulls and embeddings already in the list
         const existingUris = new Set(allEmbeddings.map((e) => e.uri))
@@ -146,18 +133,10 @@ const makeVisualizationService = Effect.gen(function* () {
           (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
         )
 
-        console.log('[Visualization] Merging embeddings:', {
-          existingCount: allEmbeddings.length,
-          newFromIncludeUris: newEmbeddings.length,
-          totalAfterMerge: allEmbeddings.length + newEmbeddings.length,
-        })
-
         // Add include_uris embeddings on top of the existing list
         // This allows limit + include_uris.length total embeddings
         if (newEmbeddings.length > 0) {
           allEmbeddings = [...newEmbeddings, ...allEmbeddings]
-        } else if (request.include_uris.length > 0) {
-          console.warn('[Visualization] Warning: include_uris specified but no new embeddings found')
         }
       }
 
