@@ -136,7 +136,15 @@ export function EmbeddingVisualization() {
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
-        const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+        // 2D uses pointIndex, 3D uses pointNumber
+        const pointIndex = point.pointIndex ?? point.pointNumber
+
+        // Validate pointIndex exists
+        if (pointIndex === undefined || pointIndex === null) {
+          console.warn('Could not determine point index from hover event:', point)
+          return
+        }
+
         const dataPoint = data.points[pointIndex]
         if (dataPoint) {
           // Set basic hover info immediately
@@ -457,6 +465,7 @@ export function EmbeddingVisualization() {
       hoverdistance: 20,
       autosize: true,
       margin: { t: 20, r: 20, b: 40, l: 40 },
+      uirevision: 'true', // Preserve zoom/pan state across updates
       ...(dimensions === 3 && {
         scene: {
           xaxis: { title: { text: 'Component 1' } },
