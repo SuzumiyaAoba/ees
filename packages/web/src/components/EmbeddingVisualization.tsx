@@ -131,34 +131,35 @@ export function EmbeddingVisualization() {
         model_name: modelName,
       })
 
-      // Re-visualize with same limit as original visualization
+      // Re-visualize with limit + 1 to reserve space for input text
+      // This ensures we can always plot the input even when at the limit
       const updatedResponse = await apiClient.visualizeEmbeddings({
         method,
         dimensions,
         model_name: modelName,
-        limit, // Use same limit as current visualization
+        limit: limit + 1, // Request one extra slot for the input text
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
-      })
-
-      console.log('[Plot Text Debug]', {
-        tempUri,
-        totalPointsReturned: updatedResponse.points.length,
-        requestedLimit: limit,
-        pointUris: updatedResponse.points.slice(0, 5).map(p => p.uri),
-        hasInputPoint: updatedResponse.points.some(p => p.uri === tempUri),
       })
 
       // Find the input point in the new visualization
       const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
 
       if (inputPoint) {
+        // Successfully found the input point
+        // Filter out the input point from main data to avoid duplication
+        const mainPoints = updatedResponse.points.filter(p => p.uri !== tempUri)
+
         setInputPoints([inputPoint])
-        setData(updatedResponse)
+        setData({
+          ...updatedResponse,
+          points: mainPoints,
+          total_points: mainPoints.length,
+        })
       } else {
-        // Input point not found - this can happen if there are more embeddings than the limit
-        setError(`Input text could not be visualized. The visualization is limited to ${limit} points. Try increasing the limit in the visualization parameters.`)
+        // Input point not found - this should rarely happen with limit + 1
+        setError(`Input text could not be visualized. Please try again or increase the visualization limit.`)
       }
 
       // Clean up temporary embedding
