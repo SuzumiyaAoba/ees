@@ -351,6 +351,29 @@ export function EmbeddingVisualization() {
       traces.push(inputTrace)
     }
 
+    // Highlight selected point
+    if (selectedEmbedding) {
+      // Find the selected point in data or inputPoints
+      let selectedPoint: VisualizationPoint | null = null
+      
+      // Check if it's the input point
+      if (inputPoints.length > 0 && inputPoints[0].uri === selectedEmbedding.uri) {
+        selectedPoint = inputPoints[0]
+      } else {
+        // Check in main data points
+        selectedPoint = data.points.find(
+          p => p.uri === selectedEmbedding.uri && p.model_name === selectedEmbedding.model_name
+        ) || null
+      }
+
+      if (selectedPoint) {
+        const highlightTrace = dimensions === 2 
+          ? render2DHighlightPlot([selectedPoint]) 
+          : render3DHighlightPlot([selectedPoint])
+        traces.push(highlightTrace)
+      }
+    }
+
     const layout = {
       title: {
         text: `${data.method.toUpperCase()} - ${data.dimensions}D Visualization (${data.total_points} points)`,
@@ -484,6 +507,49 @@ export function EmbeddingVisualization() {
           width: 1.5,
         },
         opacity: 1,
+      },
+      hoverinfo: 'none' as const,
+    }
+  }
+
+  const render2DHighlightPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      mode: 'markers' as const,
+      type: 'scatter' as const,
+      name: 'Selected',
+      marker: {
+        size: 20,
+        color: '#ef4444',
+        symbol: 'circle' as const,
+        line: {
+          color: '#ffffff',
+          width: 3,
+        },
+        opacity: 0.8,
+      },
+      hoverinfo: 'none' as const,
+    }
+  }
+
+  const render3DHighlightPlot = (points: VisualizationPoint[]) => {
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      z: points.map(p => p.coordinates[2]),
+      mode: 'markers' as const,
+      type: 'scatter3d' as const,
+      name: 'Selected',
+      marker: {
+        size: 15,
+        color: '#ef4444',
+        symbol: 'circle' as const,
+        line: {
+          color: '#ffffff',
+          width: 2,
+        },
+        opacity: 0.8,
       },
       hoverinfo: 'none' as const,
     }
