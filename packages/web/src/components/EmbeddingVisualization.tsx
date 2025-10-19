@@ -77,7 +77,7 @@ export function EmbeddingVisualization() {
   
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
-  const [hoverDelayMs, setHoverDelayMs] = useState(500) // 500ms default
+  const [hoverDelayMs, setHoverDelayMs] = useState(200) // 200ms default for more responsive loading
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
