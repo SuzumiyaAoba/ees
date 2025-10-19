@@ -69,6 +69,9 @@ export function EmbeddingVisualization() {
   const [inputText, setInputText] = useState<string>('')
   const [inputPoints, setInputPoints] = useState<VisualizationPoint[]>([])
   const [loadingInput, setLoadingInput] = useState(false)
+  
+  // Store input text content locally for display when clicked
+  const [inputTextContent, setInputTextContent] = useState<{uri: string, text: string, modelName: string} | null>(null)
 
   // Load available models from DB on mount
   useEffect(() => {
@@ -121,15 +124,25 @@ export function EmbeddingVisualization() {
     setLoadingInput(true)
     setError(null)
 
+    // Store input text content locally for display when clicked
+    const tempUri = `temp://input-${Date.now()}`
+    setInputTextContent({
+      uri: tempUri,
+      text: inputText,
+      modelName: modelName,
+    })
+
+    let embeddingId: number | null = null
+
     try {
       // Create temporary embedding with unique URI
-      const tempUri = `temp://input-${Date.now()}`
-
       const embedding = await apiClient.createEmbedding({
         uri: tempUri,
         text: inputText,
         model_name: modelName,
       })
+      
+      embeddingId = embedding.id
 
       // Verify the embedding can be retrieved before visualization
       // Retry up to 5 times with exponential backoff
@@ -200,23 +213,52 @@ export function EmbeddingVisualization() {
         
         setError(errorMessage)
       }
-
-      // Clean up temporary embedding
-      await apiClient.deleteEmbedding(embedding.id)
     } catch (e) {
       console.error('Failed to plot text:', e)
       setError(e instanceof Error ? e.message : 'Failed to plot text')
     } finally {
+      // Always clean up temporary embedding
+      if (embeddingId !== null) {
+        try {
+          await apiClient.deleteEmbedding(embeddingId)
+        } catch (deleteError) {
+          console.error('Failed to delete temporary embedding:', deleteError)
+        }
+      }
       setLoadingInput(false)
     }
   }
 
   const handlePointClick = async (event: Readonly<PlotMouseEvent>) => {
-    if (!data || !event.points || event.points.length === 0) {
+    if (!event.points || event.points.length === 0) {
       return
     }
 
     const firstPoint = event.points[0]
+    const curveNumber = firstPoint.curveNumber
+    
+    // Check if clicked on input point (second trace)
+    if (curveNumber === 1 && inputTextContent) {
+      // Display locally stored input text content
+      setSelectedEmbedding({
+        id: 0,
+        uri: inputTextContent.uri,
+        text: inputTextContent.text,
+        model_name: inputTextContent.modelName,
+        embedding: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        original_content: undefined,
+        converted_format: undefined,
+      })
+      return
+    }
+
+    // Handle normal data points
+    if (!data) {
+      return
+    }
+
     // 2D uses pointIndex, 3D uses pointNumber
     const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
 
@@ -261,6 +303,7 @@ export function EmbeddingVisualization() {
         text: `${data.method.toUpperCase()} - ${data.dimensions}D Visualization (${data.total_points} points)`,
       },
       hovermode: 'closest' as const,
+      hoverdistance: 20,
       autosize: true,
       height: 600,
       ...(dimensions === 3 && {
@@ -268,12 +311,19 @@ export function EmbeddingVisualization() {
           xaxis: { title: { text: 'Component 1' } },
           yaxis: { title: { text: 'Component 2' } },
           zaxis: { title: { text: 'Component 3' } },
+          camera: {
+            eye: { x: 1.5, y: 1.5, z: 1.5 }
+          }
         },
       }),
       ...(dimensions === 2 && {
         xaxis: { title: { text: 'Component 1' } },
         yaxis: { title: { text: 'Component 2' } },
       }),
+      hoverlabel: {
+        namelength: -1,
+        align: 'left' as const,
+      },
     }
 
     return (
@@ -332,18 +382,22 @@ export function EmbeddingVisualization() {
       type: 'scatter3d' as const,
       text: points.map(p => p.uri),
       marker: {
-        size: 5,
+        size: 3,
         color: points.map((_, i) => i),
         colorscale: 'Viridis' as const,
         showscale: true,
+        line: {
+          width: 0,
+        },
       },
       hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
       hoverlabel: {
-        bgcolor: 'rgba(255, 255, 255, 0.95)',
-        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        bgcolor: 'rgba(50, 50, 50, 0.9)',
+        bordercolor: 'rgba(255, 255, 255, 0.5)',
         font: {
-          color: 'black',
-          size: 12,
+          color: 'white',
+          size: 11,
+          family: 'monospace',
         },
       },
     }
@@ -395,23 +449,23 @@ export function EmbeddingVisualization() {
       type: 'scatter3d' as const,
       name: 'Your Input',
       marker: {
-        size: 12,
+        size: 8,
         color: '#ff6b00',
         symbol: 'diamond' as 'diamond',
         line: {
           color: '#ffffff',
-          width: 2,
+          width: 1.5,
         },
         opacity: 1,
       },
       hovertemplate: '<b>🎯 Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
       hoverlabel: {
         bgcolor: 'rgba(255, 107, 0, 0.95)',
-        bordercolor: 'rgba(0, 0, 0, 0.3)',
+        bordercolor: 'rgba(255, 255, 255, 0.8)',
         font: {
           color: 'white',
-          size: 13,
-          family: 'Arial, sans-serif',
+          size: 12,
+          family: 'monospace',
         },
       },
     }
