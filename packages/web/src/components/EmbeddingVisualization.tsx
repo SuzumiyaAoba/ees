@@ -64,6 +64,13 @@ export function EmbeddingVisualization() {
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
+  
+  // Hover info state for fixed position display
+  const [hoverInfo, setHoverInfo] = useState<{
+    uri: string
+    coordinates: number[]
+    isInputPoint: boolean
+  } | null>(null)
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -336,11 +343,42 @@ export function EmbeddingVisualization() {
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
-            // Add native Plotly event listeners (react-plotly.js onClick doesn't work reliably)
+            // Add native Plotly event listeners
             const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
 
             plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
               handlePointClick(eventData)
+            })
+
+            plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
+              if (eventData.points && eventData.points.length > 0) {
+                const point = eventData.points[0]
+                const curveNumber = point.curveNumber
+                
+                if (curveNumber === 1 && inputPoints.length > 0) {
+                  // Hovering over input point
+                  setHoverInfo({
+                    uri: inputPoints[0].uri,
+                    coordinates: inputPoints[0].coordinates,
+                    isInputPoint: true,
+                  })
+                } else if (data) {
+                  // Hovering over data point
+                  const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+                  const dataPoint = data.points[pointIndex]
+                  if (dataPoint) {
+                    setHoverInfo({
+                      uri: dataPoint.uri,
+                      coordinates: dataPoint.coordinates,
+                      isInputPoint: false,
+                    })
+                  }
+                }
+              }
+            })
+
+            plotlyDiv.on('plotly_unhover', () => {
+              setHoverInfo(null)
             })
           }}
         />
@@ -361,15 +399,7 @@ export function EmbeddingVisualization() {
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
-      hoverlabel: {
-        bgcolor: 'rgba(255, 255, 255, 0.95)',
-        bordercolor: 'rgba(0, 0, 0, 0.3)',
-        font: {
-          color: 'black',
-          size: 12,
-        },
-      },
+      hoverinfo: 'skip' as const,
     }
   }
 
@@ -390,16 +420,7 @@ export function EmbeddingVisualization() {
           width: 0,
         },
       },
-      hovertemplate: '<b>%{text}</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
-      hoverlabel: {
-        bgcolor: 'rgba(50, 50, 50, 0.9)',
-        bordercolor: 'rgba(255, 255, 255, 0.5)',
-        font: {
-          color: 'white',
-          size: 11,
-          family: 'monospace',
-        },
-      },
+      hoverinfo: 'skip' as const,
     }
   }
 
@@ -427,16 +448,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<b>🎯 Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<extra></extra>',
-      hoverlabel: {
-        bgcolor: 'rgba(255, 107, 0, 0.95)',
-        bordercolor: 'rgba(0, 0, 0, 0.3)',
-        font: {
-          color: 'white',
-          size: 13,
-          family: 'Arial, sans-serif',
-        },
-      },
+      hoverinfo: 'skip' as const,
     }
   }
 
@@ -458,16 +470,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<b>🎯 Your Input</b><br>X: %{x:.3f}<br>Y: %{y:.3f}<br>Z: %{z:.3f}<extra></extra>',
-      hoverlabel: {
-        bgcolor: 'rgba(255, 107, 0, 0.95)',
-        bordercolor: 'rgba(255, 255, 255, 0.8)',
-        font: {
-          color: 'white',
-          size: 12,
-          family: 'monospace',
-        },
-      },
+      hoverinfo: 'skip' as const,
     }
   }
 
@@ -688,11 +691,40 @@ export function EmbeddingVisualization() {
             </Button>
           </div>
 
-          {/* Grid Layout: Plot + Detail Panel */}
+          {/* Grid Layout: Plot + Hover Info + Detail Panel */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Plot Area */}
+            {/* Plot Area with Hover Info */}
             <div className={selectedEmbedding ? "lg:col-span-2" : "lg:col-span-3"}>
               {renderPlot()}
+
+              {/* Hover Info Panel */}
+              {hoverInfo && (
+                <div className="mt-4 p-4 bg-primary/5 border-2 border-primary/30 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    {hoverInfo.isInputPoint && <span>🎯</span>}
+                    Hover Information
+                  </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-muted-foreground">URI:</span>
+                      <p className="font-mono text-sm break-all">{hoverInfo.uri}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Coordinates:</span>
+                      <p className="font-mono text-sm">
+                        {hoverInfo.coordinates.map((c, i) => 
+                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                        ).join(' | ')}
+                      </p>
+                    </div>
+                    {hoverInfo.isInputPoint && (
+                      <div className="text-xs text-primary font-medium">
+                        ✨ This is your input text
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Parameters Info */}
               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
