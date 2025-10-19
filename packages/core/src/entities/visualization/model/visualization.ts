@@ -20,6 +20,7 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
+  include_uris?: string[] // URIs that must be included in the visualization
 }
 
 export interface VisualizeEmbeddingResponse {

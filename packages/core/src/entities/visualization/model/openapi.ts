@@ -40,6 +40,10 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "Minimum distance for UMAP (0-1, ignored for PCA and t-SNE)",
       example: 0.1,
     }),
+    include_uris: z.array(z.string()).optional().openapi({
+      description: "URIs that must be included in the visualization (useful for highlighting specific embeddings)",
+      example: ["temp://input-123456"],
+    }),
   })
   .openapi("VisualizeEmbeddingRequest")
 

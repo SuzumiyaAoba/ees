@@ -264,6 +264,7 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
+  include_uris?: string[]
 }
 
 export interface VisualizeEmbeddingResponse {

@@ -86,7 +86,38 @@ const makeVisualizationService = Effect.gen(function* () {
 
       const listResult = yield* embeddingRepo.findAll(options)
 
-      if (listResult.embeddings.length === 0) {
+      // If include_uris is specified, fetch those embeddings separately and merge
+      let allEmbeddings = listResult.embeddings
+      if (request.include_uris && request.include_uris.length > 0) {
+        const modelName = request.model_name ?? allEmbeddings[0]?.model_name
+        
+        if (modelName) {
+          // Fetch embeddings by URIs that must be included
+          const includeEmbeddings = yield* Effect.all(
+            request.include_uris.map((uri) =>
+              embeddingRepo.findByUri(uri, modelName).pipe(
+                Effect.catchAll(() => Effect.succeed(null))
+              )
+            )
+          )
+
+          // Filter out nulls and embeddings already in the list
+          const existingUris = new Set(allEmbeddings.map((e) => e.uri))
+          const newEmbeddings = includeEmbeddings.filter(
+            (e): e is NonNullable<typeof e> => e !== null && !existingUris.has(e.uri)
+          )
+
+          // Merge: include_uris embeddings + existing embeddings (trimmed if over limit)
+          if (newEmbeddings.length > 0) {
+            const limit = request.limit ?? allEmbeddings.length
+            const remainingSlots = Math.max(0, limit - newEmbeddings.length)
+            const trimmedExisting = allEmbeddings.slice(0, remainingSlots)
+            allEmbeddings = [...newEmbeddings, ...trimmedExisting]
+          }
+        }
+      }
+
+      if (allEmbeddings.length === 0) {
         yield* Effect.fail(
           VisualizationError("No embeddings found for visualization")
         )
@@ -98,17 +129,17 @@ const makeVisualizationService = Effect.gen(function* () {
         request
       )
 
-      if (listResult.embeddings.length < minSamplesRequired) {
+      if (allEmbeddings.length < minSamplesRequired) {
         yield* Effect.fail(
           VisualizationError(
             `Insufficient data for ${request.method.toUpperCase()} visualization. ` +
-              `Found ${listResult.embeddings.length} embeddings, need at least ${minSamplesRequired}. ` +
+              `Found ${allEmbeddings.length} embeddings, need at least ${minSamplesRequired}. ` +
               `Try reducing parameters or adding more data.`
           )
         )
       }
 
-      const vectors = listResult.embeddings.map((emb) => emb.embedding)
+      const vectors = allEmbeddings.map((emb) => emb.embedding)
 
       const reduced = yield* performReduction(
         request.method,
@@ -117,7 +148,7 @@ const makeVisualizationService = Effect.gen(function* () {
         request
       )
 
-      const points: VisualizationPoint[] = listResult.embeddings.map(
+      const points: VisualizationPoint[] = allEmbeddings.map(
         (emb, idx) => ({
           id: emb.id,
           uri: emb.uri,

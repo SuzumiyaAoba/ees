@@ -156,58 +156,32 @@ export function EmbeddingVisualization() {
         throw new Error('Failed to verify embedding creation')
       }
 
-      // Wait a bit longer to ensure database index is updated
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Wait a bit to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Re-visualize with limit + 1 to reserve space for input text
-      // Retry up to 3 times if the input point is not found
-      let updatedResponse: VisualizeEmbeddingResponse | null = null
-      let inputPoint: VisualizationPoint | undefined
-      let retryCount = 0
-      const maxRetries = 3
+      // Re-visualize with include_uris to ensure the input text is included
+      // This guarantees the temporary embedding will be in the result
+      const updatedResponse = await apiClient.visualizeEmbeddings({
+        method,
+        dimensions,
+        model_name: modelName,
+        limit,
+        perplexity: method === 'tsne' ? perplexity : undefined,
+        n_neighbors: method === 'umap' ? nNeighbors : undefined,
+        min_dist: method === 'umap' ? minDist : undefined,
+        include_uris: [tempUri], // Ensure the temporary embedding is included
+      })
 
-      while (retryCount < maxRetries) {
-        updatedResponse = await apiClient.visualizeEmbeddings({
-          method,
-          dimensions,
-          model_name: modelName,
-          limit: limit + 1, // Request one extra slot for the input text
-          perplexity: method === 'tsne' ? perplexity : undefined,
-          n_neighbors: method === 'umap' ? nNeighbors : undefined,
-          min_dist: method === 'umap' ? minDist : undefined,
-        })
+      // Find the input point in the visualization
+      const inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
 
-        // Find the input point in the new visualization
-        inputPoint = updatedResponse.points.find(p => p.uri === tempUri)
-
-        if (inputPoint) {
-          // Successfully found the input point
-          break
-        }
-
-        // Not found, retry after a short delay
-        retryCount++
-        if (retryCount < maxRetries) {
-          console.log(`[Debug] Input point not found, retry ${retryCount}/${maxRetries}`)
-          await new Promise(resolve => setTimeout(resolve, 100 * retryCount))
-        }
-      }
-
-      if (!updatedResponse) {
-        throw new Error('Failed to get visualization response')
-      }
-
-      const tempUris = updatedResponse.points.filter(p => p.uri.includes('temp://'))
       console.log('[Debug] Visualization response:', {
         tempUri,
         totalPoints: updatedResponse.points.length,
-        requestedLimit: limit + 1,
+        requestedLimit: limit,
         foundInput: !!inputPoint,
-        retryCount,
         firstUri: updatedResponse.points[0]?.uri,
         lastUri: updatedResponse.points[updatedResponse.points.length - 1]?.uri,
-        tempUrisFound: tempUris.map(p => p.uri),
-        tempUrisCount: tempUris.length,
       })
 
       if (inputPoint) {
@@ -224,8 +198,8 @@ export function EmbeddingVisualization() {
           total_points: mainPoints.length,
         })
       } else {
-        // Input point not found after retries
-        setError(`Input text could not be visualized. Please try again or increase the visualization limit.`)
+        // This should not happen with include_uris, but handle it gracefully
+        setError(`Input text could not be visualized. The embedding may have been created with a different model.`)
       }
 
       // Clean up temporary embedding
