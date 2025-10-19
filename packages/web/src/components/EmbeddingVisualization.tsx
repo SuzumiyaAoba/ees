@@ -98,59 +98,46 @@ export function EmbeddingVisualization() {
     loadModels()
   }, [])
 
-  // Setup hover event listeners
-  useEffect(() => {
-    if (!plotDivRef.current) return
-
-    const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
-
-    const handleHover = (eventData: Plotly.PlotMouseEvent) => {
-      console.log('[Hover Event]', eventData)
-      if (eventData.points && eventData.points.length > 0) {
-        const point = eventData.points[0]
-        const curveNumber = point.curveNumber
-        console.log('[Hover] curveNumber:', curveNumber, 'inputPoints.length:', inputPoints.length)
-        
-        // curveNumber 0: data points
-        // curveNumber 1: input points (if exists)
-        // curveNumber 2: highlight point (if exists)
-        
-        if (curveNumber === 1 && inputPoints.length > 0) {
-          // Hovering over input point
-          console.log('[Hover] Input point detected')
+  // Handle hover events
+  const handlePlotHover = (eventData: Readonly<Plotly.PlotMouseEvent>) => {
+    console.log('[Hover Event]', eventData)
+    if (eventData.points && eventData.points.length > 0) {
+      const point = eventData.points[0]
+      const curveNumber = point.curveNumber
+      console.log('[Hover] curveNumber:', curveNumber, 'inputPoints.length:', inputPoints.length)
+      
+      // curveNumber 0: data points
+      // curveNumber 1: input points (if exists)
+      // curveNumber 2: highlight point (if exists)
+      
+      if (curveNumber === 1 && inputPoints.length > 0) {
+        // Hovering over input point
+        console.log('[Hover] Input point detected')
+        setHoverInfo({
+          uri: inputPoints[0].uri,
+          coordinates: inputPoints[0].coordinates,
+          isInputPoint: true,
+        })
+      } else if (curveNumber === 0 && data) {
+        // Hovering over data point
+        const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+        const dataPoint = data.points[pointIndex]
+        console.log('[Hover] Data point detected, index:', pointIndex, 'point:', dataPoint)
+        if (dataPoint) {
           setHoverInfo({
-            uri: inputPoints[0].uri,
-            coordinates: inputPoints[0].coordinates,
-            isInputPoint: true,
+            uri: dataPoint.uri,
+            coordinates: dataPoint.coordinates,
+            isInputPoint: false,
           })
-        } else if (curveNumber === 0 && data) {
-          // Hovering over data point
-          const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
-          const dataPoint = data.points[pointIndex]
-          console.log('[Hover] Data point detected, index:', pointIndex, 'point:', dataPoint)
-          if (dataPoint) {
-            setHoverInfo({
-              uri: dataPoint.uri,
-              coordinates: dataPoint.coordinates,
-              isInputPoint: false,
-            })
-          }
         }
       }
     }
+  }
 
-    const handleUnhover = () => {
-      setHoverInfo(null)
-    }
-
-    plotlyDiv.on('plotly_hover', handleHover)
-    plotlyDiv.on('plotly_unhover', handleUnhover)
-
-    return () => {
-      plotlyDiv.removeAllListeners('plotly_hover')
-      plotlyDiv.removeAllListeners('plotly_unhover')
-    }
-  }, [data, inputPoints])
+  const handlePlotUnhover = () => {
+    console.log('[Unhover Event]')
+    setHoverInfo(null)
+  }
 
 
   const handleVisualize = async () => {
@@ -427,6 +414,8 @@ export function EmbeddingVisualization() {
               handlePointClick(eventData)
             })
           }}
+          onHover={handlePlotHover}
+          onUnhover={handlePlotUnhover}
         />
       </div>
     )
@@ -445,7 +434,7 @@ export function EmbeddingVisualization() {
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
@@ -466,7 +455,7 @@ export function EmbeddingVisualization() {
           width: 0,
         },
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
@@ -494,7 +483,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
@@ -506,6 +495,7 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter3d' as const,
       name: 'Your Input',
+      text: points.map(p => '🎯 ' + p.uri),
       marker: {
         size: 8,
         color: '#ff6b00',
@@ -516,7 +506,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
@@ -527,6 +517,7 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter' as const,
       name: 'Selected',
+      text: points.map(p => '📍 ' + p.uri),
       marker: {
         size: 20,
         color: '#ef4444',
@@ -537,7 +528,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
@@ -549,6 +540,7 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter3d' as const,
       name: 'Selected',
+      text: points.map(p => '📍 ' + p.uri),
       marker: {
         size: 15,
         color: '#ef4444',
@@ -559,7 +551,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hovertemplate: '<extra></extra>',
+      hoverinfo: 'text' as const,
     }
   }
 
