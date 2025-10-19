@@ -427,14 +427,14 @@ export function EmbeddingVisualization() {
       y: points.map(p => p.coordinates[1]),
       mode: 'markers' as const,
       type: 'scatter' as const,
-      text: points.map(p => p.uri),
       marker: {
         size: 8,
         color: points.map((_, i) => i),
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -445,7 +445,6 @@ export function EmbeddingVisualization() {
       z: points.map(p => p.coordinates[2]),
       mode: 'markers' as const,
       type: 'scatter3d' as const,
-      text: points.map(p => p.uri),
       marker: {
         size: 3,
         color: points.map((_, i) => i),
@@ -455,7 +454,8 @@ export function EmbeddingVisualization() {
           width: 0,
         },
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -483,7 +483,8 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -495,7 +496,6 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter3d' as const,
       name: 'Your Input',
-      text: points.map(p => '🎯 ' + p.uri),
       marker: {
         size: 8,
         color: '#ff6b00',
@@ -506,7 +506,8 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -517,7 +518,6 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter' as const,
       name: 'Selected',
-      text: points.map(p => '📍 ' + p.uri),
       marker: {
         size: 20,
         color: '#ef4444',
@@ -528,7 +528,8 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
@@ -540,7 +541,6 @@ export function EmbeddingVisualization() {
       mode: 'markers' as const,
       type: 'scatter3d' as const,
       name: 'Selected',
-      text: points.map(p => '📍 ' + p.uri),
       marker: {
         size: 15,
         color: '#ef4444',
@@ -551,7 +551,8 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hoverinfo: 'skip' as const,
+      hovertemplate: '<extra></extra>',
+      showlegend: false,
     }
   }
 
