@@ -437,7 +437,7 @@ export function EmbeddingVisualization() {
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
@@ -458,7 +458,7 @@ export function EmbeddingVisualization() {
           width: 0,
         },
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
@@ -486,7 +486,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
@@ -508,7 +508,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
@@ -529,7 +529,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
@@ -551,7 +551,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 0.8,
       },
-      hoverinfo: 'none' as const,
+      hovertemplate: '<extra></extra>',
     }
   }
 
