@@ -98,6 +98,52 @@ export function EmbeddingVisualization() {
     loadModels()
   }, [])
 
+  // Setup hover event listeners
+  useEffect(() => {
+    if (!plotDivRef.current) return
+
+    const plotlyDiv = plotDivRef.current as unknown as Plotly.PlotlyHTMLElement
+
+    const handleHover = (eventData: Plotly.PlotMouseEvent) => {
+      if (eventData.points && eventData.points.length > 0) {
+        const point = eventData.points[0]
+        const curveNumber = point.curveNumber
+        
+        if (curveNumber === 1 && inputPoints.length > 0) {
+          // Hovering over input point
+          setHoverInfo({
+            uri: inputPoints[0].uri,
+            coordinates: inputPoints[0].coordinates,
+            isInputPoint: true,
+          })
+        } else if (data) {
+          // Hovering over data point
+          const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
+          const dataPoint = data.points[pointIndex]
+          if (dataPoint) {
+            setHoverInfo({
+              uri: dataPoint.uri,
+              coordinates: dataPoint.coordinates,
+              isInputPoint: false,
+            })
+          }
+        }
+      }
+    }
+
+    const handleUnhover = () => {
+      setHoverInfo(null)
+    }
+
+    plotlyDiv.on('plotly_hover', handleHover)
+    plotlyDiv.on('plotly_unhover', handleUnhover)
+
+    return () => {
+      plotlyDiv.removeAllListeners('plotly_hover')
+      plotlyDiv.removeAllListeners('plotly_unhover')
+    }
+  }, [data, inputPoints])
+
 
   const handleVisualize = async () => {
     setLoading(true)
@@ -343,42 +389,11 @@ export function EmbeddingVisualization() {
           onInitialized={(_figure, graphDiv) => {
             plotDivRef.current = graphDiv
 
-            // Add native Plotly event listeners
+            // Add click event listener
             const plotlyDiv = graphDiv as unknown as Plotly.PlotlyHTMLElement
 
             plotlyDiv.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
               handlePointClick(eventData)
-            })
-
-            plotlyDiv.on('plotly_hover', (eventData: Plotly.PlotMouseEvent) => {
-              if (eventData.points && eventData.points.length > 0) {
-                const point = eventData.points[0]
-                const curveNumber = point.curveNumber
-                
-                if (curveNumber === 1 && inputPoints.length > 0) {
-                  // Hovering over input point
-                  setHoverInfo({
-                    uri: inputPoints[0].uri,
-                    coordinates: inputPoints[0].coordinates,
-                    isInputPoint: true,
-                  })
-                } else if (data) {
-                  // Hovering over data point
-                  const pointIndex = point.pointIndex ?? point.pointNumber ?? 0
-                  const dataPoint = data.points[pointIndex]
-                  if (dataPoint) {
-                    setHoverInfo({
-                      uri: dataPoint.uri,
-                      coordinates: dataPoint.coordinates,
-                      isInputPoint: false,
-                    })
-                  }
-                }
-              }
-            })
-
-            plotlyDiv.on('plotly_unhover', () => {
-              setHoverInfo(null)
             })
           }}
         />
@@ -399,7 +414,7 @@ export function EmbeddingVisualization() {
         colorscale: 'Viridis' as const,
         showscale: true,
       },
-      hoverinfo: 'skip' as const,
+      hoverinfo: 'none' as const,
     }
   }
 
@@ -420,7 +435,7 @@ export function EmbeddingVisualization() {
           width: 0,
         },
       },
-      hoverinfo: 'skip' as const,
+      hoverinfo: 'none' as const,
     }
   }
 
@@ -448,7 +463,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'skip' as const,
+      hoverinfo: 'none' as const,
     }
   }
 
@@ -470,7 +485,7 @@ export function EmbeddingVisualization() {
         },
         opacity: 1,
       },
-      hoverinfo: 'skip' as const,
+      hoverinfo: 'none' as const,
     }
   }
 
