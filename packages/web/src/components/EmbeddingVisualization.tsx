@@ -140,6 +140,15 @@ export function EmbeddingVisualization() {
         // 2D uses pointIndex, 3D uses pointNumber
         const pointIndex = point.pointIndex ?? point.pointNumber
 
+        console.log('[3D Debug] Hover event:', {
+          pointIndex,
+          pointNumber: point.pointNumber,
+          pointIndexDirect: point.pointIndex,
+          curveNumber,
+          dataPointsCount: data.points.length,
+          dimensions
+        })
+
         // Validate pointIndex exists
         if (pointIndex === undefined || pointIndex === null) {
           console.warn('Could not determine point index from hover event:', point)
@@ -147,14 +156,22 @@ export function EmbeddingVisualization() {
         }
 
         const dataPoint = data.points[pointIndex]
+        console.log('[3D Debug] Data point lookup:', {
+          pointIndex,
+          found: !!dataPoint,
+          uri: dataPoint?.uri,
+          model_name: dataPoint?.model_name
+        })
 
         if (dataPoint) {
           // Debounce: ignore if we're already hovering over the same point
           if (lastHoveredUriRef.current === dataPoint.uri && hoverTimeoutRef.current) {
+            console.log('[3D Debug] Debounced - same point:', dataPoint.uri)
             return
           }
 
           lastHoveredUriRef.current = dataPoint.uri
+          console.log('[3D Debug] New hover target:', dataPoint.uri)
 
           // Set basic hover info immediately
           setHoverInfo({
@@ -164,21 +181,31 @@ export function EmbeddingVisualization() {
           })
 
           // Schedule fetching original document after delay
+          console.log('[3D Debug] Scheduling fetch in', hoverDelayMs, 'ms')
           hoverTimeoutRef.current = setTimeout(async () => {
+            console.log('[3D Debug] Fetching document for:', dataPoint.uri, dataPoint.model_name)
             try {
               const embedding = await apiClient.getEmbedding(dataPoint.uri, dataPoint.model_name)
+              console.log('[3D Debug] Document fetched successfully:', {
+                uri: embedding.uri,
+                hasOriginalContent: !!embedding.original_content,
+                hasText: !!embedding.text,
+                contentLength: (embedding.original_content || embedding.text)?.length
+              })
               setHoverInfo(prev => prev ? {
                 ...prev,
                 originalDocument: embedding.original_content || embedding.text
               } : null)
             } catch (error) {
-              console.error('Failed to fetch original document:', error)
+              console.error('[3D Debug] Failed to fetch document:', error)
             }
           }, hoverDelayMs)
+        } else {
+          console.warn('[3D Debug] No data point at index:', pointIndex)
         }
       }
     }
-  }, [data, inputPoints, hoverDelayMs, inputTextContent])
+  }, [data, inputPoints, hoverDelayMs, inputTextContent, dimensions])
 
   const handlePlotUnhover = useCallback(() => {
     // Clear any existing timeout
