@@ -235,7 +235,7 @@ export function FileUpload() {
               onChange={(e) => setSelectedModel(e.target.value)}
             >
               <option value="">Use default model</option>
-              {models?.map((model) => (
+              {models?.map((model: any) => (
                 <option key={model.name} value={model.name}>
                   {model.name}
                 </option>

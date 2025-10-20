@@ -311,6 +311,7 @@ const createMockApiClient = () => ({
     successful: data.texts.length,
     failed: 0,
     model_name: 'nomic-embed-text',
+    message: 'Batch creation completed',
   }),
   getEmbeddings: async (params: { page?: number; limit?: number; uri?: string; model_name?: string }): Promise<EmbeddingsListResponse> => ({
     embeddings: Array.from({ length: 10 }, (_, i) => ({
@@ -328,6 +329,9 @@ const createMockApiClient = () => ({
     total_pages: 1,
     has_next: false,
     has_prev: false,
+    page: params.page || 1,
+    limit: params.limit || 10,
+    total: 10,
   }),
   getEmbedding: async (uri: string, modelName: string): Promise<Embedding> => ({
     id: 1,
@@ -367,7 +371,7 @@ const createMockApiClient = () => ({
       converted_format: undefined,
       similarity: Math.random(),
     })),
-    count: 5,
+    total: 5,
     query: data.query,
   }),
   
@@ -401,33 +405,39 @@ const createMockApiClient = () => ({
     successful: 3,
     failed: 0,
     model_name: modelName || 'nomic-embed-text',
+    message: 'File upload completed',
   }),
   
   // Migration operations
   migrateEmbeddings: async (data: MigrationRequest): Promise<MigrationResponse> => ({
     migrated_count: 10,
     failed_count: 0,
+    message: 'Migration completed',
   }),
   checkModelCompatibility: async (data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
     compatible: true,
+    message: 'Models are compatible',
   }),
   getModels: async (): Promise<ListModelsResponse> => ({
     models: [
       { name: 'nomic-embed-text', provider: 'ollama', dimensions: 768, maxTokens: 8192, available: true },
       { name: 'text-embedding-3-small', provider: 'openai', dimensions: 1536, maxTokens: 8192, available: true },
     ],
+    count: 2,
+    providers: ['ollama', 'openai'],
   }),
   getTaskTypes: async (modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
-    task_types: {
-      'search': { name: 'search', description: 'Search task' },
-      'clustering': { name: 'clustering', description: 'Clustering task' },
-      'classification': { name: 'classification', description: 'Classification task' },
-    },
+    task_types: [
+      { name: 'search', description: 'Search task' },
+      { name: 'clustering', description: 'Clustering task' },
+      { name: 'classification', description: 'Classification task' },
+    ],
   }),
   
   // Upload directory operations
   createUploadDirectory: async (data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => ({
     id: Math.floor(Math.random() * 10000),
+    name: data.name,
     path: data.path,
     model_name: data.model_name,
     created_at: new Date().toISOString(),
@@ -444,7 +454,7 @@ const createMockApiClient = () => ({
       updated_at: new Date().toISOString(),
       last_synced_at: new Date().toISOString(),
     })),
-    total: 3,
+    count: 3,
   }),
   getUploadDirectory: async (id: number): Promise<UploadDirectory> => ({
     id,
@@ -459,7 +469,7 @@ const createMockApiClient = () => ({
   updateUploadDirectory: async (id: number, data: UpdateUploadDirectoryRequest): Promise<UploadDirectory> => ({
     id,
     name: data.name || `Directory ${id}`,
-    path: `/path/to/dir${id}`,
+    path: data.path || `/path/to/dir${id}`,
     model_name: data.model_name || 'nomic-embed-text',
     description: data.description || `Description for directory ${id}`,
     created_at: new Date().toISOString(),
@@ -474,16 +484,24 @@ const createMockApiClient = () => ({
     processed_files: 5,
     created_embeddings: 5,
     failed_files: 0,
+    total_files: 5,
   }),
   
   // File system operations
   listDirectory: async (path: string): Promise<ListDirectoryResponse> => ({
-    items: Array.from({ length: 7 }, (_, i) => ({
-      name: i < 5 ? `file${i}.txt` : `dir${i - 5}`,
-      path: i < 5 ? `${path}/file${i}.txt` : `${path}/dir${i - 5}`,
-      size: i < 5 ? Math.floor(Math.random() * 1000) : 0,
+    files: Array.from({ length: 5 }, (_, i) => ({
+      name: `file${i}.txt`,
+      path: `${path}/file${i}.txt`,
+      size: Math.floor(Math.random() * 1000),
       modified: new Date().toISOString(),
-      is_directory: i >= 5,
+      is_directory: false,
+    })),
+    directories: Array.from({ length: 2 }, (_, i) => ({
+      name: `dir${i}`,
+      path: `${path}/dir${i}`,
+      size: 0,
+      modified: new Date().toISOString(),
+      is_directory: true,
     })),
   }),
   
@@ -499,7 +517,7 @@ const createMockApiClient = () => ({
     return {
       method: data.method || 'pca',
       dimensions: data.dimensions,
-      parameters: {},
+      parameters: data.parameters || {},
       points,
       total_points: points.length,
       debug_info: {
