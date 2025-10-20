@@ -294,41 +294,221 @@ class ApiClient {
 
 // Mock apiClient for Storybook
 const createMockApiClient = () => ({
-  getDistinctEmbeddingModels: async () => ({ models: ['nomic-embed-text', 'text-embedding-3-small'] }),
-  visualizeEmbeddings: async (params: unknown) => {
-    const dims = (params as { dimensions: 2 | 3 }).dimensions
-    const total = 100
-    const points = Array.from({ length: total }, (_, i) => ({
+  // Embedding operations
+  createEmbedding: async (data: CreateEmbeddingRequest): Promise<CreateEmbeddingResponse> => ({
+    id: Math.floor(Math.random() * 10000),
+    uri: data.uri,
+    model_name: 'nomic-embed-text',
+    message: 'created',
+  }),
+  createBatchEmbeddings: async (data: BatchCreateEmbeddingRequest): Promise<BatchCreateEmbeddingResponse> => ({
+    results: data.texts.map((_, i) => ({
+      id: Math.floor(Math.random() * 10000),
       uri: `doc-${i}`,
       model_name: 'nomic-embed-text',
-      coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
-    }))
-    return {
-      method: 'pca',
-      dimensions: dims,
-      parameters: {},
-      points,
-      total_points: points.length,
-    }
-  },
-  getEmbedding: async (uri: string) => ({
+      message: 'created',
+    })),
+    successful: data.texts.length,
+    failed: 0,
+    model_name: 'nomic-embed-text',
+  }),
+  getEmbeddings: async (params: { page?: number; limit?: number; uri?: string; model_name?: string }): Promise<EmbeddingsListResponse> => ({
+    embeddings: Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      uri: `doc-${i}`,
+      text: `Sample content for doc-${i}`,
+      model_name: 'nomic-embed-text',
+      embedding: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      original_content: undefined,
+      converted_format: undefined,
+    })),
+    count: 10,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false,
+  }),
+  getEmbedding: async (uri: string, modelName: string): Promise<Embedding> => ({
     id: 1,
     uri,
     text: `Sample content for ${uri}`,
-    model_name: 'nomic-embed-text',
+    model_name: modelName,
     embedding: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     original_content: undefined,
     converted_format: undefined,
   }),
-  createEmbedding: async ({ uri }: { uri: string; text: string }) => ({
-    id: Math.floor(Math.random() * 10000),
-    uri,
-    model_name: 'nomic-embed-text',
-    message: 'created',
+  getDistinctEmbeddingModels: async (): Promise<{ models: string[] }> => ({
+    models: ['nomic-embed-text', 'text-embedding-3-small'],
   }),
-  deleteEmbedding: async () => undefined,
+  deleteEmbedding: async (id: number): Promise<{ message: string }> => ({
+    message: 'Embedding deleted successfully',
+  }),
+  deleteAllEmbeddings: async (): Promise<{ message: string; deleted_count: number }> => ({
+    message: 'All embeddings deleted successfully',
+    deleted_count: 10,
+  }),
+  updateEmbedding: async (id: number, data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> => ({
+    success: true,
+    message: 'updated',
+  }),
+  searchEmbeddings: async (data: SearchEmbeddingRequest): Promise<SearchEmbeddingResponse> => ({
+    results: Array.from({ length: 5 }, (_, i) => ({
+      id: i + 1,
+      uri: `doc-${i}`,
+      text: `Sample content for doc-${i}`,
+      model_name: 'nomic-embed-text',
+      embedding: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      original_content: undefined,
+      converted_format: undefined,
+      similarity: Math.random(),
+    })),
+    count: 5,
+    query: data.query,
+  }),
+  
+  // Provider operations
+  getProviders: async (): Promise<Array<{ name: string; display_name: string; status: string }>> => [
+    { name: 'ollama', display_name: 'Ollama', status: 'active' },
+    { name: 'openai', display_name: 'OpenAI', status: 'inactive' },
+  ],
+  getProviderModels: async (provider?: string): Promise<Array<{ name: string; display_name: string; dimensions: number }>> => [
+    { name: 'nomic-embed-text', display_name: 'Nomic Embed Text', dimensions: 768 },
+    { name: 'text-embedding-3-small', display_name: 'Text Embedding 3 Small', dimensions: 1536 },
+  ],
+  getCurrentProvider: async (): Promise<{ name: string; display_name: string; status: string }> => ({
+    name: 'ollama',
+    display_name: 'Ollama',
+    status: 'active',
+  }),
+  getOllamaStatus: async (): Promise<{ status: string; models: string[] }> => ({
+    status: 'running',
+    models: ['nomic-embed-text'],
+  }),
+  
+  // File operations
+  uploadFile: async (file: File, modelName?: string): Promise<BatchCreateEmbeddingResponse> => ({
+    results: Array.from({ length: 3 }, (_, i) => ({
+      id: Math.floor(Math.random() * 10000),
+      uri: `${file.name}-${i}`,
+      model_name: modelName || 'nomic-embed-text',
+      message: 'created',
+    })),
+    successful: 3,
+    failed: 0,
+    model_name: modelName || 'nomic-embed-text',
+  }),
+  
+  // Migration operations
+  migrateEmbeddings: async (data: MigrationRequest): Promise<MigrationResponse> => ({
+    migrated_count: 10,
+    failed_count: 0,
+  }),
+  checkModelCompatibility: async (data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
+    compatible: true,
+  }),
+  getModels: async (): Promise<ListModelsResponse> => ({
+    models: [
+      { name: 'nomic-embed-text', provider: 'ollama', dimensions: 768, maxTokens: 8192, available: true },
+      { name: 'text-embedding-3-small', provider: 'openai', dimensions: 1536, maxTokens: 8192, available: true },
+    ],
+  }),
+  getTaskTypes: async (modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
+    task_types: {
+      'search': { name: 'search', description: 'Search task' },
+      'clustering': { name: 'clustering', description: 'Clustering task' },
+      'classification': { name: 'classification', description: 'Classification task' },
+    },
+  }),
+  
+  // Upload directory operations
+  createUploadDirectory: async (data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => ({
+    id: Math.floor(Math.random() * 10000),
+    path: data.path,
+    model_name: data.model_name,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }),
+  getUploadDirectories: async (): Promise<UploadDirectoryListResponse> => ({
+    directories: Array.from({ length: 3 }, (_, i) => ({
+      id: i + 1,
+      name: `Directory ${i + 1}`,
+      path: `/path/to/dir${i + 1}`,
+      model_name: 'nomic-embed-text',
+      description: `Description for directory ${i + 1}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_synced_at: new Date().toISOString(),
+    })),
+    total: 3,
+  }),
+  getUploadDirectory: async (id: number): Promise<UploadDirectory> => ({
+    id,
+    name: `Directory ${id}`,
+    path: `/path/to/dir${id}`,
+    model_name: 'nomic-embed-text',
+    description: `Description for directory ${id}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    last_synced_at: new Date().toISOString(),
+  }),
+  updateUploadDirectory: async (id: number, data: UpdateUploadDirectoryRequest): Promise<UploadDirectory> => ({
+    id,
+    name: data.name || `Directory ${id}`,
+    path: `/path/to/dir${id}`,
+    model_name: data.model_name || 'nomic-embed-text',
+    description: data.description || `Description for directory ${id}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    last_synced_at: new Date().toISOString(),
+  }),
+  deleteUploadDirectory: async (id: number): Promise<{ message: string }> => ({
+    message: 'Upload directory deleted successfully',
+  }),
+  syncUploadDirectory: async (id: number): Promise<SyncUploadDirectoryResponse> => ({
+    message: 'Directory synced successfully',
+    processed_files: 5,
+    created_embeddings: 5,
+    failed_files: 0,
+  }),
+  
+  // File system operations
+  listDirectory: async (path: string): Promise<ListDirectoryResponse> => ({
+    items: Array.from({ length: 7 }, (_, i) => ({
+      name: i < 5 ? `file${i}.txt` : `dir${i - 5}`,
+      path: i < 5 ? `${path}/file${i}.txt` : `${path}/dir${i - 5}`,
+      size: i < 5 ? Math.floor(Math.random() * 1000) : 0,
+      modified: new Date().toISOString(),
+      is_directory: i >= 5,
+    })),
+  }),
+  
+  // Visualization operations
+  visualizeEmbeddings: async (data: VisualizeEmbeddingRequest): Promise<VisualizeEmbeddingResponse> => {
+    const total = 100
+    const points = Array.from({ length: total }, (_, i) => ({
+      id: i + 1,
+      uri: `doc-${i}`,
+      model_name: 'nomic-embed-text',
+      coordinates: data.dimensions === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
+    }))
+    return {
+      method: data.method || 'pca',
+      dimensions: data.dimensions,
+      parameters: {},
+      points,
+      total_points: points.length,
+      debug_info: {
+        include_uris_requested: data.include_uris || [],
+        include_uris_found: points.length,
+        include_uris_failed: [],
+      },
+    }
+  },
 })
 
 // Use mock in Storybook environment or when STORYBOOK_MOCK is set

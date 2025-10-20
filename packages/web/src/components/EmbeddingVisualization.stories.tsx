@@ -9,6 +9,7 @@ const createMockApiClient = () => ({
     const dims = (params as { dimensions: 2 | 3 }).dimensions
     const total = 100
     const points = Array.from({ length: total }, (_, i) => ({
+      id: i + 1,
       uri: `doc-${i}`,
       model_name: 'nomic-embed-text',
       coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
@@ -19,6 +20,10 @@ const createMockApiClient = () => ({
       parameters: {},
       points,
       total_points: points.length,
+      debug_info: {
+        computation_time: Math.random() * 1000,
+        memory_usage: Math.random() * 100,
+      },
     }
   },
   getEmbedding: async (uri: string) => ({
@@ -40,9 +45,6 @@ const createMockApiClient = () => ({
   }),
   deleteEmbedding: async () => undefined,
 })
-
-// Global mock for stories
-const apiClientMock = createMockApiClient()
 
 const meta: Meta<typeof EmbeddingVisualization> = {
   title: 'Features/EmbeddingVisualization',
@@ -77,6 +79,7 @@ export const Loading: Story = {
       const dims = (params as { dimensions: 2 | 3 }).dimensions
       const total = 100
       const points = Array.from({ length: total }, (_, i) => ({
+        id: i + 1,
         uri: `doc-${i}`,
         model_name: 'nomic-embed-text',
         coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
@@ -87,6 +90,10 @@ export const Loading: Story = {
         parameters: {},
         points,
         total_points: points.length,
+        debug_info: {
+          computation_time: Math.random() * 1000,
+          memory_usage: Math.random() * 100,
+        },
       }
     }
     
@@ -107,6 +114,10 @@ export const EmptyState: Story = {
       parameters: {},
       points: [],
       total_points: 0,
+      debug_info: {
+        computation_time: 0,
+        memory_usage: 0,
+      },
     })
     
     // Temporarily replace the global apiClient
@@ -139,6 +150,7 @@ export const LargeDataset: Story = {
       const dims = (params as { dimensions: 2 | 3 }).dimensions
       const total = 1000
       const points = Array.from({ length: total }, (_, i) => ({
+        id: i + 1,
         uri: `doc-${i}`,
         model_name: 'nomic-embed-text',
         coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
@@ -149,6 +161,10 @@ export const LargeDataset: Story = {
         parameters: {},
         points,
         total_points: points.length,
+        debug_info: {
+          computation_time: Math.random() * 2000,
+          memory_usage: Math.random() * 200,
+        },
       }
     }
     
