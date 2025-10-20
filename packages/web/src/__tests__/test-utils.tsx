@@ -5,6 +5,8 @@
 
 import { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
+import { screen, waitFor, fireEvent } from '@testing-library/dom'
+export { screen, waitFor, fireEvent }
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 /**

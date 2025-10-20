@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { SearchInterface } from '../SearchInterface'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
@@ -146,7 +146,7 @@ describe('SearchInterface', () => {
 
       // Get the search button (not the tab button)
       const buttons = screen.getAllByRole('button')
-      const searchButton = buttons.find(btn => btn.textContent?.includes('Search') && btn.hasAttribute('disabled'))
+      const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search') && btn.hasAttribute('disabled'))
       expect(searchButton).toBeDefined()
     })
 
@@ -165,7 +165,7 @@ describe('SearchInterface', () => {
 
       await waitFor(() => {
         const buttons = screen.getAllByRole('button')
-        const searchButton = buttons.find(btn => btn.textContent?.includes('Search') && !btn.hasAttribute('disabled'))
+        const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search') && !btn.hasAttribute('disabled'))
         expect(searchButton).toBeDefined()
       })
     })
@@ -240,7 +240,7 @@ describe('SearchInterface', () => {
 
       // When loading, the search button should be disabled
       const buttons = screen.getAllByRole('button')
-      const searchButton = buttons.find(btn => btn.textContent?.includes('Search'))
+      const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search'))
       expect(searchButton).toBeDisabled()
     })
   })

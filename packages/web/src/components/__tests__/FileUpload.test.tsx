@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { screen, waitFor, fireEvent } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { FileUpload } from '../FileUpload'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
@@ -363,7 +363,7 @@ describe('FileUpload', () => {
 
       // Find and click the remove button (X icon)
       const removeButtons = screen.getAllByRole('button')
-      const removeButton = removeButtons.find((btn) => {
+      const removeButton = removeButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg !== null && btn.textContent === ''
       })
@@ -468,7 +468,7 @@ describe('FileUpload', () => {
 
       // Find and click the individual upload button
       const uploadButtons = screen.getAllByRole('button')
-      const uploadButton = uploadButtons.find((btn) => btn.textContent === 'Upload')
+      const uploadButton = uploadButtons.find((btn: HTMLElement) => btn.textContent === 'Upload')
 
       expect(uploadButton).toBeInTheDocument()
 
@@ -528,7 +528,7 @@ describe('FileUpload', () => {
       })
 
       const uploadButtons = screen.getAllByRole('button')
-      const uploadButton = uploadButtons.find((btn) => btn.textContent === 'Upload')
+      const uploadButton = uploadButtons.find((btn: HTMLElement) => btn.textContent === 'Upload')
 
       if (uploadButton) {
         await user.click(uploadButton)
@@ -566,7 +566,7 @@ describe('FileUpload', () => {
       })
 
       const uploadButtons = screen.getAllByRole('button')
-      const uploadButton = uploadButtons.find((btn) => btn.textContent === 'Upload')
+      const uploadButton = uploadButtons.find((btn: HTMLElement) => btn.textContent === 'Upload')
 
       if (uploadButton) {
         await user.click(uploadButton)
@@ -638,7 +638,7 @@ describe('FileUpload', () => {
       })
 
       const uploadButtons = screen.getAllByRole('button')
-      const uploadButton = uploadButtons.find((btn) => btn.textContent === 'Upload')
+      const uploadButton = uploadButtons.find((btn: HTMLElement) => btn.textContent === 'Upload')
 
       if (uploadButton) {
         await user.click(uploadButton)
