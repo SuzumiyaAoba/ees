@@ -1,16 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { EmbeddingVisualization } from './EmbeddingVisualization'
+import { apiClient } from '@/services/api'
 
-// Mock apiClient used inside the component
-// We mock on window to avoid import path rewrites inside component
-// and keep stories self-contained.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const apiClientMock: any = {
+// Create a mock apiClient for stories
+const createMockApiClient = () => ({
   getDistinctEmbeddingModels: async () => ({ models: ['nomic-embed-text', 'text-embedding-3-small'] }),
   visualizeEmbeddings: async (params: unknown) => {
     const dims = (params as { dimensions: 2 | 3 }).dimensions
     const total = 100
-    const points = Array.from({ length: dims === 3 ? total : total }, (_, i) => ({
+    const points = Array.from({ length: total }, (_, i) => ({
       uri: `doc-${i}`,
       model_name: 'nomic-embed-text',
       coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
@@ -41,11 +39,10 @@ const apiClientMock: any = {
     message: 'created',
   }),
   deleteEmbedding: async () => undefined,
-}
+})
 
-// Provide mocked apiClient on globalThis so the component picks it up
-// when it imports from '@/services/api'.
-;(globalThis as unknown as { apiClient?: unknown }).apiClient = apiClientMock
+// Global mock for stories
+const apiClientMock = createMockApiClient()
 
 const meta: Meta<typeof EmbeddingVisualization> = {
   title: 'Features/EmbeddingVisualization',
@@ -73,40 +70,72 @@ export const Default3D: Story = {
 
 export const Loading: Story = {
   render: () => {
-    // Slow down visualizeEmbeddings to show loading state
-    apiClientMock.visualizeEmbeddings = async () => {
-      await new Promise((r) => setTimeout(r, 1500))
-      return apiClientMock.visualizeEmbeddings({ dimensions: 2 })
+    // Create a new mock client for this story
+    const loadingMockClient = createMockApiClient()
+    loadingMockClient.visualizeEmbeddings = async (params: unknown) => {
+      await new Promise((r) => setTimeout(r, 2000)) // 2 second delay
+      const dims = (params as { dimensions: 2 | 3 }).dimensions
+      const total = 100
+      const points = Array.from({ length: total }, (_, i) => ({
+        uri: `doc-${i}`,
+        model_name: 'nomic-embed-text',
+        coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
+      }))
+      return {
+        method: 'pca',
+        dimensions: dims,
+        parameters: {},
+        points,
+        total_points: points.length,
+      }
     }
+    
+    // Temporarily replace the global apiClient
+    Object.assign(apiClient, loadingMockClient)
+    
     return <EmbeddingVisualization />
   },
 }
 
 export const EmptyState: Story = {
   render: () => {
-    apiClientMock.visualizeEmbeddings = async (params: unknown) => ({
+    // Create a new mock client for this story
+    const emptyMockClient = createMockApiClient()
+    emptyMockClient.visualizeEmbeddings = async (params: unknown) => ({
       method: 'pca',
       dimensions: (params as { dimensions: 2 | 3 }).dimensions,
       parameters: {},
       points: [],
       total_points: 0,
     })
+    
+    // Temporarily replace the global apiClient
+    Object.assign(apiClient, emptyMockClient)
+    
     return <EmbeddingVisualization />
   },
 }
 
 export const ErrorState: Story = {
   render: () => {
-    apiClientMock.visualizeEmbeddings = async () => {
+    // Create a new mock client for this story
+    const errorMockClient = createMockApiClient()
+    errorMockClient.visualizeEmbeddings = async () => {
       throw new Error('Visualization failed (mocked)')
     }
+    
+    // Temporarily replace the global apiClient
+    Object.assign(apiClient, errorMockClient)
+    
     return <EmbeddingVisualization />
   },
 }
 
 export const LargeDataset: Story = {
   render: () => {
-    apiClientMock.visualizeEmbeddings = async (params: unknown) => {
+    // Create a new mock client for this story
+    const largeMockClient = createMockApiClient()
+    largeMockClient.visualizeEmbeddings = async (params: unknown) => {
       const dims = (params as { dimensions: 2 | 3 }).dimensions
       const total = 1000
       const points = Array.from({ length: total }, (_, i) => ({
@@ -122,6 +151,10 @@ export const LargeDataset: Story = {
         total_points: points.length,
       }
     }
+    
+    // Temporarily replace the global apiClient
+    Object.assign(apiClient, largeMockClient)
+    
     return <EmbeddingVisualization />
   },
 }

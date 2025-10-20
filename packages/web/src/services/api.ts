@@ -292,4 +292,55 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient()
+// Mock apiClient for Storybook
+const createMockApiClient = () => ({
+  getDistinctEmbeddingModels: async () => ({ models: ['nomic-embed-text', 'text-embedding-3-small'] }),
+  visualizeEmbeddings: async (params: unknown) => {
+    const dims = (params as { dimensions: 2 | 3 }).dimensions
+    const total = 100
+    const points = Array.from({ length: total }, (_, i) => ({
+      uri: `doc-${i}`,
+      model_name: 'nomic-embed-text',
+      coordinates: dims === 3 ? [Math.random(), Math.random(), Math.random()] : [Math.random(), Math.random()],
+    }))
+    return {
+      method: 'pca',
+      dimensions: dims,
+      parameters: {},
+      points,
+      total_points: points.length,
+    }
+  },
+  getEmbedding: async (uri: string) => ({
+    id: 1,
+    uri,
+    text: `Sample content for ${uri}`,
+    model_name: 'nomic-embed-text',
+    embedding: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    original_content: undefined,
+    converted_format: undefined,
+  }),
+  createEmbedding: async ({ uri }: { uri: string; text: string }) => ({
+    id: Math.floor(Math.random() * 10000),
+    uri,
+    model_name: 'nomic-embed-text',
+    message: 'created',
+  }),
+  deleteEmbedding: async () => undefined,
+})
+
+// Use mock in Storybook environment or when STORYBOOK_MOCK is set
+const isStorybook = typeof window !== 'undefined' && 
+  (window.location?.pathname?.includes('storybook') || 
+   window.location?.hostname?.includes('localhost:6006') ||
+   window.location?.hostname?.includes('localhost:6007') ||
+   process.env.STORYBOOK_MOCK === 'true')
+
+export const apiClient = isStorybook ? createMockApiClient() : new ApiClient()
+
+// Debug log for Storybook
+if (isStorybook) {
+  console.log('[API] Using mock apiClient for Storybook environment')
+}
