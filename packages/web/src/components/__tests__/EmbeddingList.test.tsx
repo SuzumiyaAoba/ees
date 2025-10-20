@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { EmbeddingList } from '../EmbeddingList'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
@@ -479,7 +479,7 @@ describe('EmbeddingList', () => {
 
       // Find all delete buttons (Trash2 icons)
       const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find((btn) => {
+      const deleteButton = deleteButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-trash-2')
       })
@@ -513,7 +513,7 @@ describe('EmbeddingList', () => {
       renderWithQueryClient(<EmbeddingList />)
 
       const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find((btn) => {
+      const deleteButton = deleteButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-trash-2')
       })
@@ -541,7 +541,7 @@ describe('EmbeddingList', () => {
       renderWithQueryClient(<EmbeddingList />)
 
       const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find((btn) => {
+      const deleteButton = deleteButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-trash-2')
       })
@@ -570,7 +570,7 @@ describe('EmbeddingList', () => {
 
       // Find all view buttons (Eye icons)
       const viewButtons = screen.getAllByRole('button')
-      const viewButton = viewButtons.find((btn) => {
+      const viewButton = viewButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-eye')
       })
@@ -601,7 +601,7 @@ describe('EmbeddingList', () => {
       renderWithQueryClient(<EmbeddingList />)
 
       const viewButtons = screen.getAllByRole('button')
-      const viewButton = viewButtons.find((btn) => {
+      const viewButton = viewButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-eye')
       })

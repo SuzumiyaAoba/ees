@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { ProviderConfig } from '../ProviderConfig'
 import { renderWithQueryClient } from '@/__tests__/test-utils'

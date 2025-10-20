@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { ProviderManagement } from '../ProviderManagement'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
@@ -886,7 +886,7 @@ describe('ProviderManagement', () => {
       renderWithQueryClient(<ProviderManagement />)
 
       const eyeButtons = screen.getAllByRole('button')
-      const eyeButton = eyeButtons.find((btn) => {
+      const eyeButton = eyeButtons.find((btn: HTMLElement) => {
         const svg = btn.querySelector('svg')
         return svg && svg.classList.contains('lucide-eye')
       })
