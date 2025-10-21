@@ -371,8 +371,12 @@ const createMockApiClient = () => ({
       converted_format: undefined,
       similarity: Math.random(),
     })),
-    count: 5,
     query: data.query,
+    model_name: data.model_name || 'nomic-embed-text',
+    limit: data.limit || 10,
+    metric: data.metric || 'cosine',
+    threshold: data.threshold,
+    total_results: 5,
   }),
   
   // Provider operations
@@ -410,7 +414,11 @@ const createMockApiClient = () => ({
   
   // Migration operations
   migrateEmbeddings: async (_data: MigrationRequest): Promise<MigrationResponse> => ({
-    message: 'Migration completed',
+    totalProcessed: 10,
+    successful: 10,
+    failed: 0,
+    duration: 1000,
+    details: [],
   }),
   checkModelCompatibility: async (_data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
     compatible: true,
@@ -424,20 +432,19 @@ const createMockApiClient = () => ({
     providers: ['ollama', 'openai'],
   }),
   getTaskTypes: async (_modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
+    model_name: _modelName,
     task_types: [
-      { description: 'Search task' },
-      { description: 'Clustering task' },
-      { description: 'Classification task' },
+      { value: 'semantic_similarity', label: 'Semantic Similarity', description: 'Search task' },
+      { value: 'clustering', label: 'Clustering', description: 'Clustering task' },
+      { value: 'classification', label: 'Classification', description: 'Classification task' },
     ],
+    count: 3,
   }),
   
   // Upload directory operations
   createUploadDirectory: async (data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => ({
     id: Math.floor(Math.random() * 10000),
-    path: data.path,
-    model_name: data.model_name,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    message: 'Upload directory created successfully',
   }),
   getUploadDirectories: async (): Promise<UploadDirectoryListResponse> => ({
     directories: Array.from({ length: 3 }, (_, i) => ({
@@ -476,20 +483,22 @@ const createMockApiClient = () => ({
     message: 'Upload directory deleted successfully',
   }),
   syncUploadDirectory: async (_id: number): Promise<SyncUploadDirectoryResponse> => ({
+    directory_id: _id,
+    files_processed: 5,
+    files_created: 5,
+    files_updated: 0,
+    files_failed: 0,
+    files: ['file1.txt', 'file2.txt', 'file3.txt', 'file4.txt', 'file5.txt'],
     message: 'Directory synced successfully',
-    created_embeddings: 5,
-    failed_files: 0,
-    total_files: 5,
   }),
   
   // File system operations
   listDirectory: async (path: string): Promise<ListDirectoryResponse> => ({
-    items: Array.from({ length: 7 }, (_, i) => ({
+    path,
+    entries: Array.from({ length: 7 }, (_, i) => ({
       name: i < 5 ? `file${i}.txt` : `dir${i - 5}`,
       path: i < 5 ? `${path}/file${i}.txt` : `${path}/dir${i - 5}`,
-      size: i < 5 ? Math.floor(Math.random() * 1000) : 0,
-      modified: new Date().toISOString(),
-      is_directory: i >= 5,
+      isDirectory: i >= 5,
     })),
   }),
   
