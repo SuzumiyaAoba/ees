@@ -347,14 +347,14 @@ const createMockApiClient = () => ({
   getDistinctEmbeddingModels: async (): Promise<{ models: string[] }> => ({
     models: ['nomic-embed-text', 'text-embedding-3-small'],
   }),
-  deleteEmbedding: async (id: number): Promise<{ message: string }> => ({
+  deleteEmbedding: async (_id: number): Promise<{ message: string }> => ({
     message: 'Embedding deleted successfully',
   }),
   deleteAllEmbeddings: async (): Promise<{ message: string; deleted_count: number }> => ({
     message: 'All embeddings deleted successfully',
     deleted_count: 10,
   }),
-  updateEmbedding: async (id: number, data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> => ({
+  updateEmbedding: async (_id: number, _data: UpdateEmbeddingRequest): Promise<UpdateEmbeddingResponse> => ({
     success: true,
     message: 'updated',
   }),
@@ -371,7 +371,7 @@ const createMockApiClient = () => ({
       converted_format: undefined,
       similarity: Math.random(),
     })),
-    total: 5,
+    count: 5,
     query: data.query,
   }),
   
@@ -380,18 +380,18 @@ const createMockApiClient = () => ({
     { name: 'ollama', display_name: 'Ollama', status: 'active' },
     { name: 'openai', display_name: 'OpenAI', status: 'inactive' },
   ],
-  getProviderModels: async (provider?: string): Promise<Array<{ name: string; display_name: string; dimensions: number }>> => [
+  getProviderModels: async (_provider?: string): Promise<Array<{ name: string; display_name: string; dimensions: number }>> => [
     { name: 'nomic-embed-text', display_name: 'Nomic Embed Text', dimensions: 768 },
     { name: 'text-embedding-3-small', display_name: 'Text Embedding 3 Small', dimensions: 1536 },
   ],
-  getCurrentProvider: async (): Promise<{ name: string; display_name: string; status: string }> => ({
-    name: 'ollama',
-    display_name: 'Ollama',
-    status: 'active',
+  getCurrentProvider: async (): Promise<{ provider: string; configuration?: Record<string, unknown> }> => ({
+    provider: 'ollama',
+    configuration: { baseUrl: 'http://localhost:11434' },
   }),
-  getOllamaStatus: async (): Promise<{ status: string; models: string[] }> => ({
+  getOllamaStatus: async (): Promise<{ status: string; models: string[]; version?: string }> => ({
     status: 'running',
     models: ['nomic-embed-text'],
+    version: '0.1.0',
   }),
   
   // File operations
@@ -409,14 +409,11 @@ const createMockApiClient = () => ({
   }),
   
   // Migration operations
-  migrateEmbeddings: async (data: MigrationRequest): Promise<MigrationResponse> => ({
-    migrated_count: 10,
-    failed_count: 0,
+  migrateEmbeddings: async (_data: MigrationRequest): Promise<MigrationResponse> => ({
     message: 'Migration completed',
   }),
-  checkModelCompatibility: async (data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
+  checkModelCompatibility: async (_data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
     compatible: true,
-    message: 'Models are compatible',
   }),
   getModels: async (): Promise<ListModelsResponse> => ({
     models: [
@@ -426,18 +423,17 @@ const createMockApiClient = () => ({
     count: 2,
     providers: ['ollama', 'openai'],
   }),
-  getTaskTypes: async (modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
+  getTaskTypes: async (_modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
     task_types: [
-      { name: 'search', description: 'Search task' },
-      { name: 'clustering', description: 'Clustering task' },
-      { name: 'classification', description: 'Classification task' },
+      { description: 'Search task' },
+      { description: 'Clustering task' },
+      { description: 'Classification task' },
     ],
   }),
   
   // Upload directory operations
   createUploadDirectory: async (data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => ({
     id: Math.floor(Math.random() * 10000),
-    name: data.name,
     path: data.path,
     model_name: data.model_name,
     created_at: new Date().toISOString(),
@@ -469,19 +465,18 @@ const createMockApiClient = () => ({
   updateUploadDirectory: async (id: number, data: UpdateUploadDirectoryRequest): Promise<UploadDirectory> => ({
     id,
     name: data.name || `Directory ${id}`,
-    path: data.path || `/path/to/dir${id}`,
+    path: `/path/to/dir${id}`,
     model_name: data.model_name || 'nomic-embed-text',
     description: data.description || `Description for directory ${id}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     last_synced_at: new Date().toISOString(),
   }),
-  deleteUploadDirectory: async (id: number): Promise<{ message: string }> => ({
+  deleteUploadDirectory: async (_id: number): Promise<{ message: string }> => ({
     message: 'Upload directory deleted successfully',
   }),
-  syncUploadDirectory: async (id: number): Promise<SyncUploadDirectoryResponse> => ({
+  syncUploadDirectory: async (_id: number): Promise<SyncUploadDirectoryResponse> => ({
     message: 'Directory synced successfully',
-    processed_files: 5,
     created_embeddings: 5,
     failed_files: 0,
     total_files: 5,
@@ -489,19 +484,12 @@ const createMockApiClient = () => ({
   
   // File system operations
   listDirectory: async (path: string): Promise<ListDirectoryResponse> => ({
-    files: Array.from({ length: 5 }, (_, i) => ({
-      name: `file${i}.txt`,
-      path: `${path}/file${i}.txt`,
-      size: Math.floor(Math.random() * 1000),
+    items: Array.from({ length: 7 }, (_, i) => ({
+      name: i < 5 ? `file${i}.txt` : `dir${i - 5}`,
+      path: i < 5 ? `${path}/file${i}.txt` : `${path}/dir${i - 5}`,
+      size: i < 5 ? Math.floor(Math.random() * 1000) : 0,
       modified: new Date().toISOString(),
-      is_directory: false,
-    })),
-    directories: Array.from({ length: 2 }, (_, i) => ({
-      name: `dir${i}`,
-      path: `${path}/dir${i}`,
-      size: 0,
-      modified: new Date().toISOString(),
-      is_directory: true,
+      is_directory: i >= 5,
     })),
   }),
   
@@ -517,7 +505,7 @@ const createMockApiClient = () => ({
     return {
       method: data.method || 'pca',
       dimensions: data.dimensions,
-      parameters: data.parameters || {},
+      parameters: {},
       points,
       total_points: points.length,
       debug_info: {

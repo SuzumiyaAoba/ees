@@ -183,8 +183,8 @@ export function useOllamaStatus() {
       const result = await apiClient.getOllamaStatus()
       return {
         status: result.status === 'running' ? 'online' : 'offline',
-        version: result.version,
-        models: result.models,
+        version: (result as any).version,
+        models: (result as any).models,
       }
     },
     staleTime: 30 * 1000, // 30 seconds
@@ -199,8 +199,8 @@ export function useCurrentProvider() {
     queryFn: async () => {
       const result = await apiClient.getCurrentProvider()
       return {
-        provider: result.provider,
-        configuration: result.configuration,
+        provider: (result as any).provider,
+        configuration: (result as any).configuration,
       }
     },
   })
