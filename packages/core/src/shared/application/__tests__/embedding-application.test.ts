@@ -81,18 +81,26 @@ describe("EmbeddingApplicationService", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.createEmbedding({
-            uri: "test-doc",
-            text: "Test content",
-            modelName: "test-model",
-          })
+          return yield* appService.createEmbedding(
+            "test-doc",
+            "Test content",
+            "test-model",
+            undefined,
+            undefined,
+            undefined,
+            undefined
+          )
         }).pipe(Effect.provide(createTestLayer()))
       )
 
       expect(mockEmbeddingService.createEmbedding).toHaveBeenCalledWith(
         "test-doc",
         "Test content",
-        "test-model"
+        "test-model",
+        undefined,
+        undefined,
+        undefined,
+        undefined
       )
       expect(result).toEqual(mockResponse)
     })
@@ -111,16 +119,25 @@ describe("EmbeddingApplicationService", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.createEmbedding({
-            uri: "test-doc-2",
-            text: "Test content without model",
-          })
+          return yield* appService.createEmbedding(
+            "test-doc-2",
+            "Test content without model",
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined
+          )
         }).pipe(Effect.provide(createTestLayer()))
       )
 
       expect(mockEmbeddingService.createEmbedding).toHaveBeenCalledWith(
         "test-doc-2",
         "Test content without model",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
         undefined
       )
       expect(result).toEqual(mockResponse)
@@ -134,10 +151,15 @@ describe("EmbeddingApplicationService", () => {
         Effect.runPromise(
           Effect.gen(function* () {
             const appService = yield* EmbeddingApplicationService
-            return yield* appService.createEmbedding({
-              uri: "test-doc",
-              text: "Test content",
-            })
+            return yield* appService.createEmbedding(
+              "test-doc",
+              "Test content",
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined
+            )
           }).pipe(Effect.provide(createTestLayer()))
         )
       ).rejects.toThrow("Embedding creation failed")
@@ -145,6 +167,10 @@ describe("EmbeddingApplicationService", () => {
       expect(mockEmbeddingService.createEmbedding).toHaveBeenCalledWith(
         "test-doc",
         "Test content",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -475,11 +501,15 @@ describe("EmbeddingApplicationService", () => {
 
       const program = Effect.gen(function* () {
         const appService = yield* EmbeddingApplicationService
-        return yield* appService.createEmbedding({
-          uri: "integration-test",
-          text: "Integration test content",
-          modelName: "test-model",
-        })
+        return yield* appService.createEmbedding(
+          "integration-test",
+          "Integration test content",
+          "test-model",
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        )
       })
 
       const result = await Effect.runPromise(
@@ -490,7 +520,11 @@ describe("EmbeddingApplicationService", () => {
       expect(mockEmbeddingService.createEmbedding).toHaveBeenCalledWith(
         "integration-test",
         "Integration test content",
-        "test-model"
+        "test-model",
+        undefined,
+        undefined,
+        undefined,
+        undefined
       )
     })
 

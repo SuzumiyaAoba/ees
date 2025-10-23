@@ -428,7 +428,10 @@ describe("EmbeddingDataParser", () => {
   describe("EmbeddingDataParseError", () => {
     it("should create error with message and cause", () => {
       const cause = new Error("Original error")
-      const error = new EmbeddingDataParseError("Parse failed", cause)
+      const error = new EmbeddingDataParseError({
+        message: "Parse failed",
+        cause
+      })
 
       expect(error.name).toBe("EmbeddingDataParseError")
       expect(error.message).toBe("Parse failed")
@@ -436,7 +439,9 @@ describe("EmbeddingDataParser", () => {
     })
 
     it("should create error without cause", () => {
-      const error = new EmbeddingDataParseError("Parse failed")
+      const error = new EmbeddingDataParseError({
+        message: "Parse failed"
+      })
 
       expect(error.name).toBe("EmbeddingDataParseError")
       expect(error.message).toBe("Parse failed")
@@ -444,7 +449,9 @@ describe("EmbeddingDataParser", () => {
     })
 
     it("should be instanceof Error", () => {
-      const error = new EmbeddingDataParseError("Test error")
+      const error = new EmbeddingDataParseError({
+        message: "Test error"
+      })
 
       expect(error).toBeInstanceOf(Error)
       expect(error).toBeInstanceOf(EmbeddingDataParseError)

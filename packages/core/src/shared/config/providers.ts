@@ -122,7 +122,7 @@ export function getProviderConfigSummary(): Record<string, unknown> {
       ),
       defaultModel: getEnvWithDefault(
         ENV_KEYS.OLLAMA_DEFAULT_MODEL,
-        "nomic-embed-text"
+        "embeddinggemma"
       ),
     },
   }

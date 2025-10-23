@@ -16,7 +16,7 @@ import type {
  * Contains common settings shared across different provider implementations
  */
 export interface ProviderConfig {
-  readonly type: "ollama"
+  readonly type: string
   readonly apiKey?: string
   readonly baseUrl?: string
   readonly defaultModel?: string

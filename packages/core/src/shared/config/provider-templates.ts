@@ -13,7 +13,7 @@ import { ENV_KEYS } from "@/shared/config/env-keys"
 export const OLLAMA_CONFIG_TEMPLATE = {
   type: "ollama" as const,
   defaults: {
-    model: "nomic-embed-text",
+    model: "embeddinggemma",
     baseUrl: "http://localhost:11434",
   },
   optionalEnvKeys: {
