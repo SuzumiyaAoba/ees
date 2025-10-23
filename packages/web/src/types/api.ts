@@ -254,7 +254,10 @@ export interface VisualizationPoint {
   model_name: string
   coordinates: number[]
   text_preview?: string
+  cluster?: number
 }
+
+export type ClusteringMethod = 'kmeans' | 'dbscan' | 'hierarchical'
 
 export interface VisualizeEmbeddingRequest {
   model_name?: string
@@ -265,6 +268,16 @@ export interface VisualizeEmbeddingRequest {
   n_neighbors?: number
   min_dist?: number
   include_uris?: string[] // URIs added on top of limit (e.g., limit=100 + 1 URI = 101 total)
+  clustering?: {
+    enabled: boolean
+    method: ClusteringMethod
+    n_clusters?: number // for kmeans and hierarchical
+    eps?: number // for DBSCAN
+    min_samples?: number // for DBSCAN
+    auto_clusters?: boolean // Use BIC to automatically determine n_clusters
+    min_clusters?: number // Minimum clusters to test (for BIC)
+    max_clusters?: number // Maximum clusters to test (for BIC)
+  }
 }
 
 export interface VisualizeEmbeddingResponse {
@@ -276,6 +289,15 @@ export interface VisualizeEmbeddingResponse {
     perplexity?: number
     n_neighbors?: number
     min_dist?: number
+  }
+  clustering?: {
+    method: ClusteringMethod
+    n_clusters: number
+    parameters: {
+      n_clusters?: number
+      eps?: number
+      min_samples?: number
+    }
   }
   debug_info?: {
     include_uris_requested?: string[]

@@ -13,6 +13,7 @@ import type {
   VisualizeEmbeddingResponse,
   VisualizationPoint,
   Embedding,
+  ClusteringMethod,
 } from '@/types/api'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 
@@ -53,6 +54,16 @@ export function EmbeddingVisualization() {
   const [nNeighbors, setNNeighbors] = useState<number>(15)
   const [minDist, setMinDist] = useState<number>(0.1)
 
+  // Clustering state
+  const [clusteringEnabled, setClusteringEnabled] = useState<boolean>(false)
+  const [clusteringMethod, setClusteringMethod] = useState<ClusteringMethod>('kmeans')
+  const [nClusters, setNClusters] = useState<number>(5)
+  const [eps, setEps] = useState<number>(0.5)
+  const [minSamples, setMinSamples] = useState<number>(5)
+  const [autoClusters, setAutoClusters] = useState<boolean>(false)
+  const [minClusters, setMinClusters] = useState<number>(2)
+  const [maxClusters, setMaxClusters] = useState<number>(10)
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<VisualizeEmbeddingResponse | null>(null)
@@ -60,6 +71,7 @@ export function EmbeddingVisualization() {
 
   // Side panel state for displaying embedding details
   const [selectedEmbedding, setSelectedEmbedding] = useState<Embedding | null>(null)
+  const [selectedCluster, setSelectedCluster] = useState<number | undefined>(undefined)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const plotDivRef = useRef<HTMLElement | null>(null)
   
@@ -68,6 +80,7 @@ export function EmbeddingVisualization() {
     uri: string
     coordinates: number[]
     isInputPoint: boolean
+    cluster?: number
     originalDocument?: string
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -126,6 +139,7 @@ export function EmbeddingVisualization() {
           uri: inputPoints[0].uri,
           coordinates: inputPoints[0].coordinates,
           isInputPoint: true,
+          cluster: inputPoints[0].cluster,
           originalDocument: inputTextContent?.text,
         })
       } else if (curveNumber === 0 && data) {
@@ -178,6 +192,7 @@ export function EmbeddingVisualization() {
             uri: dataPoint.uri,
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
+            cluster: dataPoint.cluster,
           })
 
           // Capture dataPoint values in local variables for closure
@@ -253,6 +268,10 @@ export function EmbeddingVisualization() {
         original_content: undefined,
         converted_format: undefined,
       })
+      // Get cluster from input points
+      if (inputPoints.length > 0) {
+        setSelectedCluster(inputPoints[0].cluster)
+      }
       return
     }
 
@@ -272,6 +291,9 @@ export function EmbeddingVisualization() {
     if (!point) {
       return
     }
+
+    // Store cluster information
+    setSelectedCluster(point.cluster)
 
     setLoadingDetail(true)
     try {
@@ -313,6 +335,16 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+        clustering: clusteringEnabled ? {
+          enabled: true,
+          method: clusteringMethod,
+          n_clusters: clusteringMethod !== 'dbscan' && !autoClusters ? nClusters : undefined,
+          eps: clusteringMethod === 'dbscan' ? eps : undefined,
+          min_samples: clusteringMethod === 'dbscan' ? minSamples : undefined,
+          auto_clusters: (clusteringMethod === 'kmeans' || clusteringMethod === 'hierarchical') ? autoClusters : undefined,
+          min_clusters: autoClusters ? minClusters : undefined,
+          max_clusters: autoClusters ? maxClusters : undefined,
+        } : undefined,
       })
 
       setData(response)
@@ -532,30 +564,85 @@ export function EmbeddingVisualization() {
   }
 
   const render2DPlot = (points: VisualizationPoint[]) => {
+    const hasClusterData = points.some(p => p.cluster !== undefined)
+
+    // Define distinct colors for clusters
+    const clusterColors = [
+      '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+      '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5',
+      '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
+      '#e5c494', '#b3b3b3', '#8dd3c7', '#ffffb3', '#bebada'
+    ]
+
+    let markerConfig: Record<string, unknown>
+
+    if (hasClusterData) {
+      // Map cluster IDs to colors
+      const colors = points.map(p => {
+        const cluster = p.cluster ?? -1
+        if (cluster === -1) return '#808080' // Gray for noise
+        return clusterColors[cluster % clusterColors.length]
+      })
+
+      markerConfig = {
+        size: 8,
+        color: colors,
+        line: {
+          color: '#ffffff',
+          width: 1,
+        },
+      }
+    } else {
+      markerConfig = {
+        size: 8,
+        color: points.map((_, i) => i),
+        colorscale: 'Viridis' as const,
+        showscale: true,
+      }
+    }
+
     return {
       x: points.map(p => p.coordinates[0]),
       y: points.map(p => p.coordinates[1]),
       mode: 'markers' as const,
       type: 'scatter' as const,
-      marker: {
-        size: 8,
-        color: points.map((_, i) => i),
-        colorscale: 'Viridis' as const,
-        showscale: true,
-      },
+      marker: markerConfig,
       hovertemplate: '<extra></extra>',
       showlegend: false,
     }
   }
 
   const render3DPlot = (points: VisualizationPoint[]) => {
-    return {
-      x: points.map(p => p.coordinates[0]),
-      y: points.map(p => p.coordinates[1]),
-      z: points.map(p => p.coordinates[2]),
-      mode: 'markers' as const,
-      type: 'scatter3d' as const,
-      marker: {
+    const hasClusterData = points.some(p => p.cluster !== undefined)
+
+    // Define distinct colors for clusters
+    const clusterColors = [
+      '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+      '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5',
+      '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
+      '#e5c494', '#b3b3b3', '#8dd3c7', '#ffffb3', '#bebada'
+    ]
+
+    let markerConfig: Record<string, unknown>
+
+    if (hasClusterData) {
+      // Map cluster IDs to colors
+      const colors = points.map(p => {
+        const cluster = p.cluster ?? -1
+        if (cluster === -1) return '#808080' // Gray for noise
+        return clusterColors[cluster % clusterColors.length]
+      })
+
+      markerConfig = {
+        size: 3,
+        color: colors,
+        line: {
+          color: '#ffffff',
+          width: 0.5,
+        },
+      }
+    } else {
+      markerConfig = {
         size: 3,
         color: points.map((_, i) => i),
         colorscale: 'Viridis' as const,
@@ -563,7 +650,16 @@ export function EmbeddingVisualization() {
         line: {
           width: 0,
         },
-      },
+      }
+    }
+
+    return {
+      x: points.map(p => p.coordinates[0]),
+      y: points.map(p => p.coordinates[1]),
+      z: points.map(p => p.coordinates[2]),
+      mode: 'markers' as const,
+      type: 'scatter3d' as const,
+      marker: markerConfig,
       hovertemplate: '<extra></extra>',
       showlegend: false,
     }
@@ -677,9 +773,16 @@ export function EmbeddingVisualization() {
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold tracking-tight">Embedding Visualization</h2>
           {data && (
-            <Badge variant="secondary" className="text-xs">
-              {data.total_points} points · {data.method.toUpperCase()} · {data.dimensions}D
-            </Badge>
+            <>
+              <Badge variant="secondary" className="text-xs">
+                {data.total_points} points · {data.method.toUpperCase()} · {data.dimensions}D
+              </Badge>
+              {data.clustering && (
+                <Badge variant="default" className="text-xs">
+                  {data.clustering.n_clusters} clusters · {data.clustering.method.toUpperCase()}
+                </Badge>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -850,6 +953,157 @@ export function EmbeddingVisualization() {
                   </div>
                 </>
               )}
+
+              {/* Clustering Section */}
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground uppercase">
+                    Clustering
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setClusteringEnabled(!clusteringEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      clusteringEnabled ? 'bg-primary' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        clusteringEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {clusteringEnabled && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                        Algorithm
+                      </label>
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        value={clusteringMethod}
+                        onChange={(e) => setClusteringMethod(e.target.value as ClusteringMethod)}
+                      >
+                        <option value="kmeans">K-means</option>
+                        <option value="dbscan">DBSCAN</option>
+                        <option value="hierarchical">Hierarchical</option>
+                      </select>
+                    </div>
+
+                    {(clusteringMethod === 'kmeans' || clusteringMethod === 'hierarchical') && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground uppercase">
+                            Auto Determine (BIC)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setAutoClusters(!autoClusters)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              autoClusters ? 'bg-primary' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                autoClusters ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {autoClusters ? (
+                          <>
+                            <div>
+                              <label htmlFor="min-clusters" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                                Min Clusters to Test
+                              </label>
+                              <Input
+                                id="min-clusters"
+                                type="number"
+                                min="2"
+                                max="20"
+                                value={minClusters}
+                                onChange={(e) => setMinClusters(Number(e.target.value))}
+                                className="h-9"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">2-20</p>
+                            </div>
+                            <div>
+                              <label htmlFor="max-clusters" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                                Max Clusters to Test
+                              </label>
+                              <Input
+                                id="max-clusters"
+                                type="number"
+                                min="2"
+                                max="20"
+                                value={maxClusters}
+                                onChange={(e) => setMaxClusters(Number(e.target.value))}
+                                className="h-9"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">2-20</p>
+                            </div>
+                          </>
+                        ) : (
+                          <div>
+                            <label htmlFor="n-clusters" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                              Number of Clusters
+                            </label>
+                            <Input
+                              id="n-clusters"
+                              type="number"
+                              min="2"
+                              max="20"
+                              value={nClusters}
+                              onChange={(e) => setNClusters(Number(e.target.value))}
+                              className="h-9"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">2-20</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {clusteringMethod === 'dbscan' && (
+                      <>
+                        <div>
+                          <label htmlFor="eps" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                            Epsilon (ε)
+                          </label>
+                          <Input
+                            id="eps"
+                            type="number"
+                            min="0.1"
+                            max="10"
+                            step="0.1"
+                            value={eps}
+                            onChange={(e) => setEps(Number(e.target.value))}
+                            className="h-9"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">0.1-10.0</p>
+                        </div>
+                        <div>
+                          <label htmlFor="min-samples-cluster" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                            Min Samples
+                          </label>
+                          <Input
+                            id="min-samples-cluster"
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={minSamples}
+                            onChange={(e) => setMinSamples(Number(e.target.value))}
+                            className="h-9"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">1-50</p>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
 
               <div className="border-t pt-4">
                 {/* Visualize Button */}
@@ -1077,6 +1331,16 @@ export function EmbeddingVisualization() {
                         ).join(' | ')}
                       </p>
                     </div>
+                    {hoverInfo.cluster !== undefined && (
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Cluster</span>
+                        <div className="mt-1">
+                          <Badge variant={hoverInfo.cluster === -1 ? "secondary" : "default"} className="text-xs">
+                            {hoverInfo.cluster === -1 ? 'Noise' : `Cluster ${hoverInfo.cluster}`}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
                     {hoverInfo.isInputPoint && (
                       <div className="text-xs text-primary font-medium">
                         ✨ This is your input text
@@ -1126,6 +1390,17 @@ export function EmbeddingVisualization() {
                       <Badge variant="secondary" className="text-xs mt-1">{selectedEmbedding.model_name}</Badge>
                     </div>
 
+                    {selectedCluster !== undefined && (
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Cluster</span>
+                        <div className="mt-1">
+                          <Badge variant={selectedCluster === -1 ? "secondary" : "default"} className="text-xs">
+                            {selectedCluster === -1 ? 'Noise' : `Cluster ${selectedCluster}`}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <span className="text-xs font-medium text-muted-foreground uppercase">
                         {selectedEmbedding.original_content ? 'Original Content' : 'Text'}
@@ -1174,8 +1449,87 @@ export function EmbeddingVisualization() {
                       <span className="font-medium">{data.parameters.min_dist}</span>
                     </div>
                   )}
+                  {data.clustering && (
+                    <>
+                      <div className="border-t pt-2 mt-2">
+                        <span className="text-xs font-semibold">Clustering</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Algorithm:</span>
+                        <span className="font-medium">{data.clustering.method.toUpperCase()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clusters Found:</span>
+                        <span className="font-medium">{data.clustering.n_clusters}</span>
+                      </div>
+                      {data.clustering.parameters.n_clusters !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Target Clusters:</span>
+                          <span className="font-medium">{data.clustering.parameters.n_clusters}</span>
+                        </div>
+                      )}
+                      {data.clustering.parameters.eps !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Epsilon:</span>
+                          <span className="font-medium">{data.clustering.parameters.eps}</span>
+                        </div>
+                      )}
+                      {data.clustering.parameters.min_samples !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min Samples:</span>
+                          <span className="font-medium">{data.clustering.parameters.min_samples}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* Cluster Legend */}
+              {data.clustering && (
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <h4 className="text-sm font-semibold mb-3">Cluster Legend</h4>
+                  <div className="space-y-2">
+                    {Array.from({ length: data.clustering.n_clusters }, (_, i) => {
+                      const clusterColors = [
+                        '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+                        '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5',
+                        '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
+                        '#e5c494', '#b3b3b3', '#8dd3c7', '#ffffb3', '#bebada'
+                      ]
+                      const color = clusterColors[i % clusterColors.length]
+                      const count = data.points.filter(p => p.cluster === i).length
+
+                      return (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded-full border border-white"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="font-medium">Cluster {i}</span>
+                          </div>
+                          <span className="text-muted-foreground">{count} points</span>
+                        </div>
+                      )
+                    })}
+                    {data.points.some(p => p.cluster === -1) && (
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full border border-white"
+                            style={{ backgroundColor: '#808080' }}
+                          />
+                          <span className="font-medium">Noise</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {data.points.filter(p => p.cluster === -1).length} points
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             </div>
           ) : (

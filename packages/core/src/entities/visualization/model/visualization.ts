@@ -4,12 +4,15 @@ export type ReductionMethod = "pca" | "tsne" | "umap"
 
 export type VisualizationDimensions = 2 | 3
 
+export type ClusteringMethod = "kmeans" | "dbscan" | "hierarchical"
+
 export interface VisualizationPoint {
   id: number
   uri: string
   model_name: string
   coordinates: number[]
   text_preview?: string
+  cluster?: number
 }
 
 export interface VisualizeEmbeddingRequest {
@@ -21,6 +24,16 @@ export interface VisualizeEmbeddingRequest {
   n_neighbors?: number
   min_dist?: number
   include_uris?: string[] // URIs that must be included (added on top of limit)
+  clustering?: {
+    enabled: boolean
+    method: ClusteringMethod
+    n_clusters?: number // for kmeans and hierarchical
+    eps?: number // for DBSCAN
+    min_samples?: number // for DBSCAN
+    auto_clusters?: boolean // Use BIC to automatically determine n_clusters
+    min_clusters?: number // Minimum clusters to test (for BIC)
+    max_clusters?: number // Maximum clusters to test (for BIC)
+  }
 }
 
 export interface VisualizeEmbeddingResponse {
@@ -32,6 +45,15 @@ export interface VisualizeEmbeddingResponse {
     perplexity?: number
     n_neighbors?: number
     min_dist?: number
+  }
+  clustering?: {
+    method: ClusteringMethod
+    n_clusters: number
+    parameters: {
+      n_clusters?: number
+      eps?: number
+      min_samples?: number
+    }
   }
   debug_info?: {
     include_uris_requested?: string[]
