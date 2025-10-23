@@ -530,11 +530,11 @@ const createMockApiClient = () => ({
 })
 
 // Use mock in Storybook environment or when STORYBOOK_MOCK is set
-const isStorybook = typeof window !== 'undefined' && 
-  (window.location?.pathname?.includes('storybook') || 
+const isStorybook = typeof window !== 'undefined' &&
+  (window.location?.pathname?.includes('storybook') ||
    window.location?.hostname?.includes('localhost:6006') ||
    window.location?.hostname?.includes('localhost:6007') ||
-   process.env.STORYBOOK_MOCK === 'true')
+   import.meta.env.VITE_STORYBOOK_MOCK === 'true')
 
 export const apiClient = isStorybook ? createMockApiClient() : new ApiClient()
 
