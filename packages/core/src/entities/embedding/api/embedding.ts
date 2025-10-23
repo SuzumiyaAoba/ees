@@ -63,7 +63,8 @@ export interface EmbeddingService {
     modelName?: string,
     title?: string,
     originalContent?: string,
-    convertedFormat?: string
+    convertedFormat?: string,
+    metadata?: Record<string, unknown>
   ) => Effect.Effect<
     CreateEmbeddingResponse,
     | ProviderConnectionError

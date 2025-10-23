@@ -70,7 +70,7 @@ export function ProviderConfig() {
                     <span className="font-medium">Service Online</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Version: {status.version || 'Unknown'}
+                    Version: {(status as any).version || 'Unknown'}
                   </p>
                 </div>
               ) : (
@@ -127,9 +127,9 @@ export function ProviderConfig() {
                 <RefreshCw className="h-6 w-6 animate-spin" />
                 <span className="ml-2">Loading models...</span>
               </div>
-            ) : models && models.length > 0 ? (
+            ) : models && (models as any).length > 0 ? (
               <div className="space-y-2">
-                {models.map((model) => (
+                {(models as any).map((model: any) => (
                   <div
                     key={model.name}
                     className="border rounded-lg p-4 flex items-center justify-between"
@@ -177,7 +177,7 @@ export function ProviderConfig() {
               <label className="text-sm font-medium">Default Model</label>
               <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                 <option value="">Select default model</option>
-                {models?.map((model) => (
+                {(models as any)?.map((model: any) => (
                   <option key={model.name} value={model.name}>
                     {model.name}
                   </option>

@@ -239,7 +239,7 @@ export function ProviderManagement() {
             </div>
           ) : providers ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.map((provider) => (
+              {(providers as any).map((provider: any) => (
                 <Card
                   key={provider.name}
                   className={`cursor-pointer transition-all hover:shadow-md ${
@@ -293,10 +293,10 @@ export function ProviderManagement() {
             <Alert>
               <Zap className="h-4 w-4" />
               <AlertDescription>
-                <span className="font-medium">Active Provider: {currentProvider.provider}</span>
-                {currentProvider.configuration && (
+                <span className="font-medium">Active Provider: {(currentProvider as any).provider}</span>
+                {(currentProvider as any).configuration && (
                   <div className="space-y-2 text-sm mt-2">
-                    {Object.entries(currentProvider.configuration).map(([key, value]) => (
+                    {Object.entries((currentProvider as any).configuration).map(([key, value]) => (
                       <div key={key}>
                         <span className="capitalize text-muted-foreground">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
                         <div className="font-mono text-foreground mt-0.5 break-all">{String(value)}</div>
@@ -327,7 +327,7 @@ export function ProviderManagement() {
               <RefreshCw className="h-4 w-4 animate-spin" />
               <span>Checking Ollama status...</span>
             </div>
-          ) : ollamaStatus?.status === 'online' ? (
+          ) : (ollamaStatus as any)?.status === 'online' ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -347,7 +347,7 @@ export function ProviderManagement() {
                       <BarChart3 className="h-4 w-4 text-blue-600" />
                       <span className="text-sm font-medium">Version</span>
                     </div>
-                    <p className="text-lg font-bold mt-1">{ollamaStatus.version || 'Unknown'}</p>
+                    <p className="text-lg font-bold mt-1">{(ollamaStatus as any).version || 'Unknown'}</p>
                   </CardContent>
                 </Card>
 
@@ -357,7 +357,7 @@ export function ProviderManagement() {
                       <Database className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium">Available Models</span>
                     </div>
-                    <p className="text-lg font-bold mt-1">{ollamaStatus.models?.length || 0}</p>
+                    <p className="text-lg font-bold mt-1">{(ollamaStatus as any).models?.length || 0}</p>
                   </CardContent>
                 </Card>
 
@@ -372,11 +372,11 @@ export function ProviderManagement() {
                 </Card>
               </div>
 
-              {ollamaStatus.models && ollamaStatus.models.length > 0 && (
+              {(ollamaStatus as any).models && (ollamaStatus as any).models.length > 0 && (
                 <div>
                   <h4 className="font-medium mb-3">Available Models</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {ollamaStatus.models.map((modelName) => (
+                    {(ollamaStatus as any).models.map((modelName: any) => (
                       <div
                         key={modelName}
                         className="flex items-center gap-2 p-2 bg-secondary/50 rounded border"
@@ -438,7 +438,7 @@ export function ProviderManagement() {
           </div>
 
           {/* Provider Filter */}
-          {providers && providers.length > 0 && (
+          {providers && (providers as any).length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Filter by provider:</label>
               <select
@@ -446,7 +446,7 @@ export function ProviderManagement() {
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
               >
-                {providers.map((p) => (
+                {(providers as any).map((p: any) => (
                   <option key={p.name} value={p.name}>{p.name}</option>
                 ))}
               </select>
@@ -459,9 +459,9 @@ export function ProviderManagement() {
               <RefreshCw className="h-6 w-6 animate-spin" />
               <span className="ml-2">Loading models...</span>
             </div>
-          ) : models && models.length > 0 ? (
+          ) : models && (models as any).length > 0 ? (
             <div className="space-y-3">
-              {models.map((model) => (
+              {(models as any).map((model: any) => (
                 <ModelCard
                   key={`${model.provider}-${model.name}`}
                   model={model}

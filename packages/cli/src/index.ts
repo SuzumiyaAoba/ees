@@ -141,11 +141,11 @@ const makeCLICommands = Effect.gen(function* () {
         return yield* Effect.fail(new Error("No text provided"))
       }
 
-      const result = yield* appService.createEmbedding({
-        uri: options.uri,
+      const result = yield* appService.createEmbedding(
+        options.uri,
         text,
-        modelName: options.model,
-      })
+        options.model
+      )
 
       log(`Created embedding: ${result.id} for ${result.uri}`)
     })) as unknown as (options: {
@@ -292,11 +292,11 @@ const makeCLICommands = Effect.gen(function* () {
           })
 
           // Create embedding from file content
-          const result = yield* appService.createEmbedding({
-            uri: filePath,
-            text: content,
-            modelName: options.model,
-          })
+          const result = yield* appService.createEmbedding(
+            filePath,
+            content,
+            options.model
+          )
 
           log(`✓ Created embedding for ${filePath} (ID: ${result.id})`)
           successful++
@@ -351,11 +351,11 @@ const makeCLICommands = Effect.gen(function* () {
           })
 
           // Create embedding from file content
-          const result = yield* appService.createEmbedding({
-            uri: file.relativePath,
-            text: content,
-            modelName: options.model,
-          })
+          const result = yield* appService.createEmbedding(
+            file.relativePath,
+            content,
+            options.model
+          )
 
           log(`✓ Created embedding for ${file.relativePath} (ID: ${result.id})`)
           successful++

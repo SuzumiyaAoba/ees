@@ -22,6 +22,14 @@ const config: StorybookConfig = {
       ...(config.resolve.alias || {}),
       '@': path.resolve(__dirname, '../src'),
     }
+    
+    // Mock apiClient for Storybook
+    config.define = {
+      ...config.define,
+      'process.env.NODE_ENV': JSON.stringify('development'),
+      'process.env.STORYBOOK_MOCK': JSON.stringify('true'),
+    }
+    
     return config
   },
 }
