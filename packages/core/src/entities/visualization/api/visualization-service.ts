@@ -9,6 +9,7 @@ import { DatabaseQueryError } from "@/shared/errors/database"
 import { reducePCA, PCAReducerError } from "@/entities/visualization/lib/pca-reducer"
 import { reduceTSNE, TSNEReducerError } from "@/entities/visualization/lib/tsne-reducer"
 import { reduceUMAP, UMAPReducerError } from "@/entities/visualization/lib/umap-reducer"
+import { applyClustering } from "@/entities/visualization/lib/clustering"
 import type {
   VisualizeEmbeddingRequest,
   VisualizeEmbeddingResponse,
@@ -171,7 +172,7 @@ const makeVisualizationService = Effect.gen(function* () {
         request
       )
 
-      const points: VisualizationPoint[] = allEmbeddings.map(
+      let points: VisualizationPoint[] = allEmbeddings.map(
         (emb, idx) => ({
           id: emb.id,
           uri: emb.uri,
@@ -180,6 +181,74 @@ const makeVisualizationService = Effect.gen(function* () {
           text_preview: emb.text.substring(0, 100),
         })
       )
+
+      // Apply clustering if enabled
+      let clusteringInfo: VisualizeEmbeddingResponse["clustering"]
+      if (request.clustering?.enabled) {
+        const params: {
+          n_clusters?: number
+          eps?: number
+          min_samples?: number
+          auto_clusters?: boolean
+          min_clusters?: number
+          max_clusters?: number
+        } = {}
+
+        if (request.clustering.n_clusters !== undefined) {
+          params.n_clusters = request.clustering.n_clusters
+        }
+        if (request.clustering.eps !== undefined) {
+          params.eps = request.clustering.eps
+        }
+        if (request.clustering.min_samples !== undefined) {
+          params.min_samples = request.clustering.min_samples
+        }
+        if (request.clustering.auto_clusters !== undefined) {
+          params.auto_clusters = request.clustering.auto_clusters
+        }
+        if (request.clustering.min_clusters !== undefined) {
+          params.min_clusters = request.clustering.min_clusters
+        }
+        if (request.clustering.max_clusters !== undefined) {
+          params.max_clusters = request.clustering.max_clusters
+        }
+
+        const clusteringResult = applyClustering(
+          reduced.coordinates,
+          request.clustering.method,
+          params
+        )
+
+        // Add cluster labels to points
+        points = points.map((point, idx) => {
+          const label = clusteringResult.labels[idx]
+          if (label !== undefined) {
+            return { ...point, cluster: label }
+          }
+          return point
+        })
+
+        const clusteringParams: {
+          n_clusters?: number
+          eps?: number
+          min_samples?: number
+        } = {}
+        if (request.clustering.n_clusters !== undefined) {
+          clusteringParams.n_clusters = request.clustering.n_clusters
+        }
+        if (request.clustering.eps !== undefined) {
+          clusteringParams.eps = request.clustering.eps
+        }
+        if (request.clustering.min_samples !== undefined) {
+          clusteringParams.min_samples = request.clustering.min_samples
+        }
+
+        clusteringInfo = {
+          method: request.clustering.method,
+          n_clusters: clusteringResult.n_clusters,
+          parameters: clusteringParams,
+        }
+      }
 
       const parameters = {
         ...(request.method === "tsne" && { perplexity: request.perplexity }),
@@ -195,6 +264,7 @@ const makeVisualizationService = Effect.gen(function* () {
         dimensions: request.dimensions,
         total_points: points.length,
         parameters,
+        ...(clusteringInfo && { clustering: clusteringInfo }),
         ...(debugInfo.include_uris_requested && { debug_info: debugInfo }),
       }
     })

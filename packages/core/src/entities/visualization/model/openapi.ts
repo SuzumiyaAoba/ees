@@ -15,6 +15,13 @@ export const VisualizationDimensionsSchema = z
     example: 2,
   })
 
+export const ClusteringMethodSchema = z
+  .enum(["kmeans", "dbscan", "hierarchical"])
+  .openapi({
+    description: "Clustering algorithm",
+    example: "kmeans",
+  })
+
 // Request schema
 export const VisualizeEmbeddingRequestSchema = z
   .object({
@@ -44,6 +51,45 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "URIs that must be included in the visualization. These are added on top of the limit (e.g., limit=100 + 1 include_uri = 101 total points)",
       example: ["temp://input-123456"],
     }),
+    clustering: z
+      .object({
+        enabled: z.boolean().openapi({
+          description: "Enable automatic clustering",
+          example: true,
+        }),
+        method: ClusteringMethodSchema.openapi({
+          description: "Clustering algorithm to use",
+          example: "kmeans",
+        }),
+        n_clusters: z.number().int().min(2).max(20).optional().openapi({
+          description: "Number of clusters for K-means and Hierarchical (2-20, ignored for DBSCAN and when auto_clusters is true)",
+          example: 5,
+        }),
+        eps: z.number().min(0.1).max(10).optional().openapi({
+          description: "Epsilon parameter for DBSCAN (ignored for K-means and Hierarchical)",
+          example: 0.5,
+        }),
+        min_samples: z.number().int().min(1).max(50).optional().openapi({
+          description: "Minimum samples parameter for DBSCAN (ignored for K-means and Hierarchical)",
+          example: 5,
+        }),
+        auto_clusters: z.boolean().optional().openapi({
+          description: "Use BIC to automatically determine optimal number of clusters (K-means and Hierarchical only)",
+          example: true,
+        }),
+        min_clusters: z.number().int().min(2).max(20).optional().openapi({
+          description: "Minimum number of clusters to test when using BIC (default: 2)",
+          example: 2,
+        }),
+        max_clusters: z.number().int().min(2).max(20).optional().openapi({
+          description: "Maximum number of clusters to test when using BIC (default: 10)",
+          example: 10,
+        }),
+      })
+      .optional()
+      .openapi({
+        description: "Clustering configuration",
+      }),
   })
   .openapi("VisualizeEmbeddingRequest")
 
@@ -69,6 +115,10 @@ export const VisualizationPointSchema = z
     text_preview: z.string().optional().openapi({
       description: "Text preview (first 100 characters)",
       example: "This is a sample text for embedding generation...",
+    }),
+    cluster: z.number().optional().openapi({
+      description: "Cluster ID assigned by clustering algorithm (-1 for noise points in DBSCAN)",
+      example: 0,
     }),
   })
   .openapi("VisualizationPoint")
@@ -101,6 +151,35 @@ export const VisualizeEmbeddingResponseSchema = z
       })
       .openapi({
         description: "Parameters used for dimensionality reduction",
+      }),
+    clustering: z
+      .object({
+        method: ClusteringMethodSchema.openapi({
+          description: "Clustering algorithm used",
+        }),
+        n_clusters: z.number().openapi({
+          description: "Number of clusters found",
+          example: 5,
+        }),
+        parameters: z
+          .object({
+            n_clusters: z.number().optional().openapi({
+              description: "Number of clusters requested (K-means/Hierarchical)",
+            }),
+            eps: z.number().optional().openapi({
+              description: "Epsilon used (DBSCAN)",
+            }),
+            min_samples: z.number().optional().openapi({
+              description: "Minimum samples used (DBSCAN)",
+            }),
+          })
+          .openapi({
+            description: "Parameters used for clustering",
+          }),
+      })
+      .optional()
+      .openapi({
+        description: "Clustering information",
       }),
     debug_info: z
       .object({
