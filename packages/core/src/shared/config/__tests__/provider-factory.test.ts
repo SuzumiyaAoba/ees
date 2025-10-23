@@ -1,12 +1,31 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
 import { createProviderConfig, createSimpleProviderConfig } from "@/shared/config/provider-factory"
 import type { ProviderConfigTemplate } from "@/shared/config/provider-factory"
-import type {
-  OpenAIConfig,
-  GoogleConfig,
-  AzureConfig,
-  OllamaConfig,
-} from "@/shared/providers/types"
+import type { OllamaConfig } from "@/shared/providers/types"
+
+// Test types for non-Ollama providers
+type OpenAIConfig = {
+  type: "openai"
+  apiKey: string
+  baseUrl?: string
+  organization?: string
+  defaultModel: string
+}
+
+type GoogleConfig = {
+  type: "google"
+  apiKey: string
+  baseUrl?: string
+  defaultModel: string
+}
+
+type AzureConfig = {
+  type: "azure"
+  apiKey: string
+  baseUrl: string
+  apiVersion?: string
+  defaultModel: string
+}
 
 // Mock the env module
 vi.mock("../../lib/env", () => ({
@@ -79,6 +98,7 @@ describe("Provider Configuration Factory", () => {
 
     it("should return null when required API key is missing", () => {
       mockGetEnv.mockReturnValue(undefined)
+      mockGetEnvWithDefault.mockReturnValue("default-model")
 
       const template: ProviderConfigTemplate<OpenAIConfig> = {
         type: "openai",

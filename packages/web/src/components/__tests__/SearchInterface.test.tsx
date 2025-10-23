@@ -9,6 +9,7 @@ import { SearchInterface } from '../SearchInterface'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
 import { mockSearchResponse } from '@/__tests__/mocks/handlers'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
+import * as apiClientModule from '@/services/api'
 
 // Mock the useEmbeddings hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
@@ -16,10 +17,17 @@ vi.mock('@/hooks/useEmbeddings', () => ({
   useModels: vi.fn(),
 }))
 
+// Mock the apiClient
+vi.mock('@/services/api', () => ({
+  apiClient: {
+    getTaskTypes: vi.fn(),
+  },
+}))
+
 describe('SearchInterface', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default mock for useModels
     vi.mocked(useEmbeddingsModule.useModels).mockReturnValue({
       data: {
@@ -31,6 +39,17 @@ describe('SearchInterface', () => {
       isLoading: false,
       error: null,
     } as any)
+
+    // Mock getTaskTypes to avoid API calls in tests
+    vi.mocked(apiClientModule.apiClient.getTaskTypes).mockResolvedValue({
+      model_name: 'nomic-embed-text',
+      task_types: [
+        { value: 'semantic_similarity', label: 'Semantic Similarity', description: 'Search task' },
+        { value: 'clustering', label: 'Clustering', description: 'Clustering task' },
+        { value: 'classification', label: 'Classification', description: 'Classification task' },
+      ],
+      count: 3,
+    })
   })
 
   describe('Rendering', () => {

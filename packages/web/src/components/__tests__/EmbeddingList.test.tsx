@@ -8,12 +8,25 @@ import userEvent from '@testing-library/user-event'
 import { EmbeddingList } from '../EmbeddingList'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
+import * as usePaginationModule from '@/hooks/usePagination'
+import * as useFiltersModule from '@/hooks/useFilters'
 import type { EmbeddingsListResponse } from '@/types/api'
 
 // Mock the useEmbeddings and useDeleteEmbedding hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
   useEmbeddings: vi.fn(),
   useDeleteEmbedding: vi.fn(),
+  useDeleteAllEmbeddings: vi.fn(),
+}))
+
+// Mock the usePagination hook
+vi.mock('@/hooks/usePagination', () => ({
+  usePagination: vi.fn(),
+}))
+
+// Mock the useFilters hook
+vi.mock('@/hooks/useFilters', () => ({
+  useFilters: vi.fn(),
 }))
 
 // Mock window.confirm
@@ -76,6 +89,31 @@ describe('EmbeddingList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(global.confirm).mockReturnValue(true)
+
+    // Setup default pagination mock
+    vi.mocked(usePaginationModule.usePagination).mockReturnValue({
+      page: 1,
+      limit: 20,
+      setPage: vi.fn(),
+      setLimit: vi.fn(),
+      nextPage: vi.fn(),
+      previousPage: vi.fn(),
+      goToPage: vi.fn(),
+      resetPagination: vi.fn(),
+      getPaginationInfo: (total: number) => ({
+        totalPages: Math.ceil(total / 20),
+        startIndex: 1,
+        endIndex: Math.min(20, total),
+        hasNextPage: total > 20,
+        hasPreviousPage: false,
+      }),
+    } as any)
+
+    // Setup default filters mock
+    vi.mocked(useFiltersModule.useFilters).mockReturnValue({
+      filters: { uri: '', modelName: '' },
+      updateFilter: vi.fn(),
+    } as any)
   })
 
   describe('Rendering', () => {
@@ -87,6 +125,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -108,6 +151,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText('Filter by URI')).toBeInTheDocument()
@@ -123,6 +171,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -148,6 +201,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText('Loading embeddings...')).toBeInTheDocument()
@@ -164,6 +222,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -187,6 +250,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText('No embeddings found')).toBeInTheDocument()
@@ -202,6 +270,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -231,6 +304,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       const uriFilterInput = screen.getByPlaceholderText('Enter URI to filter...')
@@ -252,6 +330,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       const modelFilterInput = screen.getByPlaceholderText('Enter model name...')
@@ -269,6 +352,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -298,6 +386,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText('Previous')).toBeInTheDocument()
@@ -313,6 +406,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -335,6 +433,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       const previousButton = screen.getByText('Previous')
@@ -350,6 +453,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -378,6 +486,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText(/ID: 1/)).toBeInTheDocument()
@@ -392,6 +505,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -416,6 +534,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText(/This is the first document/)).toBeInTheDocument()
@@ -434,6 +557,11 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
       expect(screen.getByText('Embedding dimensions: 768')).toBeInTheDocument()
@@ -448,6 +576,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
@@ -594,6 +727,11 @@ describe('EmbeddingList', () => {
       } as any)
 
       vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
       } as any)
