@@ -32,13 +32,13 @@ export interface EmbeddingApplicationService {
   /**
    * Create a new embedding from text content
    */
-  readonly createEmbedding: (params: {
-    uri: string
-    text: string
-    modelName?: string
-    originalContent?: string
+  readonly createEmbedding: (
+    uri: string,
+    text: string,
+    modelName?: string,
+    originalContent?: string,
     convertedFormat?: string
-  }) => Effect.Effect<
+  ) => Effect.Effect<
     CreateEmbeddingResponse,
     | ProviderConnectionError
     | ProviderModelError
@@ -131,14 +131,14 @@ export const EmbeddingApplicationService =
 const make = Effect.gen(function* () {
   const embeddingService = yield* EmbeddingService
 
-  const createEmbedding = (params: {
-    uri: string
-    text: string
-    modelName?: string
-    originalContent?: string
+  const createEmbedding = (
+    uri: string,
+    text: string,
+    modelName?: string,
+    originalContent?: string,
     convertedFormat?: string
-  }) =>
-    embeddingService.createEmbedding(params.uri, params.text, params.modelName, params.originalContent, params.convertedFormat)
+  ) =>
+    embeddingService.createEmbedding(uri, text, modelName, originalContent, convertedFormat)
 
   const createBatchEmbeddings = (request: BatchCreateEmbeddingRequest) =>
     embeddingService.createBatchEmbedding(request)

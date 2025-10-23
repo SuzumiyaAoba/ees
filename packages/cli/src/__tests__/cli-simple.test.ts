@@ -98,11 +98,11 @@ describe("CLI Application Service Layer", () => {
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const appService = yield* EmbeddingApplicationService
-          return yield* appService.createEmbedding({
-            uri: "test-doc",
-            text: "Test content",
-            modelName: "test-model",
-          })
+          return yield* appService.createEmbedding(
+            "test-doc",
+            "Test content",
+            "test-model"
+          )
         }).pipe(Effect.provide(mockLayer)) as Effect.Effect<CreateEmbeddingResponse, never, never>
       )
 

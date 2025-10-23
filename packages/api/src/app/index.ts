@@ -143,11 +143,11 @@ app.openapi(createEmbeddingRoute, async (c) => {
 
   return executeEffectHandler(c, "createEmbedding",
     withEmbeddingService(appService =>
-      appService.createEmbedding({
+      appService.createEmbedding(
         uri,
         text,
-        modelName: model_name,
-      })
+        model_name
+      )
     )
   ) as never
 })
@@ -634,13 +634,13 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
             )
 
             // Create embedding for file content
-            yield* appService.createEmbedding({
-              uri: collectedFile.relativePath,
-              text: fileResult.content,
-              modelName: directory.modelName,
-              originalContent: fileResult.originalContent,
-              convertedFormat: fileResult.convertedFormat,
-            })
+            yield* appService.createEmbedding(
+              collectedFile.relativePath,
+              fileResult.content,
+              directory.modelName,
+              fileResult.originalContent,
+              fileResult.convertedFormat
+            )
 
             filesCreated++
           } catch (error) {
@@ -778,13 +778,13 @@ app.get("/upload-directories/:id/sync/stream", async (c) => {
                 )
 
                 // Create embedding for file content
-                yield* appService.createEmbedding({
-                  uri: collectedFile.relativePath,
-                  text: fileResult.content,
-                  modelName: directory.modelName,
-                  originalContent: fileResult.originalContent,
-                  convertedFormat: fileResult.convertedFormat,
-                })
+                yield* appService.createEmbedding(
+                  collectedFile.relativePath,
+                  fileResult.content,
+                  directory.modelName,
+                  fileResult.originalContent,
+                  fileResult.convertedFormat
+                )
 
                 filesCreated++
 
