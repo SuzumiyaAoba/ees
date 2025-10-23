@@ -442,10 +442,13 @@ const createMockApiClient = () => ({
   }),
   
   // Upload directory operations
-  createUploadDirectory: async (data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => ({
-    id: Math.floor(Math.random() * 10000),
-    message: 'Upload directory created successfully',
-  }),
+  createUploadDirectory: async (_data: CreateUploadDirectoryRequest): Promise<CreateUploadDirectoryResponse> => {
+    void _data
+    return {
+      id: Math.floor(Math.random() * 10000),
+      message: 'Upload directory created successfully',
+    }
+  },
   getUploadDirectories: async (): Promise<UploadDirectoryListResponse> => ({
     directories: Array.from({ length: 3 }, (_, i) => ({
       id: i + 1,
