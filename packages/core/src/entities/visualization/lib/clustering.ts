@@ -11,16 +11,32 @@ export interface ClusteringResult {
 }
 
 /**
+ * Seeded random number generator using mulberry32 algorithm
+ * Provides deterministic pseudo-random numbers for reproducible results
+ */
+const createSeededRandom = (seed: number) => {
+  let state = seed
+  return () => {
+    state = (state + 0x6D2B79F5) | 0
+    let t = Math.imul(state ^ (state >>> 15), 1 | state)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
  * K-means clustering implementation
  * @param points - Array of data points (each point is an array of coordinates)
  * @param k - Number of clusters
  * @param maxIterations - Maximum number of iterations
+ * @param seed - Random seed for reproducibility (default: 42)
  * @returns Cluster labels for each point
  */
 export function kmeans(
   points: number[][],
   k: number,
   maxIterations = 100,
+  seed = 42,
 ): ClusteringResult {
   const n = points.length
   const firstPoint = points[0]
@@ -29,14 +45,15 @@ export function kmeans(
   }
   const dim = firstPoint.length
 
-  // Initialize centroids randomly
+  // Initialize centroids randomly with seeded random
+  const seededRandom = createSeededRandom(seed)
   const centroids: number[][] = []
   const usedIndices = new Set<number>()
 
   for (let i = 0; i < k; i++) {
     let randomIndex: number
     do {
-      randomIndex = Math.floor(Math.random() * n)
+      randomIndex = Math.floor(seededRandom() * n)
     } while (usedIndices.has(randomIndex))
     usedIndices.add(randomIndex)
     const point = points[randomIndex]
@@ -338,13 +355,14 @@ export function findOptimalClusters(
   points: number[][],
   minK = 2,
   maxK = 10,
+  seed = 42,
 ): { optimalK: number; bicScores: Array<{ k: number; bic: number }> } {
   const bicScores: Array<{ k: number; bic: number }> = []
   let optimalK = minK
   let lowestBIC = Number.POSITIVE_INFINITY
 
   for (let k = minK; k <= maxK; k++) {
-    const result = kmeans(points, k, 50) // Use fewer iterations for speed
+    const result = kmeans(points, k, 50, seed) // Use fewer iterations for speed
     const bic = calculateBIC(points, result.labels, k)
 
     bicScores.push({ k, bic })
@@ -371,8 +389,11 @@ export function applyClustering(
     auto_clusters?: boolean
     min_clusters?: number
     max_clusters?: number
+    seed?: number
   },
 ): ClusteringResult {
+  const seed = params.seed ?? 42
+
   switch (method) {
     case "kmeans": {
       let k = params.n_clusters ?? 5
@@ -381,11 +402,11 @@ export function applyClustering(
       if (params.auto_clusters) {
         const minK = params.min_clusters ?? 2
         const maxK = params.max_clusters ?? 10
-        const optimal = findOptimalClusters(coordinates, minK, maxK)
+        const optimal = findOptimalClusters(coordinates, minK, maxK, seed)
         k = optimal.optimalK
       }
 
-      return kmeans(coordinates, k)
+      return kmeans(coordinates, k, 100, seed)
     }
     case "dbscan": {
       const eps = params.eps ?? 0.5
@@ -399,7 +420,7 @@ export function applyClustering(
       if (params.auto_clusters) {
         const minK = params.min_clusters ?? 2
         const maxK = params.max_clusters ?? 10
-        const optimal = findOptimalClusters(coordinates, minK, maxK)
+        const optimal = findOptimalClusters(coordinates, minK, maxK, seed)
         k = optimal.optimalK
       }
 

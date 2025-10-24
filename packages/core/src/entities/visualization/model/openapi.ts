@@ -51,6 +51,10 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "Minimum distance for UMAP (0-1, ignored for PCA and t-SNE)",
       example: 0.1,
     }),
+    seed: z.number().int().min(0).optional().default(42).openapi({
+      description: "Random seed for reproducible results (default: 42). Same seed with same data produces identical visualizations.",
+      example: 42,
+    }),
     include_uris: z.array(z.string()).optional().openapi({
       description: "URIs that must be included in the visualization. These are added on top of the limit (e.g., limit=100 + 1 include_uri = 101 total points)",
       example: ["temp://input-123456"],

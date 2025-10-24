@@ -198,6 +198,7 @@ const makeVisualizationService = Effect.gen(function* () {
           auto_clusters?: boolean
           min_clusters?: number
           max_clusters?: number
+          seed?: number
         } = {}
 
         if (request.clustering.n_clusters !== undefined) {
@@ -218,6 +219,8 @@ const makeVisualizationService = Effect.gen(function* () {
         if (request.clustering.max_clusters !== undefined) {
           params.max_clusters = request.clustering.max_clusters
         }
+        // Use same seed as dimensionality reduction for consistency
+        params.seed = request.seed ?? 42
 
         const clusteringResult = applyClustering(
           reduced.coordinates,
@@ -308,17 +311,21 @@ const performReduction = (
   { coordinates: number[][] },
   PCAReducerError | TSNEReducerError | UMAPReducerError
 > => {
+  // Use seed if provided, otherwise default to 42 for deterministic results
+  const seed = request.seed ?? 42
+
   switch (method) {
     case "pca":
       return reducePCA(vectors, dimensions)
     case "tsne":
-      return reduceTSNE(vectors, dimensions, request.perplexity)
+      return reduceTSNE(vectors, dimensions, request.perplexity, seed)
     case "umap":
       return reduceUMAP(
         vectors,
         dimensions,
         request.n_neighbors,
-        request.min_dist
+        request.min_dist,
+        seed
       )
   }
 }

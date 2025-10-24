@@ -25,6 +25,7 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
+  seed?: number // Random seed for reproducible results (default: 42)
   include_uris?: string[] // URIs that must be included (added on top of limit)
   clustering?: {
     enabled: boolean
