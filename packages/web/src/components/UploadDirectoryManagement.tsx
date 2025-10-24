@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { DirectoryPickerModal } from '@/components/DirectoryPickerModal'
 import {
@@ -457,6 +458,15 @@ export function UploadDirectoryManagement() {
                         <p className="text-sm text-muted-foreground mt-1">
                           {directory.description}
                         </p>
+                      )}
+                      {directory.task_types && directory.task_types.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {directory.task_types.map((taskType) => (
+                            <Badge key={taskType} variant="outline" className="text-xs">
+                              {taskType}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
