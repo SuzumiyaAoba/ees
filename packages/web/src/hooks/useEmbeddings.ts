@@ -29,6 +29,7 @@ export const QUERY_KEYS = {
     query.query,
     query.model_name,
     query.query_task_type,
+    query.document_task_type,
     query.query_title,
     query.limit,
     query.threshold,
