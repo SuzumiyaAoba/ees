@@ -59,6 +59,11 @@ export function EmbeddingVisualization() {
   const [nNeighbors, setNNeighbors] = useState<number>(15)
   const [minDist, setMinDist] = useState<number>(0.1)
 
+  // Seed mode state
+  const [seedMode, setSeedMode] = useState<'fixed' | 'random' | 'custom'>('fixed')
+  const [customSeed, setCustomSeed] = useState<number>(42)
+  const [lastUsedSeed, setLastUsedSeed] = useState<number | undefined>(undefined)
+
   // Clustering state
   const [clusteringEnabled, setClusteringEnabled] = useState<boolean>(false)
   const [clusteringMethod, setClusteringMethod] = useState<ClusteringMethod>('kmeans')
@@ -375,6 +380,8 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+        seed_mode: seedMode,
+        seed: seedMode === 'custom' ? customSeed : undefined,
         clustering: clusteringEnabled ? {
           enabled: true,
           method: clusteringMethod,
@@ -388,6 +395,10 @@ export function EmbeddingVisualization() {
       })
 
       setData(response)
+      // Store the actual seed used
+      if (response.parameters.seed !== undefined) {
+        setLastUsedSeed(response.parameters.seed)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to visualize embeddings')
     } finally {
@@ -454,6 +465,8 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+        seed_mode: seedMode,
+        seed: seedMode === 'custom' ? customSeed : undefined,
         include_uris: [tempUri], // Adds input text on top of limit
       })
 
@@ -1018,6 +1031,51 @@ export function EmbeddingVisualization() {
                     <p className="text-xs text-muted-foreground mt-1">0.0-1.0</p>
                   </div>
                 </>
+              )}
+
+              {/* Seed Mode Section - Only for non-deterministic methods */}
+              {(method === 'tsne' || method === 'umap') && (
+                <div className="border-t pt-4 space-y-3">
+                  <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                    Random Seed
+                  </label>
+                  <div className="space-y-2">
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={seedMode}
+                      onChange={(e) => setSeedMode(e.target.value as 'fixed' | 'random' | 'custom')}
+                    >
+                      <option value="fixed">Fixed (42) - Reproducible</option>
+                      <option value="random">Random - Different each time</option>
+                      <option value="custom">Custom - Specify seed</option>
+                    </select>
+
+                    {seedMode === 'custom' && (
+                      <div>
+                        <label htmlFor="custom-seed" className="block text-xs font-medium mb-1 text-muted-foreground">
+                          Seed Value
+                        </label>
+                        <Input
+                          id="custom-seed"
+                          type="number"
+                          min="0"
+                          value={customSeed}
+                          onChange={(e) => setCustomSeed(Number(e.target.value))}
+                          className="h-9"
+                        />
+                      </div>
+                    )}
+
+                    {lastUsedSeed !== undefined && (
+                      <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                        Last used seed: <span className="font-mono font-semibold">{lastUsedSeed}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Controls visualization randomness. Fixed seed ensures identical results for the same data.
+                  </p>
+                </div>
               )}
 
               {/* Clustering Section */}
