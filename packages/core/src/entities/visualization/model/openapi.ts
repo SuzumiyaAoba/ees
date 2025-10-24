@@ -22,12 +22,23 @@ export const ClusteringMethodSchema = z
     example: "kmeans",
   })
 
+export const SeedModeSchema = z
+  .enum(["fixed", "random", "custom"])
+  .openapi({
+    description: "Seed mode: 'fixed' (default seed 42), 'random' (generate random seed), or 'custom' (use provided seed value)",
+    example: "fixed",
+  })
+
 // Request schema
 export const VisualizeEmbeddingRequestSchema = z
   .object({
     model_name: z.string().optional().openapi({
       description: "Filter embeddings by model name (optional, visualizes all if not specified)",
       example: "nomic-embed-text",
+    }),
+    task_type: z.string().optional().openapi({
+      description: "Filter embeddings by task type (optional, e.g., 'clustering' for clustering visualization)",
+      example: "clustering",
     }),
     method: ReductionMethodSchema.default("pca"),
     dimensions: VisualizationDimensionsSchema.default(2),
@@ -46,6 +57,14 @@ export const VisualizeEmbeddingRequestSchema = z
     min_dist: z.number().min(0).max(1).optional().default(0.1).openapi({
       description: "Minimum distance for UMAP (0-1, ignored for PCA and t-SNE)",
       example: 0.1,
+    }),
+    seed_mode: SeedModeSchema.optional().default("fixed").openapi({
+      description: "Seed mode: 'fixed' uses default seed (42), 'random' generates random seed, 'custom' uses the seed parameter",
+      example: "fixed",
+    }),
+    seed: z.number().int().min(0).optional().openapi({
+      description: "Custom seed value (only used when seed_mode is 'custom'). For reproducible results.",
+      example: 42,
     }),
     include_uris: z.array(z.string()).optional().openapi({
       description: "URIs that must be included in the visualization. These are added on top of the limit (e.g., limit=100 + 1 include_uri = 101 total points)",
@@ -108,6 +127,10 @@ export const VisualizationPointSchema = z
       description: "Model used for embedding",
       example: "nomic-embed-text",
     }),
+    task_type: z.string().optional().openapi({
+      description: "Task type of the embedding",
+      example: "clustering",
+    }),
     coordinates: z.array(z.number()).openapi({
       description: "Reduced dimensional coordinates (2D or 3D)",
       example: [0.15, -0.32],
@@ -147,6 +170,10 @@ export const VisualizeEmbeddingResponseSchema = z
         min_dist: z.number().optional().openapi({
           description: "Minimum distance used for UMAP",
           example: 0.1,
+        }),
+        seed: z.number().optional().openapi({
+          description: "Actual seed value used for this visualization (for reproducibility)",
+          example: 42,
         }),
       })
       .openapi({

@@ -29,6 +29,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
       query_task_type: undefined as TaskType | undefined,
+      document_task_type: undefined as TaskType | undefined,
       query_title: undefined as string | undefined,
     }
   })
@@ -164,7 +165,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           )}
 
           {/* Search Options */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-6' : 'lg:grid-cols-4'}`}>
             <div>
               <label className="text-sm font-medium">Model</label>
               <select
@@ -182,21 +183,45 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               </select>
             </div>
             {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
-              <div>
-                <label className="text-sm font-medium">Task Type</label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={searchParams.query_task_type}
-                  onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
-                  title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
-                >
-                  {taskTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div>
+                  <label className="text-sm font-medium">Query Task Type</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={searchParams.query_task_type}
+                    onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
+                    title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
+                  >
+                    {taskTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    How to format your query
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Document Task Type</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={searchParams.document_task_type || ''}
+                    onChange={(e) => updateFilter('document_task_type', e.target.value ? e.target.value as TaskType : undefined)}
+                    title="Filter which document embeddings to search"
+                  >
+                    <option value="">All Types</option>
+                    {taskTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Which documents to search
+                  </p>
+                </div>
+              </>
             )}
             <div>
               <label className="text-sm font-medium">Limit</label>

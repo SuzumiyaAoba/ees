@@ -5,6 +5,7 @@ export interface Embedding {
   uri: string
   text: string
   model_name: string
+  task_type?: string
   embedding: number[]
   original_content?: string
   converted_format?: string
@@ -16,6 +17,7 @@ export interface CreateEmbeddingRequest {
   uri: string
   text: string
   model_name?: string
+  task_types?: TaskType[]
 }
 
 export interface CreateEmbeddingResponse {
@@ -77,6 +79,7 @@ export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
   query_task_type?: TaskType
+  document_task_type?: TaskType
   query_title?: string
   limit?: number
   threshold?: number
@@ -88,6 +91,7 @@ export interface SearchResult {
   uri: string
   text: string
   model_name: string
+  task_type?: string
   similarity: number
   original_content?: string
   converted_format?: string
@@ -192,6 +196,7 @@ export interface UploadDirectory {
   name: string
   path: string
   model_name: string
+  task_types: string[] | null
   description: string | null
   last_synced_at: string | null
   created_at: string | null
@@ -202,6 +207,7 @@ export interface CreateUploadDirectoryRequest {
   name: string
   path: string
   model_name?: string
+  task_types?: TaskType[]
   description?: string
 }
 
@@ -248,10 +254,13 @@ export type ReductionMethod = 'pca' | 'tsne' | 'umap'
 
 export type VisualizationDimensions = 2 | 3
 
+export type SeedMode = 'fixed' | 'random' | 'custom'
+
 export interface VisualizationPoint {
   id: number
   uri: string
   model_name: string
+  task_type?: string
   coordinates: number[]
   text_preview?: string
   cluster?: number
@@ -261,12 +270,15 @@ export type ClusteringMethod = 'kmeans' | 'dbscan' | 'hierarchical'
 
 export interface VisualizeEmbeddingRequest {
   model_name?: string
+  task_type?: TaskType
   method: ReductionMethod
   dimensions: VisualizationDimensions
   limit?: number
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
+  seed_mode?: SeedMode // Seed mode: 'fixed' (default 42), 'random', or 'custom'
+  seed?: number // Custom seed value (only used when seed_mode is 'custom')
   include_uris?: string[] // URIs added on top of limit (e.g., limit=100 + 1 URI = 101 total)
   clustering?: {
     enabled: boolean
@@ -289,6 +301,7 @@ export interface VisualizeEmbeddingResponse {
     perplexity?: number
     n_neighbors?: number
     min_dist?: number
+    seed?: number // Actual seed used for this visualization
   }
   clustering?: {
     method: ClusteringMethod

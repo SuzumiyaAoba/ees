@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi"
+import { TaskTypeSchema } from "@/entities/embedding/model/openapi"
 
 // Request schemas
 export const CreateUploadDirectoryRequestSchema = z
@@ -14,6 +15,10 @@ export const CreateUploadDirectoryRequestSchema = z
     model_name: z.string().optional().default("nomic-embed-text").openapi({
       description: "Default embedding model for this directory",
       example: "nomic-embed-text",
+    }),
+    task_types: z.array(TaskTypeSchema).optional().openapi({
+      description: "Task types to generate for each file in the directory",
+      example: ["retrieval_document", "clustering"],
     }),
     description: z.string().optional().openapi({
       description: "Optional description of the directory",
@@ -31,6 +36,10 @@ export const UpdateUploadDirectoryRequestSchema = z
     model_name: z.string().optional().openapi({
       description: "Default embedding model for this directory",
       example: "nomic-embed-text",
+    }),
+    task_types: z.array(TaskTypeSchema).optional().openapi({
+      description: "Task types to generate for each file in the directory",
+      example: ["retrieval_document", "clustering"],
     }),
     description: z.string().optional().openapi({
       description: "Optional description of the directory",
@@ -68,6 +77,10 @@ export const UploadDirectorySchema = z
     model_name: z.string().openapi({
       description: "Default embedding model",
       example: "nomic-embed-text",
+    }),
+    task_types: z.array(z.string()).nullable().openapi({
+      description: "Task types to generate for each file",
+      example: ["retrieval_document", "clustering"],
     }),
     description: z.string().nullable().openapi({
       description: "Optional description",

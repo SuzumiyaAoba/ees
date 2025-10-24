@@ -74,11 +74,16 @@ const makeVisualizationService = Effect.gen(function* () {
     Effect.gen(function* () {
       const options: {
         model_name?: string
+        task_type?: string
         limit?: number
       } = {}
 
       if (request.model_name !== undefined) {
         options.model_name = request.model_name
+      }
+
+      if (request.task_type !== undefined) {
+        options.task_type = request.task_type
       }
 
       if (request.limit !== undefined) {
@@ -177,6 +182,7 @@ const makeVisualizationService = Effect.gen(function* () {
           id: emb.id,
           uri: emb.uri,
           model_name: emb.model_name,
+          ...(emb.task_type ? { task_type: emb.task_type } : {}),
           coordinates: reduced.coordinates[idx] ?? [],
           text_preview: emb.text.substring(0, 100),
         })
@@ -192,6 +198,7 @@ const makeVisualizationService = Effect.gen(function* () {
           auto_clusters?: boolean
           min_clusters?: number
           max_clusters?: number
+          seed?: number
         } = {}
 
         if (request.clustering.n_clusters !== undefined) {
@@ -212,6 +219,8 @@ const makeVisualizationService = Effect.gen(function* () {
         if (request.clustering.max_clusters !== undefined) {
           params.max_clusters = request.clustering.max_clusters
         }
+        // Use same seed as dimensionality reduction for consistency
+        params.seed = reduced.seed
 
         const clusteringResult = applyClustering(
           reduced.coordinates,
@@ -256,6 +265,7 @@ const makeVisualizationService = Effect.gen(function* () {
           n_neighbors: request.n_neighbors,
           min_dist: request.min_dist,
         }),
+        seed: reduced.seed, // Include the actual seed used
       }
 
       return {
@@ -291,6 +301,22 @@ const getMinSamplesRequired = (
 }
 
 /**
+ * Determine the seed value based on seed mode
+ */
+const determineSeed = (request: VisualizeEmbeddingRequest): number => {
+  const seedMode = request.seed_mode ?? "fixed"
+
+  switch (seedMode) {
+    case "fixed":
+      return 42
+    case "random":
+      return Math.floor(Math.random() * 2147483647) // Generate random seed (max int32)
+    case "custom":
+      return request.seed ?? 42 // Use custom seed or fallback to default
+  }
+}
+
+/**
  * Perform dimensionality reduction based on selected method
  */
 const performReduction = (
@@ -299,20 +325,30 @@ const performReduction = (
   dimensions: 2 | 3,
   request: VisualizeEmbeddingRequest
 ): Effect.Effect<
-  { coordinates: number[][] },
+  { coordinates: number[][]; seed: number },
   PCAReducerError | TSNEReducerError | UMAPReducerError
 > => {
+  // Determine seed based on seed_mode
+  const seed = determineSeed(request)
+
   switch (method) {
     case "pca":
-      return reducePCA(vectors, dimensions)
+      return reducePCA(vectors, dimensions).pipe(
+        Effect.map(result => ({ ...result, seed }))
+      )
     case "tsne":
-      return reduceTSNE(vectors, dimensions, request.perplexity)
+      return reduceTSNE(vectors, dimensions, request.perplexity, seed).pipe(
+        Effect.map(result => ({ ...result, seed }))
+      )
     case "umap":
       return reduceUMAP(
         vectors,
         dimensions,
         request.n_neighbors,
-        request.min_dist
+        request.min_dist,
+        seed
+      ).pipe(
+        Effect.map(result => ({ ...result, seed }))
       )
   }
 }

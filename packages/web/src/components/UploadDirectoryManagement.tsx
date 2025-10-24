@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -11,7 +11,8 @@ import {
   useSyncUploadDirectory,
 } from '@/hooks/useUploadDirectories'
 import { useProviderModels } from '@/hooks/useEmbeddings'
-import type { UploadDirectory } from '@/types/api'
+import { apiClient } from '@/services/api'
+import type { UploadDirectory, TaskType, TaskTypeMetadata } from '@/types/api'
 
 export function UploadDirectoryManagement() {
   const { data: directories, isLoading, error } = useUploadDirectories()
@@ -27,6 +28,9 @@ export function UploadDirectoryManagement() {
     model_name: '',
     description: '',
   })
+  const [selectedTaskTypes, setSelectedTaskTypes] = useState<TaskType[]>([])
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
   const [syncingDirectories, setSyncingDirectories] = useState<Set<number>>(new Set())
   const [showDirectoryPicker, setShowDirectoryPicker] = useState(false)
   const [syncProgress, setSyncProgress] = useState<Record<number, {
@@ -47,6 +51,40 @@ export function UploadDirectoryManagement() {
     message: string
   } | null>(null)
 
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      if (!formData.model_name) {
+        setTaskTypeOptions([])
+        setSelectedTaskTypes([])
+        return
+      }
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(formData.model_name)
+        setTaskTypeOptions(response.task_types)
+
+        // Clear selected task types if they're not supported by new model
+        if (response.task_types.length === 0) {
+          setSelectedTaskTypes([])
+        } else {
+          setSelectedTaskTypes(prev =>
+            prev.filter(t => response.task_types.some(opt => opt.value === t))
+          )
+        }
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        setTaskTypeOptions([])
+        setSelectedTaskTypes([])
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [formData.model_name])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -55,16 +93,26 @@ export function UploadDirectoryManagement() {
         name: formData.name,
         path: formData.path,
         model_name: formData.model_name || undefined,
+        task_types: selectedTaskTypes.length > 0 ? selectedTaskTypes : undefined,
         description: formData.description || undefined,
       })
 
       // Reset form and hide
       setFormData({ name: '', path: '', model_name: '', description: '' })
+      setSelectedTaskTypes([])
       setShowCreateForm(false)
     } catch (error) {
       // Error is handled by mutation
       console.error('Failed to create directory:', error)
     }
+  }
+
+  const handleTaskTypeToggle = (taskType: TaskType) => {
+    setSelectedTaskTypes(prev =>
+      prev.includes(taskType)
+        ? prev.filter(t => t !== taskType)
+        : [...prev, taskType]
+    )
   }
 
   const handleDelete = async (id: number) => {
@@ -306,6 +354,39 @@ export function UploadDirectoryManagement() {
                   ))}
                 </select>
               </div>
+
+              {/* Task Types Selection */}
+              {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium block mb-2">
+                    Task Types (Optional - for models that support it)
+                  </label>
+                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                    {taskTypeOptions.map((taskType) => (
+                      <label
+                        key={taskType.value}
+                        className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTaskTypes.includes(taskType.value as TaskType)}
+                          onChange={() => handleTaskTypeToggle(taskType.value as TaskType)}
+                          className="mt-1 h-4 w-4 rounded border-gray-300"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{taskType.label}</div>
+                          <div className="text-xs text-muted-foreground">{taskType.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {selectedTaskTypes.length > 0
+                      ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s) per file`
+                      : 'Select one or more task types to create specialized embeddings for each file'}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium">Description (Optional)</label>

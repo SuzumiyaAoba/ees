@@ -19,11 +19,10 @@ import type { Embedding } from "@/entities/embedding/model/embedding"
  */
 const EMBEDDING_QUERIES = {
   INSERT_OR_UPDATE: `
-    INSERT INTO embeddings (uri, text, model_name, embedding, original_content, converted_format)
-    VALUES (?, ?, ?, vector(?), ?, ?)
-    ON CONFLICT(uri) DO UPDATE SET
+    INSERT INTO embeddings (uri, text, model_name, task_type, embedding, original_content, converted_format)
+    VALUES (?, ?, ?, ?, vector(?), ?, ?)
+    ON CONFLICT(uri, model_name, task_type) DO UPDATE SET
       text = excluded.text,
-      model_name = excluded.model_name,
       embedding = excluded.embedding,
       original_content = excluded.original_content,
       converted_format = excluded.converted_format,
@@ -36,11 +35,12 @@ const EMBEDDING_QUERIES = {
       uri,
       text,
       model_name,
+      task_type,
       (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
       created_at,
       updated_at
     FROM embeddings
-    WHERE model_name = ? AND (1.0 - vector_distance_cos(embedding, vector(?))) >= ?
+    WHERE model_name = ? AND (? IS NULL OR task_type = ?) AND (1.0 - vector_distance_cos(embedding, vector(?))) >= ?
     ORDER BY similarity DESC
     LIMIT ?
   `,
@@ -50,11 +50,12 @@ const EMBEDDING_QUERIES = {
       uri,
       text,
       model_name,
+      task_type,
       (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
       created_at,
       updated_at
     FROM embeddings
-    WHERE model_name = ?
+    WHERE model_name = ? AND (? IS NULL OR task_type = ?)
     ORDER BY similarity DESC
     LIMIT ?
   `,
@@ -64,11 +65,12 @@ const EMBEDDING_QUERIES = {
       uri,
       text,
       model_name,
+      task_type,
       vector_distance_l2(embedding, vector(?)) as distance,
       created_at,
       updated_at
     FROM embeddings
-    WHERE model_name = ?
+    WHERE model_name = ? AND (? IS NULL OR task_type = ?)
     ORDER BY distance ASC
     LIMIT ?
   `,
@@ -78,11 +80,12 @@ const EMBEDDING_QUERIES = {
       uri,
       text,
       model_name,
+      task_type,
       embedding,
       created_at,
       updated_at
     FROM embeddings
-    WHERE model_name = ?
+    WHERE model_name = ? AND (? IS NULL OR task_type = ?)
     LIMIT 10000
   `,
 } as const
@@ -100,6 +103,7 @@ export interface SaveEmbeddingResult {
 export interface ListEmbeddingsOptions {
   uri?: string
   model_name?: string
+  task_type?: string
   page?: number
   limit?: number
 }
@@ -124,6 +128,7 @@ export interface ListEmbeddingsResult {
 export interface SearchSimilarOptions {
   queryEmbedding: number[]
   modelName: string
+  taskType?: string
   limit: number
   threshold?: number | undefined
   metric: "cosine" | "euclidean" | "dot_product"
@@ -137,6 +142,7 @@ type VectorSearchRowRaw = {
   uri: string | null
   text: string | null
   model_name: string | null
+  task_type?: string | null
   similarity?: number | string | null
   distance?: number | string | null
   embedding?: string | Uint8Array | null
@@ -152,6 +158,7 @@ export interface SimilarEmbedding {
   uri: string
   text: string
   model_name: string
+  task_type?: string
   similarity: number
   created_at: string | null
   updated_at: string | null
@@ -168,6 +175,7 @@ export interface EmbeddingRepository {
    * @param text - Text content
    * @param modelName - Model name used to generate embedding
    * @param embedding - Embedding vector
+   * @param taskType - Optional task type for the embedding
    * @param originalContent - Optional original content before conversion
    * @param convertedFormat - Optional format after conversion (e.g., "markdown")
    * @returns Effect containing the saved embedding's ID
@@ -177,19 +185,22 @@ export interface EmbeddingRepository {
     text: string,
     modelName: string,
     embedding: number[],
+    taskType?: string,
     originalContent?: string,
     convertedFormat?: string
   ) => Effect.Effect<SaveEmbeddingResult, DatabaseQueryError>
 
   /**
-   * Find an embedding by URI and model name
+   * Find an embedding by URI, model name, and optional task type
    * @param uri - Unique identifier
    * @param modelName - Model name
+   * @param taskType - Optional task type
    * @returns Effect containing the embedding or null if not found
    */
   readonly findByUri: (
     uri: string,
-    modelName: string
+    modelName: string,
+    taskType?: string
   ) => Effect.Effect<Embedding | null, DatabaseQueryError>
 
   /**
@@ -258,6 +269,7 @@ const make = Effect.gen(function* () {
     text: string,
     modelName: string,
     embedding: number[],
+    taskType?: string,
     originalContent?: string,
     convertedFormat?: string
   ): Effect.Effect<SaveEmbeddingResult, DatabaseQueryError> =>
@@ -270,7 +282,7 @@ const make = Effect.gen(function* () {
         try: async () => {
           const insertResult = await client.execute({
             sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
-            args: [uri, text, modelName, embeddingVector, originalContent ?? null, convertedFormat ?? null],
+            args: [uri, text, modelName, taskType ?? null, embeddingVector, originalContent ?? null, convertedFormat ?? null],
           })
           return insertResult.rows
         },
@@ -288,17 +300,20 @@ const make = Effect.gen(function* () {
 
   const findByUri = (
     uri: string,
-    modelName: string
+    modelName: string,
+    taskType?: string
   ): Effect.Effect<Embedding | null, DatabaseQueryError> =>
     Effect.gen(function* () {
+      const whereConditions = taskType
+        ? and(eq(embeddings.uri, uri), eq(embeddings.modelName, modelName), eq(embeddings.taskType, taskType))
+        : and(eq(embeddings.uri, uri), eq(embeddings.modelName, modelName))
+
       const result = yield* Effect.tryPromise({
         try: () =>
           db
             .select()
             .from(embeddings)
-            .where(
-              and(eq(embeddings.uri, uri), eq(embeddings.modelName, modelName))
-            )
+            .where(whereConditions)
             .limit(1),
         catch: (error) =>
           new DatabaseQueryError({
@@ -331,6 +346,7 @@ const make = Effect.gen(function* () {
         uri: row.uri,
         text: row.text,
         model_name: row.modelName,
+        task_type: row.taskType,
         embedding,
         original_content: row.originalContent,
         converted_format: row.convertedFormat,
@@ -355,6 +371,9 @@ const make = Effect.gen(function* () {
       }
       if (options?.model_name) {
         whereConditions.push(eq(embeddings.modelName, options.model_name))
+      }
+      if (options?.task_type) {
+        whereConditions.push(eq(embeddings.taskType, options.task_type))
       }
 
       // Get total count for pagination
@@ -417,6 +436,7 @@ const make = Effect.gen(function* () {
               uri: row.uri,
               text: row.text,
               model_name: row.modelName,
+              task_type: row.taskType,
               embedding,
               original_content: row.originalContent,
               converted_format: row.convertedFormat,
@@ -514,7 +534,7 @@ const make = Effect.gen(function* () {
     options: SearchSimilarOptions
   ): Effect.Effect<SimilarEmbedding[], DatabaseQueryError> =>
     Effect.gen(function* () {
-      const { queryEmbedding, modelName, limit, threshold, metric } = options
+      const { queryEmbedding, modelName, taskType, limit, threshold, metric } = options
 
       // Convert embedding vector to JSON string for libSQL vector functions
       // libSQL expects vectors in JSON array format for vector operations
@@ -551,28 +571,29 @@ const make = Effect.gen(function* () {
         try: async () => {
           // Build query parameters array based on metric and threshold
           // Parameter order must match placeholders (?) in the SQL query
-          let args: (string | number)[]
+          let args: (string | number | null)[]
 
           if (metric === "cosine") {
             args = threshold
-              // With threshold: [queryVector, modelName, queryVector, threshold, limit]
+              // With threshold: [queryVector, modelName, taskType, taskType, queryVector, threshold, limit]
               // First queryVector: for similarity calculation in SELECT
               // modelName: filter by model
+              // taskType: filter by task type (twice for IS NULL OR task_type = ?)
               // Second queryVector: for similarity comparison in WHERE clause
               // threshold: minimum similarity value
               // limit: maximum number of results
-              ? [queryVector, modelName, queryVector, threshold, limit]
-              // Without threshold: [queryVector, modelName, limit]
+              ? [queryVector, modelName, taskType ?? null, taskType ?? null, queryVector, threshold, limit]
+              // Without threshold: [queryVector, modelName, taskType, taskType, limit]
               // Simpler query without threshold filtering
-              : [queryVector, modelName, limit]
+              : [queryVector, modelName, taskType ?? null, taskType ?? null, limit]
           } else if (metric === "euclidean") {
-            // Euclidean: [queryVector, modelName, limit]
+            // Euclidean: [queryVector, modelName, taskType, taskType, limit]
             // Threshold filtering is done in application layer after similarity conversion
-            args = [queryVector, modelName, limit]
+            args = [queryVector, modelName, taskType ?? null, taskType ?? null, limit]
           } else {
-            // Dot product: [modelName] only
+            // Dot product: [modelName, taskType, taskType]
             // Retrieves all embeddings for in-memory calculation
-            args = [modelName]
+            args = [modelName, taskType ?? null, taskType ?? null]
           }
 
           // Execute the vector search query using libSQL client
@@ -612,11 +633,13 @@ const make = Effect.gen(function* () {
                 0
               )
 
+              const taskType = row["task_type"] ? String(row["task_type"]) : null
               return {
                 id: Number(row["id"] ?? 0),
                 uri: String(row["uri"] ?? ""),
                 text: String(row["text"] ?? ""),
                 model_name: String(row["model_name"] ?? ""),
+                ...(taskType !== null ? { task_type: taskType } : {}),
                 // Dot product as similarity: higher values = more similar
                 // Note: Only valid for normalized vectors
                 similarity: dotProduct,
@@ -629,8 +652,8 @@ const make = Effect.gen(function* () {
           )
         )
 
-        results = parsedResults
-          .filter((result): result is SimilarEmbedding => result !== null)
+        const validResults = parsedResults.filter((result): result is SimilarEmbedding => result !== null)
+        results = validResults
           .filter((result) => !threshold || result.similarity >= threshold)
           // Sort by similarity descending (higher dot product = more similar)
           .sort((a, b) => b.similarity - a.similarity)
@@ -639,23 +662,27 @@ const make = Effect.gen(function* () {
       } else {
         // Cosine and Euclidean: use pre-calculated values from SQL
         results = searchResults
-          .map((row) => ({
-            id: Number(row["id"] ?? 0),
-            uri: String(row["uri"] ?? ""),
-            text: String(row["text"] ?? ""),
-            model_name: String(row["model_name"] ?? ""),
-            // Similarity score calculation varies by metric:
-            // - Cosine: pre-calculated in SQL (0-1 range, higher = more similar)
-            // - Euclidean: convert distance to similarity (lower distance = higher similarity)
-            //   For Euclidean, we invert: similarity = 1 / (1 + distance)
-            //   This ensures 0 distance = 1.0 similarity, and larger distances approach 0
-            similarity:
-              metric === "cosine"
-                ? Number(row["similarity"] ?? 0)
-                : 1.0 / (1.0 + Number(row["distance"] ?? 0)),
-            created_at: row["created_at"] ? String(row["created_at"]) : null,
-            updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
-          }))
+          .map((row) => {
+            const taskType = row["task_type"] ? String(row["task_type"]) : null
+            return {
+              id: Number(row["id"] ?? 0),
+              uri: String(row["uri"] ?? ""),
+              text: String(row["text"] ?? ""),
+              model_name: String(row["model_name"] ?? ""),
+              ...(taskType !== null ? { task_type: taskType } : {}),
+              // Similarity score calculation varies by metric:
+              // - Cosine: pre-calculated in SQL (0-1 range, higher = more similar)
+              // - Euclidean: convert distance to similarity (lower distance = higher similarity)
+              //   For Euclidean, we invert: similarity = 1 / (1 + distance)
+              //   This ensures 0 distance = 1.0 similarity, and larger distances approach 0
+              similarity:
+                metric === "cosine"
+                  ? Number(row["similarity"] ?? 0)
+                  : 1.0 / (1.0 + Number(row["distance"] ?? 0)),
+              created_at: row["created_at"] ? String(row["created_at"]) : null,
+              updated_at: row["updated_at"] ? String(row["updated_at"]) : null,
+            }
+          })
           .filter(
             (result) =>
               // Apply threshold filter for Euclidean if not filtered in SQL

@@ -14,6 +14,8 @@ import type {
   VisualizationPoint,
   Embedding,
   ClusteringMethod,
+  TaskType,
+  TaskTypeMetadata,
 } from '@/types/api'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 
@@ -49,10 +51,18 @@ export function EmbeddingVisualization() {
   const [method, setMethod] = useState<ReductionMethod>('pca')
   const [dimensions, setDimensions] = useState<VisualizationDimensions>(2)
   const [modelName, setModelName] = useState<string>('')
+  const [taskType, setTaskType] = useState<TaskType | undefined>(undefined)
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
   const [limit, setLimit] = useState<number>(100)
   const [perplexity, setPerplexity] = useState<number>(30)
   const [nNeighbors, setNNeighbors] = useState<number>(15)
   const [minDist, setMinDist] = useState<number>(0.1)
+
+  // Seed mode state
+  const [seedMode, setSeedMode] = useState<'fixed' | 'random' | 'custom'>('fixed')
+  const [customSeed, setCustomSeed] = useState<number>(42)
+  const [lastUsedSeed, setLastUsedSeed] = useState<number | undefined>(undefined)
 
   // Clustering state
   const [clusteringEnabled, setClusteringEnabled] = useState<boolean>(false)
@@ -116,6 +126,40 @@ export function EmbeddingVisualization() {
 
     loadModels()
   }, [])
+
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      if (!modelName) return
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(modelName)
+        setTaskTypeOptions(response.task_types)
+
+        // Clear task type if model doesn't support them
+        if (response.task_types.length === 0) {
+          setTaskType(undefined)
+        } else if (taskType !== undefined) {
+          // If user has already selected a task type, validate it's still supported
+          const isSupported = response.task_types.some(t => t.value === taskType)
+          if (!isSupported) {
+            setTaskType(undefined)
+          }
+        }
+        // If taskType is undefined, leave it as "All Types" - don't auto-select
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        // On error, clear task types (model doesn't support them)
+        setTaskTypeOptions([])
+        setTaskType(undefined)
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [modelName])
 
   // Handle hover events
   const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
@@ -331,10 +375,13 @@ export function EmbeddingVisualization() {
         method,
         dimensions,
         model_name: modelName,
+        task_type: taskType,
         limit,
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+        seed_mode: seedMode,
+        seed: seedMode === 'custom' ? customSeed : undefined,
         clustering: clusteringEnabled ? {
           enabled: true,
           method: clusteringMethod,
@@ -348,6 +395,10 @@ export function EmbeddingVisualization() {
       })
 
       setData(response)
+      // Store the actual seed used
+      if (response.parameters.seed !== undefined) {
+        setLastUsedSeed(response.parameters.seed)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to visualize embeddings')
     } finally {
@@ -414,6 +465,8 @@ export function EmbeddingVisualization() {
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
         min_dist: method === 'umap' ? minDist : undefined,
+        seed_mode: seedMode,
+        seed: seedMode === 'custom' ? customSeed : undefined,
         include_uris: [tempUri], // Adds input text on top of limit
       })
 
@@ -882,6 +935,32 @@ export function EmbeddingVisualization() {
                 </select>
               </div>
 
+              {/* Task Type Filter */}
+              {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
+                <div>
+                  <label htmlFor="task-type" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                    Task Type
+                  </label>
+                  <select
+                    id="task-type"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={taskType || ''}
+                    onChange={(e) => setTaskType(e.target.value ? e.target.value as TaskType : undefined)}
+                    title={taskTypeOptions.find(opt => opt.value === taskType)?.description}
+                  >
+                    <option value="">All Types</option>
+                    {taskTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Filter by document task type
+                  </p>
+                </div>
+              )}
+
               {/* Limit */}
               <div>
                 <label htmlFor="limit" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
@@ -952,6 +1031,51 @@ export function EmbeddingVisualization() {
                     <p className="text-xs text-muted-foreground mt-1">0.0-1.0</p>
                   </div>
                 </>
+              )}
+
+              {/* Seed Mode Section - Only for non-deterministic methods */}
+              {(method === 'tsne' || method === 'umap') && (
+                <div className="border-t pt-4 space-y-3">
+                  <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                    Random Seed
+                  </label>
+                  <div className="space-y-2">
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={seedMode}
+                      onChange={(e) => setSeedMode(e.target.value as 'fixed' | 'random' | 'custom')}
+                    >
+                      <option value="fixed">Fixed (42) - Reproducible</option>
+                      <option value="random">Random - Different each time</option>
+                      <option value="custom">Custom - Specify seed</option>
+                    </select>
+
+                    {seedMode === 'custom' && (
+                      <div>
+                        <label htmlFor="custom-seed" className="block text-xs font-medium mb-1 text-muted-foreground">
+                          Seed Value
+                        </label>
+                        <Input
+                          id="custom-seed"
+                          type="number"
+                          min="0"
+                          value={customSeed}
+                          onChange={(e) => setCustomSeed(Number(e.target.value))}
+                          className="h-9"
+                        />
+                      </div>
+                    )}
+
+                    {lastUsedSeed !== undefined && (
+                      <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                        Last used seed: <span className="font-mono font-semibold">{lastUsedSeed}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Controls visualization randomness. Fixed seed ensures identical results for the same data.
+                  </p>
+                </div>
               )}
 
               {/* Clustering Section */}

@@ -36,6 +36,8 @@ export interface EmbeddingApplicationService {
     uri: string,
     text: string,
     modelName?: string,
+    taskTypes?: string[],
+    title?: string,
     originalContent?: string,
     convertedFormat?: string
   ) => Effect.Effect<
@@ -135,10 +137,12 @@ const make = Effect.gen(function* () {
     uri: string,
     text: string,
     modelName?: string,
+    taskTypes?: string[],
+    title?: string,
     originalContent?: string,
     convertedFormat?: string
   ) =>
-    embeddingService.createEmbedding(uri, text, modelName, originalContent, convertedFormat)
+    embeddingService.createEmbedding(uri, text, modelName, taskTypes as never, title, originalContent, convertedFormat)
 
   const createBatchEmbeddings = (request: BatchCreateEmbeddingRequest) =>
     embeddingService.createBatchEmbedding(request)
