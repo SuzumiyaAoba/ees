@@ -28,13 +28,19 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       threshold: 0.7,
       metric: 'cosine' as 'cosine' | 'euclidean' | 'dot_product',
       model_name: undefined as string | undefined,
-      query_task_type: undefined as TaskType | undefined,
-      document_task_type: undefined as TaskType | undefined,
+      task_type: undefined as TaskType | undefined,
       query_title: undefined as string | undefined,
     }
   })
 
-  const { data: searchResults, isLoading: isSearching, error } = useSearchEmbeddings(searchParams)
+  // Convert single task_type to both query_task_type and document_task_type for API
+  const searchApiParams = {
+    ...searchParams,
+    query_task_type: searchParams.task_type,
+    document_task_type: searchParams.task_type,
+  }
+
+  const { data: searchResults, isLoading: isSearching, error } = useSearchEmbeddings(searchApiParams)
   const { data: modelsData } = useModels()
 
   // When models are loaded, set default model to the first available one if not selected yet
@@ -59,20 +65,20 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
         setTaskTypeOptions(response.task_types)
 
         // If current task type is not supported by the new model, reset to the first available
-        // If no task types available, clear the query_task_type
+        // If no task types available, clear the task_type
         if (response.task_types.length === 0) {
-          updateFilter('query_task_type', undefined)
+          updateFilter('task_type', undefined)
         } else {
-          const isSupported = response.task_types.some(t => t.value === searchParams.query_task_type)
+          const isSupported = response.task_types.some(t => t.value === searchParams.task_type)
           if (!isSupported) {
-            updateFilter('query_task_type', response.task_types[0].value as TaskType)
+            updateFilter('task_type', response.task_types[0].value as TaskType)
           }
         }
       } catch (error) {
         console.error('Failed to load task types:', error)
         // On error, clear task types (model doesn't support them)
         setTaskTypeOptions([])
-        updateFilter('query_task_type', undefined)
+        updateFilter('task_type', undefined)
       } finally {
         setIsLoadingTaskTypes(false)
       }
@@ -148,7 +154,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           </div>
 
           {/* Title input for retrieval_document task type */}
-          {searchParams.query_task_type === 'retrieval_document' && (
+          {searchParams.task_type === 'retrieval_document' && (
             <div>
               <label className="text-sm font-medium">Title (optional)</label>
               <Input
@@ -183,45 +189,25 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               </select>
             </div>
             {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium">Query Task Type</label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={searchParams.query_task_type}
-                    onChange={(e) => updateFilter('query_task_type', e.target.value as TaskType)}
-                    title={taskTypeOptions.find(opt => opt.value === searchParams.query_task_type)?.description}
-                  >
-                    {taskTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    How to format your query
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Document Task Type</label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={searchParams.document_task_type || ''}
-                    onChange={(e) => updateFilter('document_task_type', e.target.value ? e.target.value as TaskType : undefined)}
-                    title="Filter which document embeddings to search"
-                  >
-                    <option value="">All Types</option>
-                    {taskTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Which documents to search
-                  </p>
-                </div>
-              </>
+              <div>
+                <label className="text-sm font-medium">Task Type</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={searchParams.task_type || ''}
+                  onChange={(e) => updateFilter('task_type', e.target.value ? e.target.value as TaskType : undefined)}
+                  title={taskTypeOptions.find(opt => opt.value === searchParams.task_type)?.description}
+                >
+                  <option value="">All Types</option>
+                  {taskTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Task type for both query and documents
+                </p>
+              </div>
             )}
             <div>
               <label className="text-sm font-medium">Limit</label>
