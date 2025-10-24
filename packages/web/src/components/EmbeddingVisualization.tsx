@@ -51,7 +51,7 @@ export function EmbeddingVisualization() {
   const [method, setMethod] = useState<ReductionMethod>('pca')
   const [dimensions, setDimensions] = useState<VisualizationDimensions>(2)
   const [modelName, setModelName] = useState<string>('')
-  const [taskType, setTaskType] = useState<TaskType | undefined>('clustering')
+  const [taskType, setTaskType] = useState<TaskType | undefined>(undefined)
   const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
   const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
   const [limit, setLimit] = useState<number>(100)
@@ -132,17 +132,17 @@ export function EmbeddingVisualization() {
         const response = await apiClient.getTaskTypes(modelName)
         setTaskTypeOptions(response.task_types)
 
-        // If current task type is not supported by the new model, reset to clustering or first available
+        // Clear task type if model doesn't support them
         if (response.task_types.length === 0) {
           setTaskType(undefined)
-        } else {
+        } else if (taskType !== undefined) {
+          // If user has already selected a task type, validate it's still supported
           const isSupported = response.task_types.some(t => t.value === taskType)
           if (!isSupported) {
-            // Try to default to clustering, otherwise use first available
-            const clusteringType = response.task_types.find(t => t.value === 'clustering')
-            setTaskType((clusteringType?.value as TaskType) || response.task_types[0].value as TaskType)
+            setTaskType(undefined)
           }
         }
+        // If taskType is undefined, leave it as "All Types" - don't auto-select
       } catch (error) {
         console.error('Failed to load task types:', error)
         // On error, clear task types (model doesn't support them)
