@@ -6,6 +6,8 @@ export type VisualizationDimensions = 2 | 3
 
 export type ClusteringMethod = "kmeans" | "dbscan" | "hierarchical"
 
+export type SeedMode = "fixed" | "random" | "custom"
+
 export interface VisualizationPoint {
   id: number
   uri: string
@@ -25,7 +27,8 @@ export interface VisualizeEmbeddingRequest {
   perplexity?: number
   n_neighbors?: number
   min_dist?: number
-  seed?: number // Random seed for reproducible results (default: 42)
+  seed_mode?: SeedMode // Seed mode: "fixed" (default 42), "random", or "custom"
+  seed?: number // Custom seed value (only used when seed_mode is "custom")
   include_uris?: string[] // URIs that must be included (added on top of limit)
   clustering?: {
     enabled: boolean
@@ -48,6 +51,7 @@ export interface VisualizeEmbeddingResponse {
     perplexity?: number
     n_neighbors?: number
     min_dist?: number
+    seed?: number // Actual seed used for this visualization
   }
   clustering?: {
     method: ClusteringMethod

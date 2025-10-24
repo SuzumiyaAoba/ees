@@ -220,7 +220,7 @@ const makeVisualizationService = Effect.gen(function* () {
           params.max_clusters = request.clustering.max_clusters
         }
         // Use same seed as dimensionality reduction for consistency
-        params.seed = request.seed ?? 42
+        params.seed = reduced.seed
 
         const clusteringResult = applyClustering(
           reduced.coordinates,
@@ -265,6 +265,7 @@ const makeVisualizationService = Effect.gen(function* () {
           n_neighbors: request.n_neighbors,
           min_dist: request.min_dist,
         }),
+        seed: reduced.seed, // Include the actual seed used
       }
 
       return {
@@ -300,6 +301,22 @@ const getMinSamplesRequired = (
 }
 
 /**
+ * Determine the seed value based on seed mode
+ */
+const determineSeed = (request: VisualizeEmbeddingRequest): number => {
+  const seedMode = request.seed_mode ?? "fixed"
+
+  switch (seedMode) {
+    case "fixed":
+      return 42
+    case "random":
+      return Math.floor(Math.random() * 2147483647) // Generate random seed (max int32)
+    case "custom":
+      return request.seed ?? 42 // Use custom seed or fallback to default
+  }
+}
+
+/**
  * Perform dimensionality reduction based on selected method
  */
 const performReduction = (
@@ -308,17 +325,21 @@ const performReduction = (
   dimensions: 2 | 3,
   request: VisualizeEmbeddingRequest
 ): Effect.Effect<
-  { coordinates: number[][] },
+  { coordinates: number[][]; seed: number },
   PCAReducerError | TSNEReducerError | UMAPReducerError
 > => {
-  // Use seed if provided, otherwise default to 42 for deterministic results
-  const seed = request.seed ?? 42
+  // Determine seed based on seed_mode
+  const seed = determineSeed(request)
 
   switch (method) {
     case "pca":
-      return reducePCA(vectors, dimensions)
+      return reducePCA(vectors, dimensions).pipe(
+        Effect.map(result => ({ ...result, seed }))
+      )
     case "tsne":
-      return reduceTSNE(vectors, dimensions, request.perplexity, seed)
+      return reduceTSNE(vectors, dimensions, request.perplexity, seed).pipe(
+        Effect.map(result => ({ ...result, seed }))
+      )
     case "umap":
       return reduceUMAP(
         vectors,
@@ -326,6 +347,8 @@ const performReduction = (
         request.n_neighbors,
         request.min_dist,
         seed
+      ).pipe(
+        Effect.map(result => ({ ...result, seed }))
       )
   }
 }

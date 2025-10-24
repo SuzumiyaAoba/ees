@@ -22,6 +22,13 @@ export const ClusteringMethodSchema = z
     example: "kmeans",
   })
 
+export const SeedModeSchema = z
+  .enum(["fixed", "random", "custom"])
+  .openapi({
+    description: "Seed mode: 'fixed' (default seed 42), 'random' (generate random seed), or 'custom' (use provided seed value)",
+    example: "fixed",
+  })
+
 // Request schema
 export const VisualizeEmbeddingRequestSchema = z
   .object({
@@ -51,8 +58,12 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "Minimum distance for UMAP (0-1, ignored for PCA and t-SNE)",
       example: 0.1,
     }),
-    seed: z.number().int().min(0).optional().default(42).openapi({
-      description: "Random seed for reproducible results (default: 42). Same seed with same data produces identical visualizations.",
+    seed_mode: SeedModeSchema.optional().default("fixed").openapi({
+      description: "Seed mode: 'fixed' uses default seed (42), 'random' generates random seed, 'custom' uses the seed parameter",
+      example: "fixed",
+    }),
+    seed: z.number().int().min(0).optional().openapi({
+      description: "Custom seed value (only used when seed_mode is 'custom'). For reproducible results.",
       example: 42,
     }),
     include_uris: z.array(z.string()).optional().openapi({
@@ -159,6 +170,10 @@ export const VisualizeEmbeddingResponseSchema = z
         min_dist: z.number().optional().openapi({
           description: "Minimum distance used for UMAP",
           example: 0.1,
+        }),
+        seed: z.number().optional().openapi({
+          description: "Actual seed value used for this visualization (for reproducibility)",
+          example: 42,
         }),
       })
       .openapi({
