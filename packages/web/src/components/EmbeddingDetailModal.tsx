@@ -39,6 +39,11 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
         <div className="flex items-center gap-3">
           <DialogTitle>Embedding Details</DialogTitle>
           <Badge variant="secondary">{embedding.model_name}</Badge>
+          {embedding.task_type && (
+            <Badge variant="outline" className="bg-blue-50">
+              {embedding.task_type}
+            </Badge>
+          )}
         </div>
       </DialogHeader>
 

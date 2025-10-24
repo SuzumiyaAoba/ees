@@ -37,6 +37,10 @@ export const UpdateUploadDirectoryRequestSchema = z
       description: "Default embedding model for this directory",
       example: "nomic-embed-text",
     }),
+    task_types: z.array(TaskTypeSchema).optional().openapi({
+      description: "Task types to generate for each file in the directory",
+      example: ["retrieval_document", "clustering"],
+    }),
     description: z.string().optional().openapi({
       description: "Optional description of the directory",
       example: "Updated project documentation",

@@ -380,7 +380,7 @@ registerListTaskTypesRoutes(app)
  */
 app.use("/upload-directories", security.rateLimits.general)
 app.openapi(createUploadDirectoryRoute, async (c) => {
-  const { name, path, model_name, description } = c.req.valid("json")
+  const { name, path, model_name, task_types, description } = c.req.valid("json")
 
   return executeEffectHandler(c, "createUploadDirectory",
     withUploadDirectoryRepository(repository =>
@@ -395,6 +395,7 @@ app.openapi(createUploadDirectoryRoute, async (c) => {
           name,
           path,
           modelName: model_name,
+          taskTypes: task_types,
           description,
         })
 
@@ -423,6 +424,7 @@ app.openapi(listUploadDirectoriesRoute, async (c) => {
             name: string
             path: string
             modelName: string
+            taskTypes: string[] | null
             description: string | null
             lastSyncedAt: string | null
             createdAt: string | null
@@ -432,6 +434,7 @@ app.openapi(listUploadDirectoriesRoute, async (c) => {
             name: dir.name,
             path: dir.path,
             model_name: dir.modelName,
+            task_types: dir.taskTypes,
             description: dir.description,
             last_synced_at: dir.lastSyncedAt,
             created_at: dir.createdAt,
@@ -472,6 +475,7 @@ app.openapi(getUploadDirectoryRoute, async (c) => {
           name: directory.name,
           path: directory.path,
           model_name: directory.modelName,
+          task_types: directory.taskTypes,
           description: directory.description,
           last_synced_at: directory.lastSyncedAt,
           created_at: directory.createdAt,
@@ -504,6 +508,7 @@ app.openapi(updateUploadDirectoryRoute, async (c) => {
         const updated = yield* repository.update(id, {
           ...(updates.name && { name: updates.name }),
           ...(updates.model_name && { modelName: updates.model_name }),
+          ...(updates.task_types !== undefined && { taskTypes: updates.task_types }),
           ...(updates.description !== undefined && { description: updates.description }),
         })
 
@@ -521,6 +526,7 @@ app.openapi(updateUploadDirectoryRoute, async (c) => {
           name: directory.name,
           path: directory.path,
           model_name: directory.modelName,
+          task_types: directory.taskTypes,
           description: directory.description,
           last_synced_at: directory.lastSyncedAt,
           created_at: directory.createdAt,
@@ -636,6 +642,13 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
             )
 
             // Create embedding for file content
+            logger.info({
+              operation: "syncUploadDirectory",
+              file: collectedFile.relativePath,
+              taskTypes: directory.taskTypes,
+              taskTypesType: typeof directory.taskTypes
+            }, "Creating embedding with task types")
+
             yield* appService.createEmbedding(
               collectedFile.relativePath,
               fileResult.content,
@@ -782,6 +795,13 @@ app.get("/upload-directories/:id/sync/stream", async (c) => {
                 )
 
                 // Create embedding for file content
+                logger.info({
+                  operation: "syncUploadDirectorySSE",
+                  file: collectedFile.relativePath,
+                  taskTypes: directory.taskTypes,
+                  taskTypesType: typeof directory.taskTypes
+                }, "Creating embedding with task types")
+
                 yield* appService.createEmbedding(
                   collectedFile.relativePath,
                   fileResult.content,

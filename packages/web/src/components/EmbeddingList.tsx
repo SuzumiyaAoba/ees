@@ -248,13 +248,18 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                           className="mt-1"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-medium truncate" title={embedding.uri}>
                               {formatUri(embedding.uri)}
                             </h4>
                             {embedding.converted_format && (
                               <Badge variant="secondary">
                                 org → {embedding.converted_format}
+                              </Badge>
+                            )}
+                            {embedding.task_type && (
+                              <Badge variant="outline" className="bg-blue-50">
+                                {embedding.task_type}
                               </Badge>
                             )}
                           </div>
