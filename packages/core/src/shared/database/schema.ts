@@ -11,19 +11,26 @@ export const embeddings = sqliteTable(
   "embeddings",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    uri: text("uri").notNull().unique(),
+    uri: text("uri").notNull(),
     text: text("text").notNull(),
     originalContent: text("original_content"), // Store original content before conversion (e.g., org-mode text)
     convertedFormat: text("converted_format"), // Format of converted content (e.g., "markdown" for org->md conversion)
     modelName: text("model_name").notNull().default("nomic-embed-text"),
+    taskType: text("task_type"), // Task type for embedding (e.g., "retrieval_document", "clustering")
     embedding: blob("embedding").notNull(),
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
-    uriIdx: index("idx_embeddings_uri").on(table.uri),
+    // Unique constraint on (uri, model_name, task_type) to allow multiple task types per document
+    uniqueUriModelTask: index("idx_embeddings_uri_model_task").on(
+      table.uri,
+      table.modelName,
+      table.taskType
+    ),
     createdAtIdx: index("idx_embeddings_created_at").on(table.createdAt),
     modelNameIdx: index("idx_embeddings_model_name").on(table.modelName),
+    taskTypeIdx: index("idx_embeddings_task_type").on(table.taskType),
     // Vector index for efficient similarity search using cosine distance
     vectorIdx: index("idx_embeddings_vector").on(
       sql`libsql_vector_idx(embedding, 'metric=cosine')`
@@ -45,6 +52,7 @@ export const uploadDirectories = sqliteTable(
     name: text("name").notNull(), // User-friendly name for the directory
     path: text("path").notNull().unique(), // Absolute path to the directory
     modelName: text("model_name").notNull().default("nomic-embed-text"), // Default model for this directory
+    taskTypes: text("task_types"), // JSON array of task types to generate for each file
     description: text("description"), // Optional description
     lastSyncedAt: text("last_synced_at"), // Last time files were synced from this directory
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),

@@ -5,7 +5,18 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useCreateEmbedding, useUpdateEmbedding, useModels } from '@/hooks/useEmbeddings'
 import { ErrorCard } from '@/components/shared/ErrorCard'
-import type { Embedding } from '@/types/api'
+import type { Embedding, TaskType } from '@/types/api'
+
+const TASK_TYPES: Array<{ value: TaskType; label: string; description: string }> = [
+  { value: 'retrieval_document', label: 'Document Retrieval', description: 'For indexing documents for search' },
+  { value: 'retrieval_query', label: 'Query Retrieval', description: 'For search queries (use in search, not for indexing)' },
+  { value: 'clustering', label: 'Clustering', description: 'For grouping similar documents' },
+  { value: 'classification', label: 'Classification', description: 'For categorizing documents' },
+  { value: 'semantic_similarity', label: 'Semantic Similarity', description: 'For measuring text similarity' },
+  { value: 'question_answering', label: 'Question Answering', description: 'For Q&A systems' },
+  { value: 'fact_verification', label: 'Fact Verification', description: 'For verifying factual statements' },
+  { value: 'code_retrieval', label: 'Code Retrieval', description: 'For searching code snippets' },
+]
 
 interface CreateEditEmbeddingProps {
   editingEmbedding?: Embedding | null
@@ -16,6 +27,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
   const [uri, setUri] = useState('')
   const [text, setText] = useState('')
   const [modelName, setModelName] = useState('')
+  const [selectedTaskTypes, setSelectedTaskTypes] = useState<TaskType[]>([])
 
   const { mutate: createEmbedding, isPending: isCreating, error: createError } = useCreateEmbedding()
   const { mutate: updateEmbedding, isPending: isUpdating, error: updateError } = useUpdateEmbedding()
@@ -31,13 +43,23 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
       setUri(editingEmbedding.uri)
       setText(editingEmbedding.text)
       setModelName(editingEmbedding.model_name)
+      setSelectedTaskTypes([])
     } else {
       // Clear form when switching back to create mode
       setUri('')
       setText('')
       setModelName('')
+      setSelectedTaskTypes([])
     }
   }, [editingEmbedding])
+
+  const handleTaskTypeToggle = (taskType: TaskType) => {
+    setSelectedTaskTypes(prev =>
+      prev.includes(taskType)
+        ? prev.filter(t => t !== taskType)
+        : [...prev, taskType]
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +80,12 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
       if (!uri.trim()) return
 
       createEmbedding(
-        { uri, text, model_name: modelName || undefined },
+        {
+          uri,
+          text,
+          model_name: modelName || undefined,
+          task_types: selectedTaskTypes.length > 0 ? selectedTaskTypes : undefined
+        },
         {
           onSuccess: () => {
             handleReset()
@@ -72,6 +99,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
     setUri('')
     setText('')
     setModelName('')
+    setSelectedTaskTypes([])
     onEditComplete?.()
   }
 
@@ -137,6 +165,39 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                   ))}
               </select>
             </div>
+
+            {!isEditMode && (
+              <div>
+                <label className="text-sm font-medium block mb-2">
+                  Task Types (Optional - for models that support it)
+                </label>
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                  {TASK_TYPES.map((taskType) => (
+                    <label
+                      key={taskType.value}
+                      className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTaskTypes.includes(taskType.value)}
+                        onChange={() => handleTaskTypeToggle(taskType.value)}
+                        disabled={isSubmitting}
+                        className="mt-1 h-4 w-4 rounded border-gray-300"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{taskType.label}</div>
+                        <div className="text-xs text-muted-foreground">{taskType.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {selectedTaskTypes.length > 0
+                    ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s)`
+                    : 'Select one or more task types to create specialized embeddings (e.g., "Document Retrieval" + "Clustering")'}
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <Button type="submit" disabled={isSubmitting || !text.trim() || (!isEditMode && !uri.trim())}>

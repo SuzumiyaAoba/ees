@@ -95,6 +95,8 @@ uploadApp.openapi(uploadFilesRoute, async (c) => {
           fileResult.filename,
           fileResult.content,
           modelName,
+          undefined, // task_types
+          undefined, // title
           fileResult.originalContent,
           fileResult.convertedFormat
         ).pipe(

@@ -5,6 +5,7 @@ export interface Embedding {
   uri: string
   text: string
   model_name: string
+  task_type?: string
   embedding: number[]
   original_content?: string
   converted_format?: string
@@ -16,6 +17,7 @@ export interface CreateEmbeddingRequest {
   uri: string
   text: string
   model_name?: string
+  task_types?: TaskType[]
 }
 
 export interface CreateEmbeddingResponse {
@@ -77,6 +79,7 @@ export interface SearchEmbeddingRequest {
   query: string
   model_name?: string
   query_task_type?: TaskType
+  document_task_type?: TaskType
   query_title?: string
   limit?: number
   threshold?: number
@@ -88,6 +91,7 @@ export interface SearchResult {
   uri: string
   text: string
   model_name: string
+  task_type?: string
   similarity: number
   original_content?: string
   converted_format?: string
@@ -192,6 +196,7 @@ export interface UploadDirectory {
   name: string
   path: string
   model_name: string
+  task_types: string[] | null
   description: string | null
   last_synced_at: string | null
   created_at: string | null
@@ -202,6 +207,7 @@ export interface CreateUploadDirectoryRequest {
   name: string
   path: string
   model_name?: string
+  task_types?: TaskType[]
   description?: string
 }
 
@@ -252,6 +258,7 @@ export interface VisualizationPoint {
   id: number
   uri: string
   model_name: string
+  task_type?: string
   coordinates: number[]
   text_preview?: string
   cluster?: number
@@ -261,6 +268,7 @@ export type ClusteringMethod = 'kmeans' | 'dbscan' | 'hierarchical'
 
 export interface VisualizeEmbeddingRequest {
   model_name?: string
+  task_type?: TaskType
   method: ReductionMethod
   dimensions: VisualizationDimensions
   limit?: number

@@ -14,6 +14,8 @@ import type {
   VisualizationPoint,
   Embedding,
   ClusteringMethod,
+  TaskType,
+  TaskTypeMetadata,
 } from '@/types/api'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 
@@ -49,6 +51,9 @@ export function EmbeddingVisualization() {
   const [method, setMethod] = useState<ReductionMethod>('pca')
   const [dimensions, setDimensions] = useState<VisualizationDimensions>(2)
   const [modelName, setModelName] = useState<string>('')
+  const [taskType, setTaskType] = useState<TaskType | undefined>('clustering')
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
   const [limit, setLimit] = useState<number>(100)
   const [perplexity, setPerplexity] = useState<number>(30)
   const [nNeighbors, setNNeighbors] = useState<number>(15)
@@ -116,6 +121,40 @@ export function EmbeddingVisualization() {
 
     loadModels()
   }, [])
+
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      if (!modelName) return
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(modelName)
+        setTaskTypeOptions(response.task_types)
+
+        // If current task type is not supported by the new model, reset to clustering or first available
+        if (response.task_types.length === 0) {
+          setTaskType(undefined)
+        } else {
+          const isSupported = response.task_types.some(t => t.value === taskType)
+          if (!isSupported) {
+            // Try to default to clustering, otherwise use first available
+            const clusteringType = response.task_types.find(t => t.value === 'clustering')
+            setTaskType((clusteringType?.value as TaskType) || response.task_types[0].value as TaskType)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        // On error, clear task types (model doesn't support them)
+        setTaskTypeOptions([])
+        setTaskType(undefined)
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [modelName])
 
   // Handle hover events
   const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
@@ -331,6 +370,7 @@ export function EmbeddingVisualization() {
         method,
         dimensions,
         model_name: modelName,
+        task_type: taskType,
         limit,
         perplexity: method === 'tsne' ? perplexity : undefined,
         n_neighbors: method === 'umap' ? nNeighbors : undefined,
@@ -881,6 +921,32 @@ export function EmbeddingVisualization() {
                   ))}
                 </select>
               </div>
+
+              {/* Task Type Filter */}
+              {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
+                <div>
+                  <label htmlFor="task-type" className="block text-xs font-medium mb-2 text-muted-foreground uppercase">
+                    Task Type
+                  </label>
+                  <select
+                    id="task-type"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={taskType || ''}
+                    onChange={(e) => setTaskType(e.target.value ? e.target.value as TaskType : undefined)}
+                    title={taskTypeOptions.find(opt => opt.value === taskType)?.description}
+                  >
+                    <option value="">All Types</option>
+                    {taskTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Filter by document task type
+                  </p>
+                </div>
+              )}
 
               {/* Limit */}
               <div>

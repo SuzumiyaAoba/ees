@@ -25,6 +25,7 @@ export interface UploadDirectoryData {
   name: string
   path: string
   modelName?: string
+  taskTypes?: string[]
   description?: string
 }
 
@@ -36,6 +37,7 @@ export interface UploadDirectory {
   name: string
   path: string
   modelName: string
+  taskTypes: string[] | null
   description: string | null
   lastSyncedAt: string | null
   createdAt: string | null
@@ -116,6 +118,7 @@ const make = Effect.gen(function* () {
               name: data.name,
               path: data.path,
               modelName: data.modelName ?? "nomic-embed-text",
+              taskTypes: data.taskTypes ? JSON.stringify(data.taskTypes) : null,
               description: data.description,
             })
             .returning({ id: uploadDirectories.id }),
@@ -149,6 +152,7 @@ const make = Effect.gen(function* () {
         name: row.name,
         path: row.path,
         modelName: row.modelName,
+        taskTypes: row.taskTypes ? (JSON.parse(row.taskTypes) as string[]) : null,
         description: row.description,
         lastSyncedAt: row.lastSyncedAt,
         createdAt: row.createdAt,
@@ -188,6 +192,7 @@ const make = Effect.gen(function* () {
         name: row.name,
         path: row.path,
         modelName: row.modelName,
+        taskTypes: row.taskTypes ? (JSON.parse(row.taskTypes) as string[]) : null,
         description: row.description,
         lastSyncedAt: row.lastSyncedAt,
         createdAt: row.createdAt,
@@ -227,6 +232,7 @@ const make = Effect.gen(function* () {
         name: row.name,
         path: row.path,
         modelName: row.modelName,
+        taskTypes: row.taskTypes ? (JSON.parse(row.taskTypes) as string[]) : null,
         description: row.description,
         lastSyncedAt: row.lastSyncedAt,
         createdAt: row.createdAt,
@@ -239,14 +245,21 @@ const make = Effect.gen(function* () {
     data: Partial<UploadDirectoryData>
   ): Effect.Effect<boolean, DatabaseQueryError> =>
     Effect.gen(function* () {
+      const updateData: Record<string, unknown> = {
+        ...data,
+        updatedAt: new Date().toISOString(),
+      }
+
+      // Convert taskTypes array to JSON string if present
+      if (data.taskTypes !== undefined) {
+        updateData['taskTypes'] = data.taskTypes ? JSON.stringify(data.taskTypes) : null
+      }
+
       const result = yield* Effect.tryPromise({
         try: () =>
           db
             .update(uploadDirectories)
-            .set({
-              ...data,
-              updatedAt: new Date().toISOString(),
-            })
+            .set(updateData)
             .where(eq(uploadDirectories.id, id)),
         catch: (error) =>
           new DatabaseQueryError({

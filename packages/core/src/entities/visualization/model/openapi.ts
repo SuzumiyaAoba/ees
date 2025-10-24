@@ -29,6 +29,10 @@ export const VisualizeEmbeddingRequestSchema = z
       description: "Filter embeddings by model name (optional, visualizes all if not specified)",
       example: "nomic-embed-text",
     }),
+    task_type: z.string().optional().openapi({
+      description: "Filter embeddings by task type (optional, e.g., 'clustering' for clustering visualization)",
+      example: "clustering",
+    }),
     method: ReductionMethodSchema.default("pca"),
     dimensions: VisualizationDimensionsSchema.default(2),
     limit: z.number().int().min(1).max(10000).optional().openapi({
@@ -107,6 +111,10 @@ export const VisualizationPointSchema = z
     model_name: z.string().openapi({
       description: "Model used for embedding",
       example: "nomic-embed-text",
+    }),
+    task_type: z.string().optional().openapi({
+      description: "Task type of the embedding",
+      example: "clustering",
     }),
     coordinates: z.array(z.number()).openapi({
       description: "Reduced dimensional coordinates (2D or 3D)",

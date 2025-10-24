@@ -74,11 +74,16 @@ const makeVisualizationService = Effect.gen(function* () {
     Effect.gen(function* () {
       const options: {
         model_name?: string
+        task_type?: string
         limit?: number
       } = {}
 
       if (request.model_name !== undefined) {
         options.model_name = request.model_name
+      }
+
+      if (request.task_type !== undefined) {
+        options.task_type = request.task_type
       }
 
       if (request.limit !== undefined) {
@@ -177,6 +182,7 @@ const makeVisualizationService = Effect.gen(function* () {
           id: emb.id,
           uri: emb.uri,
           model_name: emb.model_name,
+          ...(emb.task_type ? { task_type: emb.task_type } : {}),
           coordinates: reduced.coordinates[idx] ?? [],
           text_preview: emb.text.substring(0, 100),
         })

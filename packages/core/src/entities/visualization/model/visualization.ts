@@ -10,6 +10,7 @@ export interface VisualizationPoint {
   id: number
   uri: string
   model_name: string
+  task_type?: string
   coordinates: number[]
   text_preview?: string
   cluster?: number
@@ -17,6 +18,7 @@ export interface VisualizationPoint {
 
 export interface VisualizeEmbeddingRequest {
   model_name?: string
+  task_type?: string
   method: ReductionMethod
   dimensions: VisualizationDimensions
   limit?: number

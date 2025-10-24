@@ -132,8 +132,10 @@ const make = Effect.gen(function* () {
         // Dropping indices first is cleaner but SQLite allows dropping table with indices
         await client.execute(`DROP TABLE IF EXISTS embeddings`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_uri`)
+        await client.execute(`DROP INDEX IF EXISTS idx_embeddings_uri_model_task`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_created_at`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_model_name`)
+        await client.execute(`DROP INDEX IF EXISTS idx_embeddings_task_type`)
         await client.execute(`DROP INDEX IF EXISTS idx_embeddings_vector`)
 
         // Inform user about data loss and next steps
@@ -147,11 +149,12 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE TABLE IF NOT EXISTS embeddings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          uri TEXT NOT NULL UNIQUE,
+          uri TEXT NOT NULL,
           text TEXT NOT NULL,
           original_content TEXT,
           converted_format TEXT,
           model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
+          task_type TEXT,
           embedding F32_BLOB(768) NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -160,9 +163,9 @@ const make = Effect.gen(function* () {
 
       // Create indices for common query patterns
 
-      // Index on uri: Enables fast lookups by document identifier
+      // Composite unique index on (uri, model_name, task_type): Allows multiple task types per document
       await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_embeddings_uri ON embeddings(uri)
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_uri_model_task ON embeddings(uri, model_name, task_type)
       `)
 
       // Index on created_at: Supports time-based queries and sorting
@@ -173,6 +176,11 @@ const make = Effect.gen(function* () {
       // Index on model_name: Enables filtering by embedding model
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_embeddings_model_name ON embeddings(model_name)
+      `)
+
+      // Index on task_type: Enables filtering by task type
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_embeddings_task_type ON embeddings(task_type)
       `)
 
       // Vector index: Enables fast similarity search using cosine metric
@@ -189,6 +197,7 @@ const make = Effect.gen(function* () {
           name TEXT NOT NULL,
           path TEXT NOT NULL UNIQUE,
           model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
+          task_types TEXT,
           description TEXT,
           last_synced_at TEXT,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,

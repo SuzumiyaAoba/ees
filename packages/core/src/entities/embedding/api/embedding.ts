@@ -52,6 +52,7 @@ export interface EmbeddingService {
    * @param uri - Unique identifier for the text content
    * @param text - Text content to generate embedding for
    * @param modelName - Optional model name to use (defaults to provider's default)
+   * @param taskTypes - Optional array of task types to generate embeddings for
    * @param title - Optional title for document (improves accuracy for embeddinggemma)
    * @param originalContent - Optional original content before conversion
    * @param convertedFormat - Optional format after conversion (e.g., "markdown")
@@ -61,10 +62,10 @@ export interface EmbeddingService {
     uri: string,
     text: string,
     modelName?: string,
+    taskTypes?: TaskType[],
     title?: string,
     originalContent?: string,
-    convertedFormat?: string,
-    metadata?: Record<string, unknown>
+    convertedFormat?: string
   ) => Effect.Effect<
     CreateEmbeddingResponse,
     | ProviderConnectionError
@@ -353,10 +354,12 @@ const make = Effect.gen(function* () {
     uri: string,
     text: string,
     modelName?: string,
+    taskType?: string,
+    title?: string,
     originalContent?: string,
     convertedFormat?: string
   ): Effect.Effect<
-    { id: number; uri: string; model_name: string },
+    { id: number; uri: string; model_name: string; task_type?: string },
     ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError | DatabaseQueryError
   > => {
     // Capture start time for duration metrics
@@ -384,16 +387,24 @@ const make = Effect.gen(function* () {
     return pipe(
       // Step 1: Validate input parameters (URI and text constraints)
       validateEmbeddingInput(uri, text),
-      // Step 2: Generate embedding vector using current provider
+      // Step 2: Format text with task type if applicable
+      Effect.map(() => {
+        // Only format text with task type if model supports it and task type is provided
+        const formattedText = taskType && modelName
+          ? formatTextWithTaskType(modelName, text, taskType as TaskType, title)
+          : text
+        return formattedText
+      }),
+      // Step 3: Generate embedding vector using current provider
       // Provider may override model name, so we use the response value
-      Effect.flatMap(() =>
-        providerService.generateEmbedding({ text, modelName })
+      Effect.flatMap((formattedText) =>
+        providerService.generateEmbedding({ text: formattedText, modelName })
       ),
-      // Step 3: Save embedding to database with all metadata (including optional conversion info)
+      // Step 4: Save embedding to database with all metadata (including optional conversion info and task type)
       Effect.flatMap((embeddingResponse) =>
         pipe(
-          repository.save(uri, text, embeddingResponse.model, embeddingResponse.embedding, originalContent, convertedFormat),
-          // Step 4: Record success metrics after database save
+          repository.save(uri, text, embeddingResponse.model, embeddingResponse.embedding, taskType, originalContent, convertedFormat),
+          // Step 5: Record success metrics after database save
           Effect.flatMap((saveResult) =>
             pipe(
               metricsService.recordEmbeddingCreated(
@@ -401,7 +412,7 @@ const make = Effect.gen(function* () {
                 embeddingResponse.model,
                 (Date.now() - startTime) / 1000
               ),
-              // Step 5: Invalidate cache entry for this URI/model
+              // Step 6: Invalidate cache entry for this URI/model
               // Cache errors don't affect the operation result
               Effect.flatMap(() => invalidateCache(embeddingResponse.model, uri)),
               // Return the final result with actual model name used
@@ -409,12 +420,13 @@ const make = Effect.gen(function* () {
                 id: saveResult.id,
                 uri,
                 model_name: embeddingResponse.model,
+                ...(taskType ? { task_type: taskType } : {}),
               }))
             )
           )
         )
       ),
-      // Step 6: Record error metrics on any failure
+      // Step 7: Record error metrics on any failure
       // tapError doesn't change the error, just adds side effect
       Effect.tapError((error) =>
         metricsService.recordEmbeddingError(
@@ -426,14 +438,42 @@ const make = Effect.gen(function* () {
     )
   }
 
-  const createEmbedding = (uri: string, text: string, modelName?: string, originalContent?: string, convertedFormat?: string) =>
-    pipe(
-      createSingleEmbedding(uri, text, modelName, originalContent, convertedFormat),
+  const createEmbedding = (
+    uri: string,
+    text: string,
+    modelName?: string,
+    taskTypes?: TaskType[],
+    title?: string,
+    originalContent?: string,
+    convertedFormat?: string
+  ) => {
+    // If task types are provided, create embeddings for each task type
+    if (taskTypes && taskTypes.length > 0) {
+      return pipe(
+        Effect.all(
+          taskTypes.map((taskType) =>
+            createSingleEmbedding(uri, text, modelName, taskType, title, originalContent, convertedFormat)
+          ),
+          { concurrency: 3 } // Process multiple task types concurrently
+        ),
+        Effect.map((results) => ({
+          id: results[0]?.id ?? 0,
+          uri,
+          model_name: results[0]?.model_name ?? modelName ?? "unknown",
+          message: `Embedding created successfully for ${results.length} task type(s)`,
+        }))
+      )
+    }
+
+    // If no task types provided, create a single embedding without task type
+    return pipe(
+      createSingleEmbedding(uri, text, modelName, undefined, title, originalContent, convertedFormat),
       Effect.map((result) => ({
         ...result,
         message: "Embedding created successfully",
       }))
     )
+  }
 
   /**
    * Create multiple embeddings in a single batch operation
@@ -710,6 +750,7 @@ const make = Effect.gen(function* () {
       query,
       model_name,
       query_task_type,  // Optional task type for query formatting
+      document_task_type,  // Optional task type to filter document embeddings
       query_title,      // Optional title for retrieval_document task type
       limit = 10,  // Default limit prevents unbounded result sets
       threshold,   // Optional minimum similarity threshold
@@ -751,6 +792,7 @@ const make = Effect.gen(function* () {
           repository.searchSimilar({
             queryEmbedding: queryEmbeddingResponse.embedding,
             modelName: queryEmbeddingResponse.model,  // Use actual model from provider
+            ...(document_task_type ? { taskType: document_task_type } : {}),  // Filter by document task type if provided
             limit,
             threshold,
             metric,

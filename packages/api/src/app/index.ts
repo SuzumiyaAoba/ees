@@ -139,14 +139,16 @@ app.route("/", providerApp)
  */
 app.use("/embeddings", security.rateLimits.embedding)
 app.openapi(createEmbeddingRoute, async (c) => {
-  const { uri, text, model_name } = c.req.valid("json")
+  const { uri, text, model_name, task_types, title } = c.req.valid("json")
 
   return executeEffectHandler(c, "createEmbedding",
-    withEmbeddingService(appService =>
-      appService.createEmbedding(
+    withEmbeddingService(embeddingService =>
+      embeddingService.createEmbedding(
         uri,
         text,
-        model_name
+        model_name,
+        task_types,
+        title
       )
     )
   ) as never
@@ -638,6 +640,8 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
               collectedFile.relativePath,
               fileResult.content,
               directory.modelName,
+              directory.taskTypes as string[] | undefined, // task_types from directory config
+              undefined, // title
               fileResult.originalContent,
               fileResult.convertedFormat
             )
@@ -782,6 +786,8 @@ app.get("/upload-directories/:id/sync/stream", async (c) => {
                   collectedFile.relativePath,
                   fileResult.content,
                   directory.modelName,
+                  directory.taskTypes as string[] | undefined, // task_types from directory config
+                  undefined, // title
                   fileResult.originalContent,
                   fileResult.convertedFormat
                 )

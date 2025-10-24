@@ -42,6 +42,10 @@ export const CreateEmbeddingRequestSchema = z
       description: "Name of the embedding model to use",
       example: "nomic-embed-text",
     }),
+    task_types: z.array(TaskTypeSchema).optional().openapi({
+      description: "Optional array of task types to generate embeddings for (for models that support task-specific embeddings)",
+      example: ["retrieval_document", "clustering"],
+    }),
     title: z.string().optional().openapi({
       description: "Optional title for document (improves search accuracy for embeddinggemma)",
       example: "Document Title",
@@ -259,6 +263,10 @@ export const SearchEmbeddingRequestSchema = z
     query_task_type: TaskTypeSchema.optional().default("retrieval_query").openapi({
       description: "Task type for query embedding (e.g., retrieval_query for search, question_answering for Q&A)",
       example: "retrieval_query",
+    }),
+    document_task_type: TaskTypeSchema.optional().openapi({
+      description: "Task type to filter document embeddings (e.g., retrieval_document, clustering)",
+      example: "retrieval_document",
     }),
     query_title: z.string().optional().openapi({
       description: "Optional title for retrieval_document task type (improves search accuracy)",
