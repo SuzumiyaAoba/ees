@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings } from '@/hooks/useEmbeddings'
+import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
@@ -39,6 +39,8 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
     uri: filters.uri || undefined,
     model_name: filters.modelName || undefined,
   })
+
+  const { data: distinctModels } = useDistinctEmbeddingModels()
 
   const deleteMutation = useDeleteEmbedding()
   const deleteAllMutation = useDeleteAllEmbeddings()
@@ -155,11 +157,18 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             </div>
             <div>
               <label className="text-sm font-medium">Filter by Model</label>
-              <Input
-                placeholder="Enter model name..."
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={filters.modelName}
                 onChange={(e) => handleFilterChange('modelName', e.target.value)}
-              />
+              >
+                <option value="">All Models</option>
+                {distinctModels?.models.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm font-medium">Items per page</label>
