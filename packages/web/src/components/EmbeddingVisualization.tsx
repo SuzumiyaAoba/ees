@@ -92,6 +92,8 @@ export function EmbeddingVisualization() {
     isInputPoint: boolean
     cluster?: number
     originalDocument?: string
+    mouseX?: number
+    mouseY?: number
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -105,9 +107,38 @@ export function EmbeddingVisualization() {
   const [inputText, setInputText] = useState<string>('')
   const [inputPoints, setInputPoints] = useState<VisualizationPoint[]>([])
   const [loadingInput, setLoadingInput] = useState(false)
-  
+
   // Store input text content locally for display when clicked
   const [inputTextContent, setInputTextContent] = useState<{uri: string, text: string, modelName: string} | null>(null)
+
+  // Calculate tooltip position based on mouse quadrant
+  const getTooltipPositionClasses = (mouseX?: number, mouseY?: number): string => {
+    if (mouseX === undefined || mouseY === undefined) {
+      return 'top-4 right-4' // Default position
+    }
+
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Determine which quadrant the mouse is in
+    const isLeft = mouseX < viewportWidth / 2
+    const isTop = mouseY < viewportHeight / 2
+
+    // Place tooltip in opposite diagonal quadrant
+    if (isLeft && isTop) {
+      // Mouse in top-left → tooltip in bottom-right
+      return 'bottom-4 right-4'
+    } else if (isLeft && !isTop) {
+      // Mouse in bottom-left → tooltip in top-right
+      return 'top-4 right-4'
+    } else if (!isLeft && isTop) {
+      // Mouse in top-right → tooltip in bottom-left
+      return 'bottom-4 left-4'
+    } else {
+      // Mouse in bottom-right → tooltip in top-left
+      return 'top-4 left-4'
+    }
+  }
 
   // Load available models from DB on mount
   useEffect(() => {
@@ -185,6 +216,8 @@ export function EmbeddingVisualization() {
           isInputPoint: true,
           cluster: inputPoints[0].cluster,
           originalDocument: inputTextContent?.text,
+          mouseX: eventData.event?.clientX,
+          mouseY: eventData.event?.clientY,
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
@@ -237,6 +270,8 @@ export function EmbeddingVisualization() {
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
             cluster: dataPoint.cluster,
+            mouseX: eventData.event?.clientX,
+            mouseY: eventData.event?.clientY,
           })
 
           // Capture dataPoint values in local variables for closure
@@ -1362,7 +1397,7 @@ export function EmbeddingVisualization() {
 
               {/* Floating Hover Info - Visible when right panel is closed */}
               {hoverInfo && !showDetailPanel && (
-                <div className="absolute top-4 right-4 w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in slide-in-from-right-2 duration-200">
+                <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
                   <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     {hoverInfo.isInputPoint && <span>🎯</span>}
                     Hover Information
