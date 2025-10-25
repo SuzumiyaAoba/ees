@@ -160,7 +160,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                   .filter((model) => model.available)
                   .map((model) => (
                     <option key={model.name} value={model.name}>
-                      {model.name}
+                      {model.displayName || model.name}
                     </option>
                   ))}
               </select>

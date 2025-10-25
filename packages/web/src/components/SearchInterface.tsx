@@ -183,7 +183,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 .filter((model) => model.available)
                 .map((model) => ({
                   value: model.name,
-                  label: model.name,
+                  label: model.displayName || model.name,
                 })) || []}
             />
             {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (

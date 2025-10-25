@@ -46,13 +46,13 @@ const make = Effect.gen(function* () {
 
   const mapProviderModelInfo = (providerModel: ProviderModelInfo): ModelManagerInfo => ({
     name: providerModel.name,
-    displayName: providerModel.name,
+    displayName: providerModel.fullName || providerModel.name, // Use fullName for display if available
     provider: providerModel.provider,
     dimensions: providerModel.dimensions || 768, // Default if not specified
     maxTokens: providerModel.maxTokens || 8192, // Default if not specified
     pricePerToken: providerModel.pricePerToken,
     available: true, // Assume available if listed
-    description: `${providerModel.provider} model: ${providerModel.name}`,
+    description: `${providerModel.provider} model: ${providerModel.fullName || providerModel.name}`,
   })
 
   const listAvailableModels = (): Effect.Effect<ModelManagerInfo[], ModelManagerError> =>

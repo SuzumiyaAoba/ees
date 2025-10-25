@@ -114,7 +114,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
               <option value="">Select source model</option>
               {models.map((model) => (
                 <option key={model.name} value={model.name}>
-                  {model.name} ({model.provider})
+                  {model.displayName || model.name} ({model.provider})
                 </option>
               ))}
             </select>
@@ -135,7 +135,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
               <option value="">Select target model</option>
               {models.map((model) => (
                 <option key={model.name} value={model.name}>
-                  {model.name} ({model.provider})
+                  {model.displayName || model.name} ({model.provider})
                 </option>
               ))}
             </select>
