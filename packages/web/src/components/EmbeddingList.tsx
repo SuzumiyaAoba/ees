@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { FormSelect } from '@/components/ui/FormSelect'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
 import { useFilters } from '@/hooks/useFilters'
@@ -155,34 +157,30 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                 onChange={(e) => handleFilterChange('uri', e.target.value)}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Filter by Model</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={filters.modelName}
-                onChange={(e) => handleFilterChange('modelName', e.target.value)}
-              >
-                <option value="">All Models</option>
-                {distinctModels?.models.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Items per page</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={pagination.limit}
-                onChange={(e) => pagination.setLimit(parseInt(e.target.value))}
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
+            <FormSelect
+              label="Filter by Model"
+              value={filters.modelName}
+              onChange={(value) => handleFilterChange('modelName', value)}
+              options={[
+                { value: '', label: 'All Models' },
+                ...(distinctModels?.models.map((model) => ({
+                  value: model,
+                  label: model,
+                })) || []),
+              ]}
+              placeholder="All Models"
+            />
+            <FormSelect
+              label="Items per page"
+              value={pagination.limit.toString()}
+              onChange={(value) => pagination.setLimit(parseInt(value))}
+              options={[
+                { value: '10', label: '10' },
+                { value: '20', label: '20' },
+                { value: '50', label: '50' },
+                { value: '100', label: '100' },
+              ]}
+            />
           </div>
 
           {/* Bulk actions */}
@@ -341,16 +339,15 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               )}
             </>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <List className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No embeddings found</p>
-              <p className="text-sm">
-                {filters.uri || filters.modelName
+            <EmptyState
+              icon={<List className="h-12 w-12" />}
+              title="No embeddings found"
+              description={
+                filters.uri || filters.modelName
                   ? 'Try adjusting your filters'
                   : 'Upload files or create embeddings to get started'
-                }
-              </p>
-            </div>
+              }
+            />
           )}
         </CardContent>
       </Card>

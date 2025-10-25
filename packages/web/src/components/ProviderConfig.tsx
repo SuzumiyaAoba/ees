@@ -3,6 +3,8 @@ import { Settings, RefreshCw, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { FormSelect } from '@/components/ui/FormSelect'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useProviderModels, useOllamaStatus } from '@/hooks/useEmbeddings'
 
 export function ProviderConfig() {
@@ -153,11 +155,11 @@ export function ProviderConfig() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No models found</p>
-                <p className="text-sm">Pull a model using the form above</p>
-              </div>
+              <EmptyState
+                icon={<Settings className="h-12 w-12" />}
+                title="No models found"
+                description="Pull a model using the form above"
+              />
             )}
           </div>
         </CardContent>
@@ -173,25 +175,28 @@ export function ProviderConfig() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Default Model</label>
-              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value="">Select default model</option>
-                {(models as any)?.map((model: any) => (
-                  <option key={model.name} value={model.name}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Search Metric</label>
-              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value="cosine">Cosine Similarity</option>
-                <option value="euclidean">Euclidean Distance</option>
-                <option value="dot_product">Dot Product</option>
-              </select>
-            </div>
+            <FormSelect
+              label="Default Model"
+              value=""
+              onChange={() => {}}
+              options={[
+                { value: '', label: 'Select default model' },
+                ...((models as any)?.map((model: any) => ({
+                  value: model.name,
+                  label: model.name,
+                })) || []),
+              ]}
+            />
+            <FormSelect
+              label="Search Metric"
+              value="cosine"
+              onChange={() => {}}
+              options={[
+                { value: 'cosine', label: 'Cosine Similarity' },
+                { value: 'euclidean', label: 'Euclidean Distance' },
+                { value: 'dot_product', label: 'Dot Product' },
+              ]}
+            />
             <div>
               <label className="text-sm font-medium">Default Search Limit</label>
               <Input type="number" min="1" max="100" defaultValue="10" />
