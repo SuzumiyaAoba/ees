@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
-import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronUp, Info } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -92,6 +92,8 @@ export function EmbeddingVisualization() {
     isInputPoint: boolean
     cluster?: number
     originalDocument?: string
+    mouseX?: number
+    mouseY?: number
   } | null>(null)
   const unhoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -100,14 +102,49 @@ export function EmbeddingVisualization() {
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
   const [hoverDelayMs, setHoverDelayMs] = useState(200) // 200ms default for more responsive loading
+  const [showHoverInfo, setShowHoverInfo] = useState(true) // Toggle for Hover Information visibility
+  const [hoverInfoExpanded, setHoverInfoExpanded] = useState(true) // Toggle for Hover Information content expansion
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
   const [inputPoints, setInputPoints] = useState<VisualizationPoint[]>([])
   const [loadingInput, setLoadingInput] = useState(false)
-  
+
   // Store input text content locally for display when clicked
   const [inputTextContent, setInputTextContent] = useState<{uri: string, text: string, modelName: string} | null>(null)
+
+  // Calculate tooltip position based on mouse quadrant relative to plot area
+  const getTooltipPositionClasses = (mouseX?: number, mouseY?: number): string => {
+    if (mouseX === undefined || mouseY === undefined || !plotDivRef.current) {
+      return 'top-4 right-4' // Default position
+    }
+
+    // Get plot area bounding rectangle
+    const plotRect = plotDivRef.current.getBoundingClientRect()
+
+    // Calculate mouse position relative to plot area
+    const relativeX = mouseX - plotRect.left
+    const relativeY = mouseY - plotRect.top
+
+    // Determine which quadrant the mouse is in relative to plot center
+    const isLeft = relativeX < plotRect.width / 2
+    const isTop = relativeY < plotRect.height / 2
+
+    // Place tooltip in opposite diagonal quadrant
+    if (isLeft && isTop) {
+      // Mouse in top-left → tooltip in bottom-right
+      return 'bottom-4 right-4'
+    } else if (isLeft && !isTop) {
+      // Mouse in bottom-left → tooltip in top-right
+      return 'top-4 right-4'
+    } else if (!isLeft && isTop) {
+      // Mouse in top-right → tooltip in bottom-left
+      return 'bottom-4 left-4'
+    } else {
+      // Mouse in bottom-right → tooltip in top-left
+      return 'top-4 left-4'
+    }
+  }
 
   // Load available models from DB on mount
   useEffect(() => {
@@ -185,6 +222,8 @@ export function EmbeddingVisualization() {
           isInputPoint: true,
           cluster: inputPoints[0].cluster,
           originalDocument: inputTextContent?.text,
+          mouseX: eventData.event?.clientX,
+          mouseY: eventData.event?.clientY,
         })
       } else if (curveNumber === 0 && data) {
         // Hovering over data point
@@ -237,6 +276,8 @@ export function EmbeddingVisualization() {
             coordinates: dataPoint.coordinates,
             isInputPoint: false,
             cluster: dataPoint.cluster,
+            mouseX: eventData.event?.clientX,
+            mouseY: eventData.event?.clientY,
           })
 
           // Capture dataPoint values in local variables for closure
@@ -1288,19 +1329,44 @@ export function EmbeddingVisualization() {
               {/* Settings */}
               {showSettings && (
                 <div className="border-t pt-4 space-y-3">
-                  <label className="block text-xs font-medium text-muted-foreground uppercase">
-                    Hover Delay (ms)
-                  </label>
-                  <Input
-                    type="number"
-                    value={hoverDelayMs}
-                    onChange={(e) => setHoverDelayMs(Number(e.target.value))}
-                    min="100"
-                    max="10000"
-                    step="100"
-                    className="h-9"
-                  />
-                  <p className="text-xs text-muted-foreground">100-10000ms</p>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                      Show Hover Information
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowHoverInfo(!showHoverInfo)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showHoverInfo ? 'bg-primary' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          showHoverInfo ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Display tooltip when hovering over points (only visible when Information panel is closed)
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase">
+                      Hover Delay (ms)
+                    </label>
+                    <Input
+                      type="number"
+                      value={hoverDelayMs}
+                      onChange={(e) => setHoverDelayMs(Number(e.target.value))}
+                      min="100"
+                      max="10000"
+                      step="100"
+                      className="h-9"
+                      disabled={!showHoverInfo}
+                    />
+                    <p className="text-xs text-muted-foreground">100-10000ms</p>
+                  </div>
                 </div>
               )}
 
@@ -1360,47 +1426,68 @@ export function EmbeddingVisualization() {
             <div className="flex-1 overflow-auto relative">
               <div className="h-full p-4">{renderPlot()}</div>
 
-              {/* Floating Hover Info - Visible when right panel is closed */}
-              {hoverInfo && !showDetailPanel && (
-                <div className="absolute top-4 right-4 w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in slide-in-from-right-2 duration-200">
-                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    {hoverInfo.isInputPoint && <span>🎯</span>}
-                    Hover Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
-                      <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
+              {/* Floating Hover Info - Visible when right panel is closed and showHoverInfo is enabled */}
+              {hoverInfo && !showDetailPanel && showHoverInfo && (
+                hoverInfoExpanded ? (
+                  <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        {hoverInfo.isInputPoint && <span>🎯</span>}
+                        Hover Information
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setHoverInfoExpanded(false)}
+                        className="p-1 hover:bg-muted rounded transition-colors"
+                        title="Collapse"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
-                      <p className="font-mono text-xs mt-1">
-                        {hoverInfo.coordinates.map((c, i) =>
-                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
-                        ).join(' | ')}
-                      </p>
-                    </div>
-                    {hoverInfo.isInputPoint && (
-                      <div className="text-xs text-primary font-medium">
-                        ✨ This is your input text
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                        <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
                       </div>
-                    )}
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
-                      <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
-                        {hoverInfo.originalDocument ? (
-                          <p className="text-xs whitespace-pre-wrap break-words">
-                            {hoverInfo.originalDocument}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">
-                            Hover for {hoverDelayMs}ms to load document...
-                          </p>
-                        )}
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
+                        <p className="font-mono text-xs mt-1">
+                          {hoverInfo.coordinates.map((c, i) =>
+                            `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                          ).join(' | ')}
+                        </p>
+                      </div>
+                      {hoverInfo.isInputPoint && (
+                        <div className="text-xs text-primary font-medium">
+                          ✨ This is your input text
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
+                          {hoverInfo.originalDocument ? (
+                            <p className="text-xs whitespace-pre-wrap break-words">
+                              {hoverInfo.originalDocument}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Hover for {hoverDelayMs}ms to load document...
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setHoverInfoExpanded(true)}
+                    className="absolute bottom-4 right-4 p-2 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-full shadow-lg hover:bg-primary/10 transition-colors z-20"
+                    title="Expand Hover Information"
+                  >
+                    <Info className="h-5 w-5 text-primary" />
+                  </button>
+                )
               )}
             </div>
           )}
