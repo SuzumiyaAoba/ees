@@ -1385,20 +1385,20 @@ export function EmbeddingVisualization() {
                         ✨ This is your input text
                       </div>
                     )}
-                    {hoverInfo.originalDocument ? (
-                      <div>
-                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
-                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
+                      <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
+                        {hoverInfo.originalDocument ? (
                           <p className="text-xs whitespace-pre-wrap break-words">
                             {hoverInfo.originalDocument}
                           </p>
-                        </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">
+                            Hover for {hoverDelayMs}ms to load document...
+                          </p>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-xs text-muted-foreground italic">
-                        Hover for {hoverDelayMs}ms to load document...
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1470,18 +1470,20 @@ export function EmbeddingVisualization() {
                         ✨ This is your input text
                       </div>
                     )}
-                    {hoverInfo.originalDocument ? (
+                    {!hoverInfo.isInputPoint && (
                       <div>
                         <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
-                        <div className="mt-1 p-3 bg-muted/30 rounded border max-h-32 overflow-y-auto">
-                          <p className="text-xs whitespace-pre-wrap break-words">
-                            {hoverInfo.originalDocument}
-                          </p>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
+                          {hoverInfo.originalDocument ? (
+                            <p className="text-xs whitespace-pre-wrap break-words">
+                              {hoverInfo.originalDocument}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Hover for {hoverDelayMs}ms to load document...
+                            </p>
+                          )}
                         </div>
-                      </div>
-                    ) : !hoverInfo.isInputPoint && (
-                      <div className="text-xs text-muted-foreground italic">
-                        Hover for {hoverDelayMs}ms to load document...
                       </div>
                     )}
                   </div>
