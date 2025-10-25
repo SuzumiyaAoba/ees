@@ -249,6 +249,42 @@ export interface ListDirectoryResponse {
   entries: DirectoryEntry[]
 }
 
+// Ollama Status types
+export interface OllamaStatusResponse {
+  status: 'online' | 'offline'
+  version?: string
+  models?: string[]
+  responseTime?: number
+  baseUrl?: string
+}
+
+// Provider types
+export interface ProviderResponse {
+  name: string
+  displayName?: string
+  description?: string
+  status: 'online' | 'offline' | 'unknown'
+  version?: string
+  modelCount?: number
+}
+
+export interface CurrentProviderResponse {
+  provider: string
+  configuration?: Record<string, unknown>
+}
+
+export interface ProviderModelResponse {
+  name: string
+  displayName?: string
+  provider: string
+  dimensions?: number
+  maxTokens?: number
+  pricePerToken?: number
+  size?: number
+  modified_at?: string
+  digest?: string
+}
+
 // Visualization types
 export type ReductionMethod = 'pca' | 'tsne' | 'umap'
 

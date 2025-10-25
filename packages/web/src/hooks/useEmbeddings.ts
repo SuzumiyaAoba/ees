@@ -148,14 +148,7 @@ export function useSearchEmbeddings(searchParams: SearchEmbeddingRequest) {
 export function useProviders() {
   return useQuery({
     queryKey: QUERY_KEYS.providers(),
-    queryFn: async () => {
-      const result = await apiClient.getProviders()
-      return result.map((provider: any) => ({
-        name: provider.name,
-        displayName: provider.display_name,
-        status: provider.status === 'active' ? 'online' : 'offline',
-      }))
-    },
+    queryFn: () => apiClient.getProviders(),
   })
 }
 
@@ -163,15 +156,7 @@ export function useProviders() {
 export function useProviderModels(provider?: string) {
   return useQuery({
     queryKey: QUERY_KEYS.providerModels(provider),
-    queryFn: async () => {
-      const result = await apiClient.getProviderModels(provider)
-      return result.map((model: any) => ({
-        name: model.name,
-        displayName: model.display_name,
-        provider: provider || 'unknown',
-        dimensions: model.dimensions,
-      }))
-    },
+    queryFn: () => apiClient.getProviderModels(provider),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
@@ -180,14 +165,7 @@ export function useProviderModels(provider?: string) {
 export function useOllamaStatus() {
   return useQuery({
     queryKey: ['ollama', 'status'],
-    queryFn: async () => {
-      const result = await apiClient.getOllamaStatus()
-      return {
-        status: result.status,
-        version: (result as any).version,
-        models: (result as any).models,
-      }
-    },
+    queryFn: () => apiClient.getOllamaStatus(),
     staleTime: 30 * 1000, // 30 seconds
     refetchInterval: 60 * 1000, // Refetch every minute
   })
@@ -197,13 +175,7 @@ export function useOllamaStatus() {
 export function useCurrentProvider() {
   return useQuery({
     queryKey: QUERY_KEYS.currentProvider(),
-    queryFn: async () => {
-      const result = await apiClient.getCurrentProvider()
-      return {
-        provider: (result as any).provider,
-        configuration: (result as any).configuration,
-      }
-    },
+    queryFn: () => apiClient.getCurrentProvider(),
   })
 }
 

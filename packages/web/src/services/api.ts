@@ -24,6 +24,10 @@ import type {
   ListDirectoryResponse,
   VisualizeEmbeddingRequest,
   VisualizeEmbeddingResponse,
+  OllamaStatusResponse,
+  ProviderResponse,
+  CurrentProviderResponse,
+  ProviderModelResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -135,44 +139,20 @@ class ApiClient {
   }
 
   // Provider operations
-  async getProviders(): Promise<Array<{
-    name: string
-    displayName?: string
-    description?: string
-    status: 'online' | 'offline' | 'unknown'
-    version?: string
-    modelCount?: number
-  }>> {
+  async getProviders(): Promise<ProviderResponse[]> {
     return this.request('/providers')
   }
 
-  async getProviderModels(provider?: string): Promise<Array<{
-    name: string
-    displayName?: string
-    provider: string
-    dimensions?: number
-    maxTokens?: number
-    pricePerToken?: number
-    size?: number
-    modified_at?: string
-    digest?: string
-  }>> {
+  async getProviderModels(provider?: string): Promise<ProviderModelResponse[]> {
     const url = provider ? `/providers/models?provider=${provider}` : '/providers/models'
     return this.request(url)
   }
 
-  async getCurrentProvider(): Promise<{
-    provider: string
-    configuration?: Record<string, unknown>
-  }> {
+  async getCurrentProvider(): Promise<CurrentProviderResponse> {
     return this.request('/providers/current')
   }
 
-  async getOllamaStatus(): Promise<{
-    status: 'online' | 'offline'
-    version?: string
-    models?: string[]
-  }> {
+  async getOllamaStatus(): Promise<OllamaStatusResponse> {
     return this.request('/providers/ollama/status')
   }
 
@@ -380,20 +360,20 @@ const createMockApiClient = () => ({
   }),
   
   // Provider operations
-  getProviders: async (): Promise<Array<{ name: string; display_name: string; status: string }>> => [
-    { name: 'ollama', display_name: 'Ollama', status: 'active' },
-    { name: 'openai', display_name: 'OpenAI', status: 'inactive' },
+  getProviders: async (): Promise<ProviderResponse[]> => [
+    { name: 'ollama', displayName: 'Ollama', status: 'online', description: 'Local Ollama provider' },
+    { name: 'openai', displayName: 'OpenAI', status: 'offline', description: 'OpenAI provider' },
   ],
-  getProviderModels: async (_provider?: string): Promise<Array<{ name: string; display_name: string; dimensions: number }>> => [
-    { name: 'nomic-embed-text', display_name: 'Nomic Embed Text', dimensions: 768 },
-    { name: 'text-embedding-3-small', display_name: 'Text Embedding 3 Small', dimensions: 1536 },
+  getProviderModels: async (_provider?: string): Promise<ProviderModelResponse[]> => [
+    { name: 'nomic-embed-text', displayName: 'Nomic Embed Text', provider: 'ollama', dimensions: 768 },
+    { name: 'text-embedding-3-small', displayName: 'Text Embedding 3 Small', provider: 'openai', dimensions: 1536 },
   ],
-  getCurrentProvider: async (): Promise<{ provider: string; configuration?: Record<string, unknown> }> => ({
+  getCurrentProvider: async (): Promise<CurrentProviderResponse> => ({
     provider: 'ollama',
     configuration: { baseUrl: 'http://localhost:11434' },
   }),
-  getOllamaStatus: async (): Promise<{ status: string; models: string[]; version?: string }> => ({
-    status: 'running',
+  getOllamaStatus: async (): Promise<OllamaStatusResponse> => ({
+    status: 'online',
     models: ['nomic-embed-text'],
     version: '0.1.0',
   }),
