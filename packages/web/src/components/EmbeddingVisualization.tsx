@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
-import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -103,6 +103,7 @@ export function EmbeddingVisualization() {
   const [showSettings, setShowSettings] = useState(false)
   const [hoverDelayMs, setHoverDelayMs] = useState(200) // 200ms default for more responsive loading
   const [showHoverInfo, setShowHoverInfo] = useState(true) // Toggle for Hover Information visibility
+  const [hoverInfoExpanded, setHoverInfoExpanded] = useState(true) // Toggle for Hover Information content expansion
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -1427,44 +1428,64 @@ export function EmbeddingVisualization() {
 
               {/* Floating Hover Info - Visible when right panel is closed and showHoverInfo is enabled */}
               {hoverInfo && !showDetailPanel && showHoverInfo && (
-                <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
-                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    {hoverInfo.isInputPoint && <span>🎯</span>}
-                    Hover Information
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
-                      <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
-                      <p className="font-mono text-xs mt-1">
-                        {hoverInfo.coordinates.map((c, i) =>
-                          `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
-                        ).join(' | ')}
-                      </p>
-                    </div>
-                    {hoverInfo.isInputPoint && (
-                      <div className="text-xs text-primary font-medium">
-                        ✨ This is your input text
-                      </div>
+                <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} ${hoverInfoExpanded ? 'w-80' : 'w-auto'} max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    {hoverInfoExpanded ? (
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        {hoverInfo.isInputPoint && <span>🎯</span>}
+                        Hover Information
+                      </h4>
+                    ) : (
+                      <Info className="h-5 w-5 text-primary" />
                     )}
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
-                      <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
-                        {hoverInfo.originalDocument ? (
-                          <p className="text-xs whitespace-pre-wrap break-words">
-                            {hoverInfo.originalDocument}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">
-                            Hover for {hoverDelayMs}ms to load document...
-                          </p>
-                        )}
+                    <button
+                      type="button"
+                      onClick={() => setHoverInfoExpanded(!hoverInfoExpanded)}
+                      className="p-1 hover:bg-muted rounded transition-colors"
+                      title={hoverInfoExpanded ? "Collapse" : "Expand"}
+                    >
+                      {hoverInfoExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {hoverInfoExpanded && (
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
+                        <p className="font-mono text-xs break-all mt-1">{hoverInfo.uri}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Coordinates</span>
+                        <p className="font-mono text-xs mt-1">
+                          {hoverInfo.coordinates.map((c, i) =>
+                            `${['X', 'Y', 'Z'][i]}: ${c.toFixed(3)}`
+                          ).join(' | ')}
+                        </p>
+                      </div>
+                      {hoverInfo.isInputPoint && (
+                        <div className="text-xs text-primary font-medium">
+                          ✨ This is your input text
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground uppercase">Document</span>
+                        <div className="mt-1 p-3 bg-muted/30 rounded border h-32 overflow-y-auto">
+                          {hoverInfo.originalDocument ? (
+                            <p className="text-xs whitespace-pre-wrap break-words">
+                              {hoverInfo.originalDocument}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Hover for {hoverDelayMs}ms to load document...
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
