@@ -63,14 +63,14 @@ export function ProviderConfig() {
                   <RefreshCw className="h-4 w-4 animate-spin" />
                   <span>Checking status...</span>
                 </div>
-              ) : status ? (
+              ) : status && status.status === 'online' ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <span className="font-medium">Service Online</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Version: {(status as any).version || 'Unknown'}
+                    Version: {status.version || 'Unknown'}
                   </p>
                 </div>
               ) : (
