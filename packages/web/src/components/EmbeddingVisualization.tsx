@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import type { PlotMouseEvent } from 'plotly.js'
 import Plotly from 'plotly.js'
-import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Eye, Loader2, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronUp, Info } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -1428,30 +1428,22 @@ export function EmbeddingVisualization() {
 
               {/* Floating Hover Info - Visible when right panel is closed and showHoverInfo is enabled */}
               {hoverInfo && !showDetailPanel && showHoverInfo && (
-                <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} ${hoverInfoExpanded ? 'w-80' : 'w-auto'} max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    {hoverInfoExpanded ? (
+                hoverInfoExpanded ? (
+                  <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
+                    <div className="flex items-center justify-between gap-2 mb-3">
                       <h4 className="text-sm font-semibold flex items-center gap-2">
                         {hoverInfo.isInputPoint && <span>🎯</span>}
                         Hover Information
                       </h4>
-                    ) : (
-                      <Info className="h-5 w-5 text-primary" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setHoverInfoExpanded(!hoverInfoExpanded)}
-                      className="p-1 hover:bg-muted rounded transition-colors"
-                      title={hoverInfoExpanded ? "Collapse" : "Expand"}
-                    >
-                      {hoverInfoExpanded ? (
+                      <button
+                        type="button"
+                        onClick={() => setHoverInfoExpanded(false)}
+                        className="p-1 hover:bg-muted rounded transition-colors"
+                        title="Collapse"
+                      >
                         <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {hoverInfoExpanded && (
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       <div>
                         <span className="text-xs font-medium text-muted-foreground uppercase">URI</span>
@@ -1485,8 +1477,17 @@ export function EmbeddingVisualization() {
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setHoverInfoExpanded(true)}
+                    className="absolute bottom-4 right-4 p-2 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-full shadow-lg hover:bg-primary/10 transition-colors z-20"
+                    title="Expand Hover Information"
+                  >
+                    <Info className="h-5 w-5 text-primary" />
+                  </button>
+                )
               )}
             </div>
           )}
