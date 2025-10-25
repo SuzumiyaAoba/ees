@@ -215,7 +215,8 @@ providerApp.openapi(getOllamaStatusRoute, async (c) => {
             try: () => modelsResponse.json() as Promise<{ models?: Array<{ name: string }> }>,
             catch: () => new Error("Failed to parse Ollama models"),
           })
-          models = modelsData.models?.map((m) => m.name.replace(/:latest$/, '').replace(/:[\w\-\.]+$/, '')) || []
+          // Keep full model names with version tags for display (e.g., "gemma3:27b", "qwen3:8b")
+          models = modelsData.models?.map((m) => m.name) || []
         }
 
         const responseTime = Date.now() - startTime
