@@ -111,18 +111,22 @@ export function EmbeddingVisualization() {
   // Store input text content locally for display when clicked
   const [inputTextContent, setInputTextContent] = useState<{uri: string, text: string, modelName: string} | null>(null)
 
-  // Calculate tooltip position based on mouse quadrant
+  // Calculate tooltip position based on mouse quadrant relative to plot area
   const getTooltipPositionClasses = (mouseX?: number, mouseY?: number): string => {
-    if (mouseX === undefined || mouseY === undefined) {
+    if (mouseX === undefined || mouseY === undefined || !plotDivRef.current) {
       return 'top-4 right-4' // Default position
     }
 
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+    // Get plot area bounding rectangle
+    const plotRect = plotDivRef.current.getBoundingClientRect()
 
-    // Determine which quadrant the mouse is in
-    const isLeft = mouseX < viewportWidth / 2
-    const isTop = mouseY < viewportHeight / 2
+    // Calculate mouse position relative to plot area
+    const relativeX = mouseX - plotRect.left
+    const relativeY = mouseY - plotRect.top
+
+    // Determine which quadrant the mouse is in relative to plot center
+    const isLeft = relativeX < plotRect.width / 2
+    const isTop = relativeY < plotRect.height / 2
 
     // Place tooltip in opposite diagonal quadrant
     if (isLeft && isTop) {
