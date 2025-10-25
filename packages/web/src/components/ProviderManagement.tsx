@@ -98,7 +98,7 @@ function ModelCard({ model, onDelete }: ModelCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium truncate">{model.displayName || model.name}</h4>
+              <h4 className="font-medium truncate">{model.name}</h4>
               <Badge variant="secondary">
                 {model.provider}
               </Badge>
