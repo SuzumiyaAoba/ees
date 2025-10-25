@@ -45,8 +45,10 @@ export interface OllamaConfig extends ProviderConfig {
  * Contains metadata about model capabilities and pricing
  */
 export interface ModelInfo {
-  /** Model name as recognized by the provider */
+  /** Model name as recognized by the provider (normalized, without version tags) */
   readonly name: string
+  /** Full model name including version tags (e.g., "gemma3:27b") for display purposes */
+  readonly fullName?: string | undefined
   /** Provider that offers this model */
   readonly provider: string
   /** Number of dimensions in the embedding vector */

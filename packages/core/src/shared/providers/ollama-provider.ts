@@ -126,6 +126,7 @@ const make = (config: OllamaConfig) =>
           return result.models
             .map(model => ({
               name: normalizeModelName(model.name),
+              fullName: model.name, // Preserve original name with version tags
               provider: "ollama" as const,
               dimensions: 768, // Default embedding dimension for most models
               maxTokens: 8192, // Default token limit
