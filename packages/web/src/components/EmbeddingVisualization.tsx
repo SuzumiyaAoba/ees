@@ -181,10 +181,17 @@ export function EmbeddingVisualization() {
           // If user has already selected a task type, validate it's still supported
           const isSupported = response.task_types.some(t => t.value === taskType)
           if (!isSupported) {
-            setTaskType(undefined)
+            // If current selection is no longer supported, try to default to clustering
+            const clusteringType = response.task_types.find(t => t.value === 'clustering')
+            setTaskType(clusteringType?.value)
+          }
+        } else {
+          // If no task type is selected, default to clustering if available
+          const clusteringType = response.task_types.find(t => t.value === 'clustering')
+          if (clusteringType) {
+            setTaskType('clustering')
           }
         }
-        // If taskType is undefined, leave it as "All Types" - don't auto-select
       } catch (error) {
         console.error('Failed to load task types:', error)
         // On error, clear task types (model doesn't support them)
