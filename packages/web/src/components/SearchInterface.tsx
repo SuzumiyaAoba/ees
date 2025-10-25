@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { FormSelect } from '@/components/ui/FormSelect'
+import { FormField } from '@/components/ui/FormField'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
@@ -172,45 +175,33 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
 
           {/* Search Options */}
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${taskTypeOptions.length > 0 ? 'lg:grid-cols-6' : 'lg:grid-cols-4'}`}>
-            <div>
-              <label className="text-sm font-medium">Model</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={searchParams.model_name || ''}
-                onChange={(e) => updateFilter('model_name', e.target.value)}
-              >
-                {modelsData?.models
-                  .filter((model) => model.available)
-                  .map((model) => (
-                    <option key={model.name} value={model.name}>
-                      {model.displayName || model.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            <FormSelect
+              label="Model"
+              value={searchParams.model_name || ''}
+              onChange={(value) => updateFilter('model_name', value)}
+              options={modelsData?.models
+                .filter((model) => model.available)
+                .map((model) => ({
+                  value: model.name,
+                  label: model.displayName || model.name,
+                })) || []}
+            />
             {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
-              <div>
-                <label className="text-sm font-medium">Task Type</label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={searchParams.task_type || ''}
-                  onChange={(e) => updateFilter('task_type', e.target.value ? e.target.value as TaskType : undefined)}
-                  title={taskTypeOptions.find(opt => opt.value === searchParams.task_type)?.description}
-                >
-                  <option value="">All Types</option>
-                  {taskTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Task type for both query and documents
-                </p>
-              </div>
+              <FormSelect
+                label="Task Type"
+                value={searchParams.task_type || ''}
+                onChange={(value) => updateFilter('task_type', value ? value as TaskType : undefined)}
+                options={[
+                  { value: '', label: 'All Types' },
+                  ...taskTypeOptions.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  })),
+                ]}
+                helpText="Task type for both query and documents"
+              />
             )}
-            <div>
-              <label className="text-sm font-medium">Limit</label>
+            <FormField label="Limit">
               <Input
                 type="number"
                 min="1"
@@ -218,9 +209,8 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 value={searchParams.limit}
                 onChange={(e) => updateFilter('limit', parseInt(e.target.value) || 10)}
               />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Threshold</label>
+            </FormField>
+            <FormField label="Threshold">
               <Input
                 type="number"
                 min="0"
@@ -229,19 +219,17 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 value={searchParams.threshold}
                 onChange={(e) => updateFilter('threshold', parseFloat(e.target.value) || 0.7)}
               />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Metric</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={searchParams.metric}
-                onChange={(e) => updateFilter('metric', e.target.value as 'cosine' | 'euclidean' | 'dot_product')}
-              >
-                <option value="cosine">Cosine</option>
-                <option value="euclidean">Euclidean</option>
-                <option value="dot_product">Dot Product</option>
-              </select>
-            </div>
+            </FormField>
+            <FormSelect
+              label="Metric"
+              value={searchParams.metric}
+              onChange={(value) => updateFilter('metric', value as 'cosine' | 'euclidean' | 'dot_product')}
+              options={[
+                { value: 'cosine', label: 'Cosine' },
+                { value: 'euclidean', label: 'Euclidean' },
+                { value: 'dot_product', label: 'Dot Product' },
+              ]}
+            />
           </div>
         </CardContent>
       </Card>
@@ -294,9 +282,12 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       {searchResults && searchResults.results.length === 0 && searchParams.query && (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              No results found for "{searchParams.query}"
-            </p>
+            <EmptyState
+              icon={<Search className="h-12 w-12" />}
+              title={`No results found for "${searchParams.query}"`}
+              description="Try adjusting your search query or filters"
+              size="md"
+            />
           </CardContent>
         </Card>
       )}
