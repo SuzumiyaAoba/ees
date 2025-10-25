@@ -168,7 +168,6 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                   label: model,
                 })) || []),
               ]}
-              placeholder="All Models"
             />
             <FormSelect
               label="Items per page"
