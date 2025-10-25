@@ -102,6 +102,7 @@ export function EmbeddingVisualization() {
   // Settings state
   const [showSettings, setShowSettings] = useState(false)
   const [hoverDelayMs, setHoverDelayMs] = useState(200) // 200ms default for more responsive loading
+  const [showHoverInfo, setShowHoverInfo] = useState(true) // Toggle for Hover Information visibility
 
   // Free text input state
   const [inputText, setInputText] = useState<string>('')
@@ -1327,19 +1328,44 @@ export function EmbeddingVisualization() {
               {/* Settings */}
               {showSettings && (
                 <div className="border-t pt-4 space-y-3">
-                  <label className="block text-xs font-medium text-muted-foreground uppercase">
-                    Hover Delay (ms)
-                  </label>
-                  <Input
-                    type="number"
-                    value={hoverDelayMs}
-                    onChange={(e) => setHoverDelayMs(Number(e.target.value))}
-                    min="100"
-                    max="10000"
-                    step="100"
-                    className="h-9"
-                  />
-                  <p className="text-xs text-muted-foreground">100-10000ms</p>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground uppercase">
+                      Show Hover Information
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowHoverInfo(!showHoverInfo)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showHoverInfo ? 'bg-primary' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          showHoverInfo ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Display tooltip when hovering over points (only visible when Information panel is closed)
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase">
+                      Hover Delay (ms)
+                    </label>
+                    <Input
+                      type="number"
+                      value={hoverDelayMs}
+                      onChange={(e) => setHoverDelayMs(Number(e.target.value))}
+                      min="100"
+                      max="10000"
+                      step="100"
+                      className="h-9"
+                      disabled={!showHoverInfo}
+                    />
+                    <p className="text-xs text-muted-foreground">100-10000ms</p>
+                  </div>
                 </div>
               )}
 
@@ -1399,8 +1425,8 @@ export function EmbeddingVisualization() {
             <div className="flex-1 overflow-auto relative">
               <div className="h-full p-4">{renderPlot()}</div>
 
-              {/* Floating Hover Info - Visible when right panel is closed */}
-              {hoverInfo && !showDetailPanel && (
+              {/* Floating Hover Info - Visible when right panel is closed and showHoverInfo is enabled */}
+              {hoverInfo && !showDetailPanel && showHoverInfo && (
                 <div className={`absolute ${getTooltipPositionClasses(hoverInfo.mouseX, hoverInfo.mouseY)} w-80 max-w-[calc(100%-2rem)] p-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-lg shadow-lg z-20 animate-in fade-in duration-200`}>
                   <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     {hoverInfo.isInputPoint && <span>🎯</span>}
