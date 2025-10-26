@@ -595,13 +595,11 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
           return null
         }
 
-        const appService = yield* withEmbeddingService(service => Effect.succeed(service))
-
         // Start background sync job
         const { startBackgroundSync } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
 
         const jobId = yield* Effect.tryPromise({
-          try: () => startBackgroundSync(id, directory, appService),
+          try: () => startBackgroundSync(id, directory),
           catch: (error) => new Error(`Failed to start sync job: ${String(error)}`)
         })
 

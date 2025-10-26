@@ -16,13 +16,16 @@ import type { TaskType } from "@ees/core"
  */
 export async function processSyncJob(
   jobId: number,
-  directory: UploadDirectory,
-  embeddingService: any
+  directory: UploadDirectory
 ): Promise<void> {
   const program = Effect.gen(function* () {
     try {
       // Mark as running
       yield* SyncJobRepository.markAsRunning(jobId)
+
+      // Get embedding service from AppLayer
+      const { EmbeddingApplicationService } = yield* Effect.promise(() => import("@ees/core"))
+      const embeddingService = yield* EmbeddingApplicationService
 
       // Collect files from directory
       const collectedFiles = yield* collectFilesFromDirectory(directory.path)

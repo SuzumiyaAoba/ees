@@ -17,8 +17,7 @@ const runningJobs = new Set<number>()
  */
 export async function startBackgroundSync(
   directoryId: number,
-  directory: UploadDirectory,
-  embeddingService: any
+  directory: UploadDirectory
 ): Promise<number> {
   const program = Effect.gen(function* () {
     // Create job record
@@ -35,7 +34,7 @@ export async function startBackgroundSync(
 
       runningJobs.add(jobId)
 
-      processSyncJob(jobId, directory, embeddingService)
+      processSyncJob(jobId, directory)
         .then(() => {
           console.log(`Job ${jobId} completed successfully`)
         })
