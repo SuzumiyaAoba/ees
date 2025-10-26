@@ -228,13 +228,26 @@ export interface UploadDirectoryListResponse {
 }
 
 export interface SyncUploadDirectoryResponse {
+  job_id: number
   directory_id: number
-  files_processed: number
-  files_created: number
-  files_updated: number
-  files_failed: number
-  files: string[]
   message: string
+}
+
+export interface SyncJobStatus {
+  id: number
+  directory_id: number
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  total_files: number
+  processed_files: number
+  created_files: number
+  updated_files: number
+  failed_files: number
+  current_file: string | null
+  error_message: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 // File System types
