@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useCreateEmbedding, useUpdateEmbedding, useModels } from '@/hooks/useEmbeddings'
 import { ErrorCard } from '@/components/shared/ErrorCard'
-import type { Embedding, TaskType } from '@/types/api'
+import { apiClient } from '@/services/api'
+import type { Embedding, TaskType, TaskTypeMetadata } from '@/types/api'
 
 const TASK_TYPES: Array<{ value: TaskType; label: string; description: string }> = [
   { value: 'retrieval_document', label: 'Document Retrieval', description: 'For indexing documents for search' },
@@ -28,6 +29,8 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
   const [text, setText] = useState('')
   const [modelName, setModelName] = useState('')
   const [selectedTaskTypes, setSelectedTaskTypes] = useState<TaskType[]>([])
+  const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
+  const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
 
   const { mutate: createEmbedding, isPending: isCreating, error: createError } = useCreateEmbedding()
   const { mutate: updateEmbedding, isPending: isUpdating, error: updateError } = useUpdateEmbedding()
@@ -52,6 +55,46 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
       setSelectedTaskTypes([])
     }
   }, [editingEmbedding])
+
+  // Load task types when model changes
+  useEffect(() => {
+    const loadTaskTypes = async () => {
+      // If no model selected, use default model to check task type support
+      let modelToCheck = modelName
+
+      if (!modelToCheck && modelsData?.models) {
+        const firstAvailable = modelsData.models.find((m) => m.available)
+        modelToCheck = firstAvailable?.name || ''
+      }
+
+      if (!modelToCheck) return
+
+      setIsLoadingTaskTypes(true)
+      try {
+        const response = await apiClient.getTaskTypes(modelToCheck)
+        setTaskTypeOptions(response.task_types)
+
+        // Clear selected task types if they're not supported by the new model
+        if (response.task_types.length === 0) {
+          setSelectedTaskTypes([])
+        } else {
+          setSelectedTaskTypes(prev =>
+            prev.filter(taskType =>
+              response.task_types.some(t => t.value === taskType)
+            )
+          )
+        }
+      } catch (error) {
+        console.error('Failed to load task types:', error)
+        setTaskTypeOptions([])
+        setSelectedTaskTypes([])
+      } finally {
+        setIsLoadingTaskTypes(false)
+      }
+    }
+
+    loadTaskTypes()
+  }, [modelName, modelsData])
 
   const handleTaskTypeToggle = (taskType: TaskType) => {
     setSelectedTaskTypes(prev =>
@@ -166,30 +209,35 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
               </select>
             </div>
 
-            {!isEditMode && (
+            {!isEditMode && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
               <div>
                 <label className="text-sm font-medium block mb-2">
                   Task Types (Optional - for models that support it)
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
-                  {TASK_TYPES.map((taskType) => (
-                    <label
-                      key={taskType.value}
-                      className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedTaskTypes.includes(taskType.value)}
-                        onChange={() => handleTaskTypeToggle(taskType.value)}
-                        disabled={isSubmitting}
-                        className="mt-1 h-4 w-4 rounded border-gray-300"
-                      />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{taskType.label}</div>
-                        <div className="text-xs text-muted-foreground">{taskType.description}</div>
-                      </div>
-                    </label>
-                  ))}
+                  {taskTypeOptions.map((taskType) => {
+                    const taskTypeInfo = TASK_TYPES.find(t => t.value === taskType.value)
+                    if (!taskTypeInfo) return null
+
+                    return (
+                      <label
+                        key={taskType.value}
+                        className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTaskTypes.includes(taskType.value as TaskType)}
+                          onChange={() => handleTaskTypeToggle(taskType.value as TaskType)}
+                          disabled={isSubmitting}
+                          className="mt-1 h-4 w-4 rounded border-gray-300"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{taskTypeInfo.label}</div>
+                          <div className="text-xs text-muted-foreground">{taskTypeInfo.description}</div>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   {selectedTaskTypes.length > 0
