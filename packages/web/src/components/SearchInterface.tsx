@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, FileText, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -11,6 +11,7 @@ import { useSearchEmbeddings, useModels } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { apiClient } from '@/services/api'
+import { MarkdownRenderer } from './MarkdownRenderer'
 import type { SearchResult, TaskType, TaskTypeMetadata } from '@/types/api'
 
 interface SearchInterfaceProps {
@@ -22,6 +23,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [title, setTitle] = useState('')
   const [taskTypeOptions, setTaskTypeOptions] = useState<TaskTypeMetadata[]>([])
   const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
+  const [renderMarkdown, setRenderMarkdown] = useState(false)
 
   // Use shared filters hook
   const { filters: searchParams, updateFilter } = useFilters({
@@ -240,15 +242,37 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       {searchResults && searchResults.results.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Search Results</CardTitle>
-            <CardDescription>
-              Found {searchResults.total_results} results for "{searchResults.query}"
-              using {searchResults.model_name} model
-            </CardDescription>
-            <div className="text-sm text-muted-foreground pt-2">
-              Showing {searchResults.results.length} of {searchResults.total_results} results
-              {searchResults.results.length < searchResults.total_results &&
-                ` (increase limit to see more)`}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <CardTitle>Search Results</CardTitle>
+                <CardDescription>
+                  Found {searchResults.total_results} results for "{searchResults.query}"
+                  using {searchResults.model_name} model
+                </CardDescription>
+                <div className="text-sm text-muted-foreground pt-2">
+                  Showing {searchResults.results.length} of {searchResults.total_results} results
+                  {searchResults.results.length < searchResults.total_results &&
+                    ` (increase limit to see more)`}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRenderMarkdown(!renderMarkdown)}
+                className="gap-2"
+              >
+                {renderMarkdown ? (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Show Raw
+                  </>
+                ) : (
+                  <>
+                    <FileCode className="h-4 w-4" />
+                    Render Markdown
+                  </>
+                )}
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -265,9 +289,15 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                       {formatSimilarity(result.similarity)}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
-                    {result.text}
-                  </p>
+                  {renderMarkdown ? (
+                    <div className="mb-2 max-h-48 overflow-y-auto">
+                      <MarkdownRenderer content={result.text} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
+                      {result.text}
+                    </p>
+                  )}
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Model: {result.model_name}</span>
                     <span>Created: {new Date(result.created_at).toLocaleDateString()}</span>
