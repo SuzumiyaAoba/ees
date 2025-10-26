@@ -19,9 +19,11 @@ export const SyncJobRepository = {
 
       const result = yield* Effect.tryPromise({
         try: async () => {
+          // Only specify required fields and let defaults be handled by the database
           const inserted = await db.db.insert(syncJobs).values({
             directoryId,
-            status: "pending",
+            // status defaults to "pending" in schema
+            // All other fields have defaults or are nullable
           }).returning()
           const job = inserted[0]
           if (!job) {
