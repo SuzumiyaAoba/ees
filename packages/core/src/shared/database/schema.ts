@@ -76,12 +76,12 @@ export const syncJobs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     directoryId: integer("directory_id").notNull().references(() => uploadDirectories.id, { onDelete: "cascade" }),
-    status: text("status").notNull().$defaultFn(() => "pending"), // pending, running, completed, failed
-    totalFiles: integer("total_files").notNull().$defaultFn(() => 0),
-    processedFiles: integer("processed_files").notNull().$defaultFn(() => 0),
-    createdFiles: integer("created_files").notNull().$defaultFn(() => 0),
-    updatedFiles: integer("updated_files").notNull().$defaultFn(() => 0),
-    failedFiles: integer("failed_files").notNull().$defaultFn(() => 0),
+    status: text("status").$defaultFn(() => "pending"), // pending, running, completed, failed
+    totalFiles: integer("total_files").$defaultFn(() => 0),
+    processedFiles: integer("processed_files").$defaultFn(() => 0),
+    createdFiles: integer("created_files").$defaultFn(() => 0),
+    updatedFiles: integer("updated_files").$defaultFn(() => 0),
+    failedFiles: integer("failed_files").$defaultFn(() => 0),
     currentFile: text("current_file"), // Currently processing file
     errorMessage: text("error_message"), // Error message if failed
     startedAt: text("started_at"),
