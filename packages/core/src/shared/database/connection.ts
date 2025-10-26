@@ -215,6 +215,41 @@ const make = Effect.gen(function* () {
         CREATE INDEX IF NOT EXISTS idx_upload_directories_created_at ON upload_directories(created_at)
       `)
 
+      // Create sync_jobs table for background directory synchronization
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS sync_jobs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          directory_id INTEGER NOT NULL REFERENCES upload_directories(id) ON DELETE CASCADE,
+          status TEXT NOT NULL DEFAULT 'pending',
+          total_files INTEGER NOT NULL DEFAULT 0,
+          processed_files INTEGER NOT NULL DEFAULT 0,
+          created_files INTEGER NOT NULL DEFAULT 0,
+          updated_files INTEGER NOT NULL DEFAULT 0,
+          failed_files INTEGER NOT NULL DEFAULT 0,
+          current_file TEXT,
+          error_message TEXT,
+          started_at TEXT,
+          completed_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+
+      // Index on directory_id: Enables fast lookups by directory
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_sync_jobs_directory_id ON sync_jobs(directory_id)
+      `)
+
+      // Index on status: Enables filtering by job status
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_sync_jobs_status ON sync_jobs(status)
+      `)
+
+      // Index on created_at: Supports time-based queries and sorting
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_sync_jobs_created_at ON sync_jobs(created_at)
+      `)
+
       if (needsMigration) {
         logger.info("✅ Database migration completed successfully")
       }
