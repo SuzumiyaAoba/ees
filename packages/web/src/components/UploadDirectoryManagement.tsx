@@ -259,7 +259,12 @@ export function UploadDirectoryManagement() {
             console.log(`No running job for directory ${directory.id}`)
           }
         } catch (error) {
-          console.error(`Failed to check latest job for directory ${directory.id}:`, error)
+          // 404 or 400 errors are expected when no job exists - just log and continue
+          if (error instanceof Error && (error.message.includes('404') || error.message.includes('400'))) {
+            console.log(`No sync job found for directory ${directory.id}`)
+          } else {
+            console.error(`Failed to check latest job for directory ${directory.id}:`, error)
+          }
         }
       }
     }
