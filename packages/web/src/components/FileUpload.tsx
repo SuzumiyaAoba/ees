@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useUploadFile, useProviderModels } from '@/hooks/useEmbeddings'
-import { loadEesignoreFromFiles, filterFiles } from '@/utils/eesignore'
 
 interface FileWithStatus {
   file: File
@@ -13,19 +12,10 @@ interface FileWithStatus {
   error?: string
 }
 
-// Extend HTMLInputElement attributes to include directory selection
-interface DirectoryInputAttributes {
-  webkitdirectory?: string
-  directory?: string
-}
-
 export function FileUpload() {
   const [files, setFiles] = useState<FileWithStatus[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [selectedModel, setSelectedModel] = useState('')
-  const [uploadMode, setUploadMode] = useState<'files' | 'directory'>('files')
-  const [concurrency, setConcurrency] = useState(3)
-  const [filterInfo, setFilterInfo] = useState<{ total: number; filtered: number } | null>(null)
   const { data: models } = useProviderModels()
   const uploadMutation = useUploadFile()
 
@@ -74,24 +64,9 @@ export function FileUpload() {
     setDragActive(false)
   }, [])
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (uploadMode === 'directory') {
-        // Load .eesignore patterns and filter files
-        const patterns = await loadEesignoreFromFiles(e.target.files)
-        const fileArray = Array.from(e.target.files)
-        const totalCount = fileArray.length
-        const filtered = filterFiles(fileArray, patterns)
-
-        // Store filtering info
-        setFilterInfo({ total: totalCount, filtered: filtered.length })
-
-        // Add filtered files directly as array
-        addFiles(filtered)
-      } else {
-        setFilterInfo(null)
-        addFiles(Array.from(e.target.files))
-      }
+      addFiles(Array.from(e.target.files))
     }
   }
 
@@ -140,27 +115,9 @@ export function FileUpload() {
   const uploadAllFiles = async () => {
     const pendingFiles = files.filter(f => f.status === 'pending')
 
-    // Upload files with controlled concurrency
-    const queue = [...pendingFiles]
-    const executing: Promise<void>[] = []
-
-    while (queue.length > 0 || executing.length > 0) {
-      // Start new uploads up to concurrency limit
-      while (executing.length < concurrency && queue.length > 0) {
-        const file = queue.shift()
-        if (file) {
-          const promise = uploadFile(file).then(() => {
-            // Remove completed promise from executing array
-            executing.splice(executing.indexOf(promise), 1)
-          })
-          executing.push(promise)
-        }
-      }
-
-      // Wait for at least one upload to complete
-      if (executing.length > 0) {
-        await Promise.race(executing)
-      }
+    // Upload files sequentially
+    for (const file of pendingFiles) {
+      await uploadFile(file)
     }
   }
 
@@ -204,29 +161,11 @@ export function FileUpload() {
             File Upload Configuration
           </CardTitle>
           <CardDescription>
-            Configure settings for file uploads and embedding generation
+            Configure settings for individual file uploads and embedding generation.
+            For directory synchronization, use the Directory Management feature.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Upload Mode</label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={uploadMode}
-              onChange={(e) => {
-                setUploadMode(e.target.value as 'files' | 'directory')
-                setFiles([]) // Clear files when switching modes
-              }}
-            >
-              <option value="files">Individual Files</option>
-              <option value="directory">Directory (with .eesignore support)</option>
-            </select>
-            {uploadMode === 'directory' && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Uploads all files from the selected directory. Create a .eesignore file (like .gitignore) in the directory root to filter files.
-              </p>
-            )}
-          </div>
           <div>
             <label className="text-sm font-medium">Embedding Model</label>
             <select
@@ -242,39 +181,15 @@ export function FileUpload() {
               ))}
             </select>
           </div>
-          {uploadMode === 'directory' && (
-            <div>
-              <label className="text-sm font-medium">Upload Concurrency</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={concurrency}
-                  onChange={(e) => setConcurrency(Number(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="text-sm font-medium w-12 text-center">{concurrency}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Number of files to upload simultaneously (1-10)
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {/* File Drop Zone */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {uploadMode === 'directory' ? 'Upload Directory' : 'Upload Files'}
-          </CardTitle>
+          <CardTitle>Upload Files</CardTitle>
           <CardDescription>
-            {uploadMode === 'directory'
-              ? 'Select a directory to upload all files (respects .eesignore patterns)'
-              : 'Drag and drop files here or click to select files'
-            }
+            Drag and drop files here or click to select files
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -291,24 +206,14 @@ export function FileUpload() {
             <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <div className="space-y-2">
               <p className="text-lg font-medium">
-                {dragActive
-                  ? uploadMode === 'directory' ? 'Drop directory here' : 'Drop files here'
-                  : uploadMode === 'directory' ? 'Click to select directory' : 'Drag & drop files here'
-                }
+                {dragActive ? 'Drop files here' : 'Drag & drop files here'}
               </p>
               <p className="text-sm text-muted-foreground">
-                {uploadMode === 'directory'
-                  ? 'Select a directory to upload all its files'
-                  : 'or click to select files'
-                }
+                or click to select files
               </p>
               <Input
                 type="file"
                 multiple={true}
-                {...(uploadMode === 'directory' && ({
-                  webkitdirectory: '',
-                  directory: '',
-                } as DirectoryInputAttributes))}
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
@@ -319,7 +224,7 @@ export function FileUpload() {
                 type="button"
                 onClick={() => document.getElementById('file-upload')?.click()}
               >
-                {uploadMode === 'directory' ? 'Select Directory' : 'Select Files'}
+                Select Files
               </Button>
             </div>
           </div>
@@ -328,12 +233,7 @@ export function FileUpload() {
           {files.length > 0 && (
             <div className="flex justify-between items-center pt-4" data-testid="upload-controls">
               <div className="text-sm text-muted-foreground">
-                {(filterInfo ? filterInfo.total : files.length)} file(s) selected
-                {filterInfo && (
-                  <span className="ml-2 text-blue-600">
-                    ({filterInfo.total} of {filterInfo.total} after filtering)
-                  </span>
-                )}
+                {files.length} file(s) selected
                 {pendingCount > 0 && ` • ${pendingCount} pending`}
                 {uploadingCount > 0 && ` • ${uploadingCount} uploading`}
                 {successCount > 0 && ` • ${successCount} completed`}
