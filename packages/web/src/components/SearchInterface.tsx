@@ -56,16 +56,16 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   })
 
   // Filter embeddings by keyword (partial match in text or URI)
-  // Only include embeddings with retrieval task types
+  // Only include embeddings with retrieval_query task type or no task type
   const keywordResults = useMemo(() => {
     if (!query.trim() || !allEmbeddings) return null
 
     const queryLower = query.toLowerCase()
     const filtered = allEmbeddings.embeddings.filter(
       (emb) => {
-        // Only include retrieval task types (retrieval_query or retrieval_document)
-        const isRetrievalType = emb.task_type?.startsWith('retrieval')
-        if (!isRetrievalType) return false
+        // Only include retrieval_query task type or no task type
+        const isValidTaskType = !emb.task_type || emb.task_type === 'retrieval_query'
+        if (!isValidTaskType) return false
 
         return (
           emb.text.toLowerCase().includes(queryLower) ||
