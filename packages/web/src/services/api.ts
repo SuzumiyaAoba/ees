@@ -262,10 +262,17 @@ class ApiClient {
     })
   }
 
-  async getLatestSyncJob(directoryId: number): Promise<SyncJobStatus> {
-    return this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/latest`, {
-      method: 'GET',
-    })
+  async getLatestSyncJob(directoryId: number): Promise<SyncJobStatus | null> {
+    try {
+      return await this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/latest`, {
+        method: 'GET',
+      })
+    } catch (error) {
+      // If no job exists, return null instead of throwing
+      // This is expected when checking for running jobs on page load
+      console.log(`No sync job found for directory ${directoryId}`)
+      return null
+    }
   }
 
   // File System operations
@@ -502,7 +509,7 @@ const createMockApiClient = () => ({
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }),
-  getLatestSyncJob: async (_directoryId: number): Promise<SyncJobStatus> => ({
+  getLatestSyncJob: async (_directoryId: number): Promise<SyncJobStatus | null> => ({
     id: 1,
     directory_id: _directoryId,
     status: 'completed',
