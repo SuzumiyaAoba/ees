@@ -21,6 +21,7 @@ import type {
   UploadDirectory,
   UploadDirectoryListResponse,
   SyncUploadDirectoryResponse,
+  SyncJobStatus,
   ListDirectoryResponse,
   VisualizeEmbeddingRequest,
   VisualizeEmbeddingResponse,
@@ -255,6 +256,18 @@ class ApiClient {
     })
   }
 
+  async getSyncJobStatus(directoryId: number, jobId: number): Promise<SyncJobStatus> {
+    return this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/${jobId}`, {
+      method: 'GET',
+    })
+  }
+
+  async getLatestSyncJob(directoryId: number): Promise<SyncJobStatus> {
+    return this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/latest`, {
+      method: 'GET',
+    })
+  }
+
   // File System operations
   async listDirectory(path: string): Promise<ListDirectoryResponse> {
     const searchParams = new URLSearchParams()
@@ -469,13 +482,41 @@ const createMockApiClient = () => ({
     message: 'Upload directory deleted successfully',
   }),
   syncUploadDirectory: async (_id: number): Promise<SyncUploadDirectoryResponse> => ({
+    job_id: 1,
     directory_id: _id,
-    files_processed: 5,
-    files_created: 5,
-    files_updated: 0,
-    files_failed: 0,
-    files: ['file1.txt', 'file2.txt', 'file3.txt', 'file4.txt', 'file5.txt'],
-    message: 'Directory synced successfully',
+    message: 'Sync job started in background. Use job_id to check progress.',
+  }),
+  getSyncJobStatus: async (_directoryId: number, _jobId: number): Promise<SyncJobStatus> => ({
+    id: _jobId,
+    directory_id: _directoryId,
+    status: 'completed',
+    total_files: 5,
+    processed_files: 5,
+    created_files: 5,
+    updated_files: 0,
+    failed_files: 0,
+    current_file: null,
+    error_message: null,
+    started_at: new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }),
+  getLatestSyncJob: async (_directoryId: number): Promise<SyncJobStatus> => ({
+    id: 1,
+    directory_id: _directoryId,
+    status: 'completed',
+    total_files: 5,
+    processed_files: 5,
+    created_files: 5,
+    updated_files: 0,
+    failed_files: 0,
+    current_file: null,
+    error_message: null,
+    started_at: new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }),
   
   // File system operations

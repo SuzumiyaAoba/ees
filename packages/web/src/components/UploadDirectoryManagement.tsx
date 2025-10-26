@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -41,6 +41,7 @@ export function UploadDirectoryManagement() {
     created: number
     updated: number
     failed: number
+    status: 'pending' | 'running' | 'completed' | 'failed'
   }>>({})
   const [lastSyncResult, setLastSyncResult] = useState<{
     directory_id: number
@@ -48,9 +49,16 @@ export function UploadDirectoryManagement() {
     files_created: number
     files_updated: number
     files_failed: number
-    files: string[]
     message: string
   } | null>(null)
+  const [pollIntervals, setPollIntervals] = useState<Record<number, NodeJS.Timeout>>({})
+
+  // Cleanup polling intervals on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(pollIntervals).forEach(interval => clearInterval(interval))
+    }
+  }, [pollIntervals])
 
   // Load task types when model changes
   useEffect(() => {
@@ -126,6 +134,139 @@ export function UploadDirectoryManagement() {
     }
   }
 
+  // Start polling for a specific job
+  const startPollingForJob = useCallback((directoryId: number, jobId: number) => {
+    const interval = setInterval(async () => {
+      try {
+        const job = await apiClient.getSyncJobStatus(directoryId, jobId)
+
+        // Update progress
+        setSyncProgress(prev => ({
+          ...prev,
+          [directoryId]: {
+            current: job.processed_files,
+            total: job.total_files,
+            file: job.current_file || '',
+            created: job.created_files,
+            updated: job.updated_files,
+            failed: job.failed_files,
+            status: job.status
+          }
+        }))
+
+        // Check if job is complete
+        if (job.status === 'completed' || job.status === 'failed') {
+          clearInterval(interval)
+          setPollIntervals(prev => {
+            const newIntervals = { ...prev }
+            delete newIntervals[directoryId]
+            return newIntervals
+          })
+
+          if (job.status === 'completed') {
+            setLastSyncResult({
+              directory_id: directoryId,
+              files_processed: job.processed_files,
+              files_created: job.created_files,
+              files_updated: job.updated_files,
+              files_failed: job.failed_files,
+              message: 'Directory synced successfully'
+            })
+          } else {
+            console.error('Sync job failed:', job.error_message)
+          }
+
+          // Clean up
+          setSyncingDirectories(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(directoryId)
+            return newSet
+          })
+          setSyncProgress(prev => {
+            const newProgress = { ...prev }
+            delete newProgress[directoryId]
+            return newProgress
+          })
+        }
+      } catch (error) {
+        console.error('Failed to get job status:', error)
+        clearInterval(interval)
+        setPollIntervals(prev => {
+          const newIntervals = { ...prev }
+          delete newIntervals[directoryId]
+          return newIntervals
+        })
+
+        // Clean up on error
+        setSyncingDirectories(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(directoryId)
+          return newSet
+        })
+        setSyncProgress(prev => {
+          const newProgress = { ...prev }
+          delete newProgress[directoryId]
+          return newProgress
+        })
+      }
+    }, 1000) // Poll every second
+
+    // Store interval for cleanup
+    setPollIntervals(prev => ({ ...prev, [directoryId]: interval }))
+  }, [])
+
+  // Check for running jobs on mount and resume polling
+  useEffect(() => {
+    if (!directories?.directories) {
+      console.log('No directories loaded yet, skipping job check')
+      return
+    }
+
+    console.log(`Checking for running jobs across ${directories.directories.length} directories`)
+
+    const checkRunningJobs = async () => {
+      for (const directory of directories.directories) {
+        try {
+          console.log(`Checking latest job for directory ${directory.id} (${directory.name})`)
+          const latestJob = await apiClient.getLatestSyncJob(directory.id)
+
+          console.log(`Latest job for directory ${directory.id}:`, latestJob)
+
+          // If job is running or pending, start polling
+          if (latestJob && (latestJob.status === 'running' || latestJob.status === 'pending')) {
+            console.log(`Found running job ${latestJob.id} for directory ${directory.id}, resuming polling`)
+
+            // Mark as syncing
+            setSyncingDirectories(prev => new Set(prev).add(directory.id))
+
+            // Initialize progress
+            setSyncProgress(prev => ({
+              ...prev,
+              [directory.id]: {
+                current: latestJob.processed_files,
+                total: latestJob.total_files,
+                file: latestJob.current_file || '',
+                created: latestJob.created_files,
+                updated: latestJob.updated_files,
+                failed: latestJob.failed_files,
+                status: latestJob.status
+              }
+            }))
+
+            // Start polling for this job
+            startPollingForJob(directory.id, latestJob.id)
+          } else {
+            console.log(`No running job for directory ${directory.id}`)
+          }
+        } catch (error) {
+          console.error(`Failed to check latest job for directory ${directory.id}:`, error)
+        }
+      }
+    }
+
+    checkRunningJobs()
+  }, [directories?.directories, startPollingForJob])
+
   const handleSync = async (id: number) => {
     setSyncingDirectories(prev => new Set(prev).add(id))
     setLastSyncResult(null)
@@ -139,115 +280,32 @@ export function UploadDirectoryManagement() {
         file: '',
         created: 0,
         updated: 0,
-        failed: 0
+        failed: 0,
+        status: 'pending'
       }
     }))
 
-    return new Promise<void>((resolve, reject) => {
-      try {
-        // Use Server-Sent Events for real-time progress
-        const eventSource = new EventSource(`http://localhost:3000/upload-directories/${id}/sync/stream`)
+    try {
+      // Start background sync job
+      const response = await apiClient.syncUploadDirectory(id)
+      const jobId = response.job_id
 
-        eventSource.addEventListener('progress', (event) => {
-          const data = JSON.parse(event.data)
+      // Start polling using shared function
+      startPollingForJob(id, jobId)
 
-          if (data.type === 'collected') {
-            setSyncProgress(prev => ({
-              ...prev,
-              [id]: {
-                ...prev[id],
-                total: data.total_files
-              }
-            }))
-          } else if (data.type === 'processing' || data.type === 'file_completed' || data.type === 'file_failed') {
-            setSyncProgress(prev => ({
-              ...prev,
-              [id]: {
-                current: data.current,
-                total: data.total,
-                file: data.file,
-                created: data.created,
-                updated: data.updated,
-                failed: data.failed
-              }
-            }))
-          } else if (data.type === 'completed') {
-            setLastSyncResult({
-              directory_id: data.directory_id,
-              files_processed: data.files_processed,
-              files_created: data.files_created,
-              files_updated: data.files_updated,
-              files_failed: data.files_failed,
-              files: [],
-              message: data.message
-            })
-            eventSource.close()
-
-            // Clean up
-            setSyncingDirectories(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(id)
-              return newSet
-            })
-            setSyncProgress(prev => {
-              const newProgress = { ...prev }
-              delete newProgress[id]
-              return newProgress
-            })
-
-            resolve()
-          }
-        })
-
-        eventSource.addEventListener('error', (event) => {
-          console.error('SSE error:', event)
-          eventSource.close()
-
-          setSyncingDirectories(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(id)
-            return newSet
-          })
-          setSyncProgress(prev => {
-            const newProgress = { ...prev }
-            delete newProgress[id]
-            return newProgress
-          })
-
-          reject(new Error('SSE connection failed'))
-        })
-
-        eventSource.onerror = () => {
-          eventSource.close()
-
-          setSyncingDirectories(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(id)
-            return newSet
-          })
-          setSyncProgress(prev => {
-            const newProgress = { ...prev }
-            delete newProgress[id]
-            return newProgress
-          })
-
-          reject(new Error('SSE connection error'))
-        }
-      } catch (error) {
-        console.error('Failed to sync directory:', error)
-        setSyncingDirectories(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(id)
-          return newSet
-        })
-        setSyncProgress(prev => {
-          const newProgress = { ...prev }
-          delete newProgress[id]
-          return newProgress
-        })
-        reject(error)
-      }
-    })
+    } catch (error) {
+      console.error('Failed to start sync job:', error)
+      setSyncingDirectories(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+      setSyncProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[id]
+        return newProgress
+      })
+    }
   }
 
   const formatDate = (dateString: string | null) => {

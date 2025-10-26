@@ -9,4 +9,6 @@ export {
   updateUploadDirectoryRoute,
   deleteUploadDirectoryRoute,
   syncUploadDirectoryRoute,
+  getSyncJobStatusRoute,
+  getLatestSyncJobRoute,
 } from "./api/route"

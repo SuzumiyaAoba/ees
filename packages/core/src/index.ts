@@ -105,6 +105,10 @@ export {
   type CreateUploadDirectoryResult,
 } from './entities/upload-directory/repository/upload-directory-repository'
 
+// Export sync job types and schema
+export { syncJobs } from './shared/database/schema'
+export type { SyncJob, NewSyncJob } from './shared/database/schema'
+
 export {
   CreateUploadDirectoryRequestSchema,
   UpdateUploadDirectoryRequestSchema,
@@ -113,6 +117,8 @@ export {
   CreateUploadDirectoryResponseSchema,
   UploadDirectoryListResponseSchema,
   SyncUploadDirectoryResponseSchema,
+  SyncJobStatusSchema,
+  JobIdParamSchema,
   DeleteUploadDirectoryResponseSchema,
 } from './entities/upload-directory/model/openapi'
 
