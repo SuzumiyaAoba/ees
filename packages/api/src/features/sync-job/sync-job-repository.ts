@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, sql } from "drizzle-orm"
 import { DatabaseService } from "@ees/core"
 import { syncJobs } from "@ees/core"
 import type { SyncJob } from "@ees/core"
@@ -19,22 +19,21 @@ export const SyncJobRepository = {
 
       const result = yield* Effect.tryPromise({
         try: async () => {
-          // Use raw SQL to avoid Drizzle including id field with null value
-          const inserted = await db.db
-            .insert(syncJobs)
-            .values({
-              directoryId,
-              status: undefined,
-              totalFiles: undefined,
-              processedFiles: undefined,
-              createdFiles: undefined,
-              updatedFiles: undefined,
-              failedFiles: undefined,
-              createdAt: undefined,
-              updatedAt: undefined,
-            })
-            .returning()
-          const job = inserted[0]
+          // Use raw SQL to insert only directory_id and let database defaults handle the rest
+          // This avoids Drizzle's behavior of including all fields with defaults in the INSERT
+          const inserted = await db.db.run(
+            sql`INSERT INTO sync_jobs (directory_id) VALUES (${directoryId})`
+          )
+
+          // Get the inserted job by ID
+          const jobId = Number(inserted.lastInsertRowid)
+          const jobs = await db.db
+            .select()
+            .from(syncJobs)
+            .where(eq(syncJobs.id, jobId))
+            .limit(1)
+
+          const job = jobs[0]
           if (!job) {
             throw new Error("Failed to create sync job: No job returned")
           }
