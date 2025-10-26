@@ -128,36 +128,100 @@ export const UploadDirectoryListResponseSchema = z
 
 export const SyncUploadDirectoryResponseSchema = z
   .object({
+    job_id: z.number().openapi({
+      description: "ID of background sync job",
+      example: 1,
+    }),
     directory_id: z.number().openapi({
       description: "ID of synced directory",
       example: 1,
     }),
-    files_processed: z.number().openapi({
-      description: "Number of files processed",
-      example: 10,
-    }),
-    files_created: z.number().openapi({
-      description: "Number of new embeddings created",
-      example: 5,
-    }),
-    files_updated: z.number().openapi({
-      description: "Number of embeddings updated",
-      example: 3,
-    }),
-    files_failed: z.number().openapi({
-      description: "Number of files that failed to process",
-      example: 2,
-    }),
-    files: z.array(z.string()).openapi({
-      description: "List of files that were collected for processing",
-      example: ["file1.txt", "file2.md", "docs/readme.md"],
-    }),
     message: z.string().openapi({
       description: "Success message",
-      example: "Directory synced successfully",
+      example: "Sync job started in background. Use job_id to check progress.",
     }),
   })
   .openapi("SyncUploadDirectoryResponse")
+
+export const SyncJobStatusSchema = z
+  .object({
+    id: z.number().openapi({
+      description: "Job ID",
+      example: 1,
+    }),
+    directory_id: z.number().openapi({
+      description: "Directory ID",
+      example: 1,
+    }),
+    status: z.enum(["pending", "running", "completed", "failed"]).openapi({
+      description: "Current job status",
+      example: "running",
+    }),
+    total_files: z.number().openapi({
+      description: "Total files to process",
+      example: 10,
+    }),
+    processed_files: z.number().openapi({
+      description: "Number of files processed so far",
+      example: 5,
+    }),
+    created_files: z.number().openapi({
+      description: "Number of new embeddings created",
+      example: 3,
+    }),
+    updated_files: z.number().openapi({
+      description: "Number of embeddings updated",
+      example: 1,
+    }),
+    failed_files: z.number().openapi({
+      description: "Number of files that failed to process",
+      example: 1,
+    }),
+    current_file: z.string().nullable().openapi({
+      description: "Currently processing file",
+      example: "docs/readme.md",
+    }),
+    error_message: z.string().nullable().openapi({
+      description: "Error message if job failed",
+      example: null,
+    }),
+    started_at: z.string().nullable().openapi({
+      description: "Job start timestamp",
+      example: "2024-01-01T00:00:00.000Z",
+    }),
+    completed_at: z.string().nullable().openapi({
+      description: "Job completion timestamp",
+      example: null,
+    }),
+    created_at: z.string().openapi({
+      description: "Job creation timestamp",
+      example: "2024-01-01T00:00:00.000Z",
+    }),
+    updated_at: z.string().openapi({
+      description: "Last update timestamp",
+      example: "2024-01-01T00:00:00.000Z",
+    }),
+  })
+  .openapi("SyncJobStatus")
+
+export const JobIdParamSchema = z.object({
+  id: z
+    .string()
+    .regex(/^\d+$/)
+    .openapi({
+      param: { name: "id", in: "path" },
+      description: "Directory ID",
+      example: "1",
+    }),
+  job_id: z
+    .string()
+    .regex(/^\d+$/)
+    .openapi({
+      param: { name: "job_id", in: "path" },
+      description: "Job ID",
+      example: "1",
+    }),
+})
 
 export const DeleteUploadDirectoryResponseSchema = z
   .object({

@@ -7,6 +7,8 @@ import {
   UploadDirectorySchema,
   UploadDirectoryListResponseSchema,
   SyncUploadDirectoryResponseSchema,
+  SyncJobStatusSchema,
+  JobIdParamSchema,
   DeleteUploadDirectoryResponseSchema,
 } from "@ees/core"
 import { createResponsesWithErrors } from "@/shared/openapi-responses"
@@ -149,16 +151,64 @@ export const syncUploadDirectoryRoute = createRoute({
   path: "/upload-directories/{id}/sync",
   tags: ["Upload Directories"],
   summary: "Sync upload directory",
-  description: "Scan and process files in the directory, creating or updating embeddings as needed",
+  description: "Start background sync job to scan and process files in the directory",
   request: {
     params: UploadDirectoryIdParamSchema,
   },
   responses: createResponsesWithErrors({
     200: {
-      description: "Directory synced successfully",
+      description: "Background sync job started successfully",
       content: {
         "application/json": {
           schema: SyncUploadDirectoryResponseSchema,
+        },
+      },
+    },
+  }),
+})
+
+/**
+ * Get sync job status route
+ */
+export const getSyncJobStatusRoute = createRoute({
+  method: "get",
+  path: "/upload-directories/{id}/sync/jobs/{job_id}",
+  tags: ["Upload Directories"],
+  summary: "Get sync job status",
+  description: "Retrieve the status of a specific sync job",
+  request: {
+    params: JobIdParamSchema,
+  },
+  responses: createResponsesWithErrors({
+    200: {
+      description: "Sync job status retrieved successfully",
+      content: {
+        "application/json": {
+          schema: SyncJobStatusSchema,
+        },
+      },
+    },
+  }),
+})
+
+/**
+ * Get latest sync job route
+ */
+export const getLatestSyncJobRoute = createRoute({
+  method: "get",
+  path: "/upload-directories/{id}/sync/jobs/latest",
+  tags: ["Upload Directories"],
+  summary: "Get latest sync job",
+  description: "Retrieve the latest sync job for a directory",
+  request: {
+    params: UploadDirectoryIdParamSchema,
+  },
+  responses: createResponsesWithErrors({
+    200: {
+      description: "Latest sync job retrieved successfully",
+      content: {
+        "application/json": {
+          schema: SyncJobStatusSchema,
         },
       },
     },

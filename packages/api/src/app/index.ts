@@ -27,6 +27,8 @@ import {
   updateUploadDirectoryRoute,
   deleteUploadDirectoryRoute,
   syncUploadDirectoryRoute,
+  getSyncJobStatusRoute,
+  getLatestSyncJobRoute,
 } from "@/features/upload-directory"
 import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
@@ -572,7 +574,7 @@ app.openapi(deleteUploadDirectoryRoute, async (c) => {
 
 /**
  * Sync upload directory endpoint
- * Scan directory and process all files
+ * Starts a background sync job and returns job ID immediately
  */
 app.openapi(syncUploadDirectoryRoute, async (c) => {
   const { id: idStr } = c.req.valid("param")
@@ -595,96 +597,129 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
 
         const appService = yield* withEmbeddingService(service => Effect.succeed(service))
 
-        // Import necessary modules
-        const { collectFilesFromDirectory, processFile } = yield* Effect.promise(() => import("@ees/core"))
-        const { readFile } = yield* Effect.promise(() => import("node:fs/promises"))
+        // Start background sync job
+        const { startBackgroundSync } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
 
-        // Collect all files from directory
-        logger.info({ operation: "syncUploadDirectory", path: directory.path }, "Collecting files from directory")
-        const collectedFiles = yield* collectFilesFromDirectory(directory.path)
+        const jobId = yield* Effect.tryPromise({
+          try: () => startBackgroundSync(id, directory, appService),
+          catch: (error) => new Error(`Failed to start sync job: ${String(error)}`)
+        })
+
         logger.info({
           operation: "syncUploadDirectory",
-          path: directory.path,
-          filesCount: collectedFiles.length,
-          files: collectedFiles.map(f => f.relativePath)
-        }, "Collected files from directory")
-
-        // Track statistics
-        let filesCreated = 0
-        let filesUpdated = 0
-        let filesFailed = 0
-
-        // Process each file
-        for (const collectedFile of collectedFiles) {
-          try {
-            // Read file content
-            const buffer = yield* Effect.tryPromise({
-              try: () => readFile(collectedFile.absolutePath),
-              catch: (error) => new Error(`Failed to read file: ${String(error)}`)
-            })
-
-            // Create a File object from buffer (convert Buffer to Uint8Array)
-            const file = new File([new Uint8Array(buffer)], collectedFile.relativePath, {
-              type: "application/octet-stream"
-            })
-
-            // Process file to extract text
-            const fileResult = yield* processFile(file).pipe(
-              Effect.catchAll((error) => {
-                logger.error({
-                  operation: "syncUploadDirectory",
-                  file: collectedFile.absolutePath,
-                  error: error.message
-                }, "Failed to process file")
-                filesFailed++
-                return Effect.fail(error)
-              })
-            )
-
-            // Create embedding for file content
-            logger.info({
-              operation: "syncUploadDirectory",
-              file: collectedFile.relativePath,
-              taskTypes: directory.taskTypes,
-              taskTypesType: typeof directory.taskTypes
-            }, "Creating embedding with task types")
-
-            yield* appService.createEmbedding(
-              collectedFile.relativePath,
-              fileResult.content,
-              directory.modelName,
-              directory.taskTypes as string[] | undefined, // task_types from directory config
-              undefined, // title
-              fileResult.originalContent,
-              fileResult.convertedFormat
-            )
-
-            filesCreated++
-          } catch (error) {
-            logger.error({
-              operation: "syncUploadDirectory",
-              file: collectedFile.absolutePath,
-              error: error instanceof Error ? error.message : String(error)
-            }, "Failed to create embedding for file")
-            filesFailed++
-          }
-        }
-
-        // Update last_synced_at timestamp
-        yield* repository.updateLastSynced(id)
+          directoryId: id,
+          jobId
+        }, "Started background sync job")
 
         return {
+          job_id: jobId,
           directory_id: id,
-          files_processed: collectedFiles.length,
-          files_created: filesCreated,
-          files_updated: filesUpdated,
-          files_failed: filesFailed,
-          files: collectedFiles.map(f => f.relativePath),
-          message: `Successfully synced directory: ${filesCreated} embeddings created, ${filesFailed} files failed`,
+          message: `Sync job started in background. Use job_id to check progress.`,
         }
       })
     ),
     "Upload directory not found"
+  ) as never
+})
+
+/**
+ * Get sync job status endpoint
+ * Retrieve the status of a specific sync job
+ */
+app.openapi(getSyncJobStatusRoute, async (c) => {
+  const { id: dirIdStr, job_id: jobIdStr } = c.req.valid("param")
+
+  const dirValidation = validateNumericId(dirIdStr, c)
+  if (typeof dirValidation !== "number") {
+    return dirValidation as never
+  }
+
+  const jobValidation = validateNumericId(jobIdStr, c)
+  if (typeof jobValidation !== "number") {
+    return jobValidation as never
+  }
+
+  const jobId = jobValidation
+
+  return executeEffectHandlerWithConditional(c, "getSyncJobStatus",
+    Effect.gen(function* () {
+      const { getSyncJobStatus } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
+
+      const job = yield* Effect.tryPromise({
+        try: () => getSyncJobStatus(jobId),
+        catch: (error) => new Error(`Failed to get sync job status: ${String(error)}`)
+      })
+
+      if (!job) {
+        return null
+      }
+
+      return {
+        id: job.id,
+        directory_id: job.directoryId,
+        status: job.status,
+        total_files: job.totalFiles,
+        processed_files: job.processedFiles,
+        created_files: job.createdFiles,
+        updated_files: job.updatedFiles,
+        failed_files: job.failedFiles,
+        current_file: job.currentFile,
+        error_message: job.errorMessage,
+        started_at: job.startedAt,
+        completed_at: job.completedAt,
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+      }
+    }),
+    "Sync job not found"
+  ) as never
+})
+
+/**
+ * Get latest sync job endpoint
+ * Retrieve the latest sync job for a directory
+ */
+app.openapi(getLatestSyncJobRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "getLatestSyncJob",
+    Effect.gen(function* () {
+      const { getLatestSyncJob } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
+
+      const job = yield* Effect.tryPromise({
+        try: () => getLatestSyncJob(id),
+        catch: (error) => new Error(`Failed to get latest sync job: ${String(error)}`)
+      })
+
+      if (!job) {
+        return null
+      }
+
+      return {
+        id: job.id,
+        directory_id: job.directoryId,
+        status: job.status,
+        total_files: job.totalFiles,
+        processed_files: job.processedFiles,
+        created_files: job.createdFiles,
+        updated_files: job.updatedFiles,
+        failed_files: job.failedFiles,
+        current_file: job.currentFile,
+        error_message: job.errorMessage,
+        started_at: job.startedAt,
+        completed_at: job.completedAt,
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+      }
+    }),
+    "No sync job found for this directory"
   ) as never
 })
 
