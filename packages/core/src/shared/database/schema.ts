@@ -66,3 +66,35 @@ export const uploadDirectories = sqliteTable(
 
 export type UploadDirectory = typeof uploadDirectories.$inferSelect
 export type NewUploadDirectory = typeof uploadDirectories.$inferInsert
+
+/**
+ * Sync jobs table
+ * Tracks background directory synchronization jobs
+ */
+export const syncJobs = sqliteTable(
+  "sync_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    directoryId: integer("directory_id").notNull().references(() => uploadDirectories.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"), // pending, running, completed, failed
+    totalFiles: integer("total_files").default(0),
+    processedFiles: integer("processed_files").default(0),
+    createdFiles: integer("created_files").default(0),
+    updatedFiles: integer("updated_files").default(0),
+    failedFiles: integer("failed_files").default(0),
+    currentFile: text("current_file"), // Currently processing file
+    errorMessage: text("error_message"), // Error message if failed
+    startedAt: text("started_at"),
+    completedAt: text("completed_at"),
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    directoryIdIdx: index("idx_sync_jobs_directory_id").on(table.directoryId),
+    statusIdx: index("idx_sync_jobs_status").on(table.status),
+    createdAtIdx: index("idx_sync_jobs_created_at").on(table.createdAt),
+  })
+)
+
+export type SyncJob = typeof syncJobs.$inferSelect
+export type NewSyncJob = typeof syncJobs.$inferInsert
