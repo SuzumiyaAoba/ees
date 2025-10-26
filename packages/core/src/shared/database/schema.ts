@@ -76,18 +76,18 @@ export const syncJobs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     directoryId: integer("directory_id").notNull().references(() => uploadDirectories.id, { onDelete: "cascade" }),
-    status: text("status").$defaultFn(() => "pending"), // pending, running, completed, failed
-    totalFiles: integer("total_files").$defaultFn(() => 0),
-    processedFiles: integer("processed_files").$defaultFn(() => 0),
-    createdFiles: integer("created_files").$defaultFn(() => 0),
-    updatedFiles: integer("updated_files").$defaultFn(() => 0),
-    failedFiles: integer("failed_files").$defaultFn(() => 0),
+    status: text("status").default("pending"), // pending, running, completed, failed
+    totalFiles: integer("total_files").default(0),
+    processedFiles: integer("processed_files").default(0),
+    createdFiles: integer("created_files").default(0),
+    updatedFiles: integer("updated_files").default(0),
+    failedFiles: integer("failed_files").default(0),
     currentFile: text("current_file"), // Currently processing file
     errorMessage: text("error_message"), // Error message if failed
     startedAt: text("started_at"),
     completedAt: text("completed_at"),
-    createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
-    updatedAt: text("updated_at").$defaultFn(() => new Date().toISOString()),
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     directoryIdIdx: index("idx_sync_jobs_directory_id").on(table.directoryId),

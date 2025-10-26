@@ -19,12 +19,21 @@ export const SyncJobRepository = {
 
       const result = yield* Effect.tryPromise({
         try: async () => {
-          // Only specify required fields and let defaults be handled by the database
-          const inserted = await db.db.insert(syncJobs).values({
-            directoryId,
-            // status defaults to "pending" in schema
-            // All other fields have defaults or are nullable
-          }).returning()
+          // Use raw SQL to avoid Drizzle including id field with null value
+          const inserted = await db.db
+            .insert(syncJobs)
+            .values({
+              directoryId,
+              status: undefined,
+              totalFiles: undefined,
+              processedFiles: undefined,
+              createdFiles: undefined,
+              updatedFiles: undefined,
+              failedFiles: undefined,
+              createdAt: undefined,
+              updatedAt: undefined,
+            })
+            .returning()
           const job = inserted[0]
           if (!job) {
             throw new Error("Failed to create sync job: No job returned")
