@@ -161,13 +161,11 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               label="Filter by Model"
               value={filters.modelName}
               onChange={(value) => handleFilterChange('modelName', value)}
-              options={[
-                { value: '', label: 'All Models' },
-                ...(distinctModels?.models.map((model) => ({
-                  value: model,
-                  label: model,
-                })) || []),
-              ]}
+              options={distinctModels?.models.map((model) => ({
+                value: model,
+                label: model,
+              })) || []}
+              placeholder="All Models"
             />
             <FormSelect
               label="Items per page"
