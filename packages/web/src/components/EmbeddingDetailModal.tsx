@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
-import { Zap } from 'lucide-react'
+import { Zap, FileText, FileCode } from 'lucide-react'
 import type { Embedding } from '@/types/api'
+import { MarkdownRenderer } from './MarkdownRenderer'
 
 interface EmbeddingDetailModalProps {
   embedding: Embedding | null
@@ -13,7 +15,11 @@ interface EmbeddingDetailModalProps {
 }
 
 export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDetailModalProps) {
+  const [renderMarkdown, setRenderMarkdown] = useState(false)
+
   if (!embedding) return null
+
+  const isMarkdownContent = embedding.converted_format === 'markdown' || embedding.text.includes('```') || embedding.text.includes('#')
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -79,13 +85,41 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
 
         {/* Text Content */}
         <div>
-          <label className="text-sm font-medium text-muted-foreground">
-            {embedding.converted_format ? 'Converted Content (Markdown)' : 'Text Content'}
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {embedding.converted_format ? 'Converted Content (Markdown)' : 'Text Content'}
+            </label>
+            {isMarkdownContent && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRenderMarkdown(!renderMarkdown)}
+                className="gap-2"
+              >
+                {renderMarkdown ? (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Show Raw
+                  </>
+                ) : (
+                  <>
+                    <FileCode className="h-4 w-4" />
+                    Render Markdown
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           <Card className="mt-2 p-4 bg-muted/30">
-            <p className="text-sm whitespace-pre-wrap break-words max-h-60 overflow-y-auto">
-              {embedding.text}
-            </p>
+            {renderMarkdown && isMarkdownContent ? (
+              <div className="max-h-96 overflow-y-auto">
+                <MarkdownRenderer content={embedding.text} />
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap break-words max-h-60 overflow-y-auto">
+                {embedding.text}
+              </p>
+            )}
           </Card>
         </div>
 
