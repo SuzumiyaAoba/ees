@@ -217,12 +217,20 @@ export function UploadDirectoryManagement() {
 
   // Check for running jobs on mount and resume polling
   useEffect(() => {
-    if (!directories?.directories) return
+    if (!directories?.directories) {
+      console.log('No directories loaded yet, skipping job check')
+      return
+    }
+
+    console.log(`Checking for running jobs across ${directories.directories.length} directories`)
 
     const checkRunningJobs = async () => {
       for (const directory of directories.directories) {
         try {
+          console.log(`Checking latest job for directory ${directory.id} (${directory.name})`)
           const latestJob = await apiClient.getLatestSyncJob(directory.id)
+
+          console.log(`Latest job for directory ${directory.id}:`, latestJob)
 
           // If job is running or pending, start polling
           if (latestJob && (latestJob.status === 'running' || latestJob.status === 'pending')) {
@@ -247,6 +255,8 @@ export function UploadDirectoryManagement() {
 
             // Start polling for this job
             startPollingForJob(directory.id, latestJob.id)
+          } else {
+            console.log(`No running job for directory ${directory.id}`)
           }
         } catch (error) {
           console.error(`Failed to check latest job for directory ${directory.id}:`, error)
