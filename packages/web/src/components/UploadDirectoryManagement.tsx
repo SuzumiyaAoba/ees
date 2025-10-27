@@ -226,40 +226,36 @@ export function UploadDirectoryManagement() {
 
     const checkRunningJobs = async () => {
       for (const directory of directories.directories) {
-        try {
-          console.log(`Checking latest job for directory ${directory.id} (${directory.name})`)
-          const latestJob = await apiClient.getLatestSyncJob(directory.id)
+        console.log(`Checking latest job for directory ${directory.id} (${directory.name})`)
+        const latestJob = await apiClient.getLatestSyncJob(directory.id)
 
-          console.log(`Latest job for directory ${directory.id}:`, latestJob)
+        console.log(`Latest job for directory ${directory.id}:`, latestJob)
 
-          // If job is running or pending, start polling
-          if (latestJob && (latestJob.status === 'running' || latestJob.status === 'pending')) {
-            console.log(`Found running job ${latestJob.id} for directory ${directory.id}, resuming polling`)
+        // If job is running or pending, start polling
+        if (latestJob && (latestJob.status === 'running' || latestJob.status === 'pending')) {
+          console.log(`Found running job ${latestJob.id} for directory ${directory.id}, resuming polling`)
 
-            // Mark as syncing
-            setSyncingDirectories(prev => new Set(prev).add(directory.id))
+          // Mark as syncing
+          setSyncingDirectories(prev => new Set(prev).add(directory.id))
 
-            // Initialize progress
-            setSyncProgress(prev => ({
-              ...prev,
-              [directory.id]: {
-                current: latestJob.processed_files,
-                total: latestJob.total_files,
-                file: latestJob.current_file || '',
-                created: latestJob.created_files,
-                updated: latestJob.updated_files,
-                failed: latestJob.failed_files,
-                status: latestJob.status
-              }
-            }))
+          // Initialize progress
+          setSyncProgress(prev => ({
+            ...prev,
+            [directory.id]: {
+              current: latestJob.processed_files,
+              total: latestJob.total_files,
+              file: latestJob.current_file || '',
+              created: latestJob.created_files,
+              updated: latestJob.updated_files,
+              failed: latestJob.failed_files,
+              status: latestJob.status
+            }
+          }))
 
-            // Start polling for this job
-            startPollingForJob(directory.id, latestJob.id)
-          } else {
-            console.log(`No running job for directory ${directory.id}`)
-          }
-        } catch (error) {
-          console.error(`Failed to check latest job for directory ${directory.id}:`, error)
+          // Start polling for this job
+          startPollingForJob(directory.id, latestJob.id)
+        } else {
+          console.log(`No running job for directory ${directory.id}`)
         }
       }
     }
