@@ -195,4 +195,33 @@ export const SyncJobRepository = {
           }),
       })
     }),
+
+  /**
+   * Cancel all incomplete jobs for a directory
+   * Marks all pending/running jobs as failed
+   */
+  cancelIncompleteJobs: (directoryId: number) =>
+    Effect.gen(function* () {
+      const db = yield* DatabaseService
+
+      yield* Effect.tryPromise({
+        try: async () => {
+          await db.db
+            .update(syncJobs)
+            .set({
+              status: "failed",
+              errorMessage: "Job cancelled by user",
+              completedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            })
+            .where(
+              sql`${syncJobs.directoryId} = ${directoryId} AND ${syncJobs.status} IN ('pending', 'running')`
+            )
+        },
+        catch: (error) =>
+          new DatabaseError({
+            message: `Failed to cancel incomplete jobs: ${String(error)}`,
+          }),
+      })
+    }),
 }

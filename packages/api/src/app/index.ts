@@ -29,6 +29,7 @@ import {
   syncUploadDirectoryRoute,
   getSyncJobStatusRoute,
   getLatestSyncJobRoute,
+  cancelIncompleteSyncJobsRoute,
 } from "@/features/upload-directory"
 import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
@@ -621,8 +622,90 @@ app.openapi(syncUploadDirectoryRoute, async (c) => {
 })
 
 /**
+ * Get latest sync job endpoint
+ * Retrieve the latest sync job for a directory
+ * IMPORTANT: This route must be registered BEFORE getSyncJobStatusRoute
+ * to prevent "latest" from being matched as a job_id parameter
+ */
+app.openapi(getLatestSyncJobRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandlerWithConditional(c, "getLatestSyncJob",
+    Effect.gen(function* () {
+      const { getLatestSyncJob } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
+
+      const job = yield* Effect.tryPromise({
+        try: () => getLatestSyncJob(id),
+        catch: (error) => new Error(`Failed to get latest sync job: ${String(error)}`)
+      })
+
+      if (!job) {
+        return null
+      }
+
+      return {
+        id: job.id,
+        directory_id: job.directoryId,
+        status: job.status,
+        total_files: job.totalFiles,
+        processed_files: job.processedFiles,
+        created_files: job.createdFiles,
+        updated_files: job.updatedFiles,
+        failed_files: job.failedFiles,
+        current_file: job.currentFile,
+        error_message: job.errorMessage,
+        started_at: job.startedAt,
+        completed_at: job.completedAt,
+        created_at: job.createdAt,
+        updated_at: job.updatedAt,
+      }
+    }),
+    "No sync job found for this directory"
+  ) as never
+})
+
+/**
+ * Cancel incomplete sync jobs endpoint
+ * Cancel all pending or running sync jobs for a directory
+ */
+app.openapi(cancelIncompleteSyncJobsRoute, async (c) => {
+  const { id: idStr } = c.req.valid("param")
+  const validationResult = validateNumericId(idStr, c)
+
+  if (typeof validationResult !== "number") {
+    return validationResult as never
+  }
+
+  const id = validationResult
+
+  return executeEffectHandler(c, "cancelIncompleteSyncJobs",
+    Effect.gen(function* () {
+      const { cancelIncompleteJobs } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
+
+      yield* Effect.tryPromise({
+        try: () => cancelIncompleteJobs(id),
+        catch: (error) => new Error(`Failed to cancel incomplete jobs: ${String(error)}`)
+      })
+
+      return {
+        message: "All incomplete sync jobs have been cancelled successfully",
+      }
+    })
+  ) as never
+})
+
+/**
  * Get sync job status endpoint
  * Retrieve the status of a specific sync job
+ * IMPORTANT: This route must be registered AFTER getLatestSyncJobRoute
+ * to prevent "latest" from being matched as a job_id parameter
  */
 app.openapi(getSyncJobStatusRoute, async (c) => {
   const { id: dirIdStr, job_id: jobIdStr } = c.req.valid("param")
@@ -670,54 +753,6 @@ app.openapi(getSyncJobStatusRoute, async (c) => {
       }
     }),
     "Sync job not found"
-  ) as never
-})
-
-/**
- * Get latest sync job endpoint
- * Retrieve the latest sync job for a directory
- */
-app.openapi(getLatestSyncJobRoute, async (c) => {
-  const { id: idStr } = c.req.valid("param")
-  const validationResult = validateNumericId(idStr, c)
-
-  if (typeof validationResult !== "number") {
-    return validationResult as never
-  }
-
-  const id = validationResult
-
-  return executeEffectHandlerWithConditional(c, "getLatestSyncJob",
-    Effect.gen(function* () {
-      const { getLatestSyncJob } = yield* Effect.promise(() => import("@/features/sync-job/sync-job-manager"))
-
-      const job = yield* Effect.tryPromise({
-        try: () => getLatestSyncJob(id),
-        catch: (error) => new Error(`Failed to get latest sync job: ${String(error)}`)
-      })
-
-      if (!job) {
-        return null
-      }
-
-      return {
-        id: job.id,
-        directory_id: job.directoryId,
-        status: job.status,
-        total_files: job.totalFiles,
-        processed_files: job.processedFiles,
-        created_files: job.createdFiles,
-        updated_files: job.updatedFiles,
-        failed_files: job.failedFiles,
-        current_file: job.currentFile,
-        error_message: job.errorMessage,
-        started_at: job.startedAt,
-        completed_at: job.completedAt,
-        created_at: job.createdAt,
-        updated_at: job.updatedAt,
-      }
-    }),
-    "No sync job found for this directory"
   ) as never
 })
 

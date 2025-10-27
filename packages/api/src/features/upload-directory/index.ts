@@ -11,4 +11,5 @@ export {
   syncUploadDirectoryRoute,
   getSyncJobStatusRoute,
   getLatestSyncJobRoute,
+  cancelIncompleteSyncJobsRoute,
 } from "./api/route"
