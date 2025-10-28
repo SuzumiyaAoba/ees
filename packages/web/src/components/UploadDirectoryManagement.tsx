@@ -13,7 +13,7 @@ import {
 } from '@/hooks/useUploadDirectories'
 import { useProviderModels } from '@/hooks/useEmbeddings'
 import { apiClient } from '@/services/api'
-import type { UploadDirectory, TaskType, TaskTypeMetadata } from '@/types/api'
+import type { UploadDirectory, TaskType, TaskTypeMetadata, FailedFile } from '@/types/api'
 
 export function UploadDirectoryManagement() {
   const { data: directories, isLoading, error } = useUploadDirectories()
@@ -41,6 +41,7 @@ export function UploadDirectoryManagement() {
     created: number
     updated: number
     failed: number
+    failedFiles: FailedFile[]
     status: 'pending' | 'running' | 'completed' | 'failed'
   }>>({})
   const [lastSyncResult, setLastSyncResult] = useState<{
@@ -141,6 +142,10 @@ export function UploadDirectoryManagement() {
         const job = await apiClient.getSyncJobStatus(directoryId, jobId)
 
         // Update progress
+        const failedFiles: FailedFile[] = job.failed_file_paths
+          ? JSON.parse(job.failed_file_paths) as FailedFile[]
+          : []
+
         setSyncProgress(prev => ({
           ...prev,
           [directoryId]: {
@@ -150,6 +155,7 @@ export function UploadDirectoryManagement() {
             created: job.created_files,
             updated: job.updated_files,
             failed: job.failed_files,
+            failedFiles: failedFiles,
             status: job.status
           }
         }))
@@ -239,6 +245,10 @@ export function UploadDirectoryManagement() {
           setSyncingDirectories(prev => new Set(prev).add(directory.id))
 
           // Initialize progress
+          const initialFailedFiles: FailedFile[] = latestJob.failed_file_paths
+            ? JSON.parse(latestJob.failed_file_paths) as FailedFile[]
+            : []
+
           setSyncProgress(prev => ({
             ...prev,
             [directory.id]: {
@@ -248,6 +258,7 @@ export function UploadDirectoryManagement() {
               created: latestJob.created_files,
               updated: latestJob.updated_files,
               failed: latestJob.failed_files,
+              failedFiles: initialFailedFiles,
               status: latestJob.status
             }
           }))
@@ -277,6 +288,7 @@ export function UploadDirectoryManagement() {
         created: 0,
         updated: 0,
         failed: 0,
+        failedFiles: [],
         status: 'pending'
       }
     }))
@@ -591,6 +603,25 @@ export function UploadDirectoryManagement() {
                         <span>Updated: <span className="font-semibold">{syncProgress[directory.id].updated}</span></span>
                         <span>Failed: <span className="font-semibold text-red-600">{syncProgress[directory.id].failed}</span></span>
                       </div>
+
+                      {/* Failed files list */}
+                      {syncProgress[directory.id].failedFiles.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <div className="text-xs font-semibold text-red-700 mb-2">Failed Files:</div>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {syncProgress[directory.id].failedFiles.map((failedFile, index) => (
+                              <div key={index} className="text-xs bg-red-50 border border-red-200 rounded px-2 py-1">
+                                <div className="font-medium text-red-800 truncate" title={failedFile.path}>
+                                  {failedFile.path}
+                                </div>
+                                <div className="text-red-600 text-[10px] mt-0.5" title={failedFile.error}>
+                                  {failedFile.error}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

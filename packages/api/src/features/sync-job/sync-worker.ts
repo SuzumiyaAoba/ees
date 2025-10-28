@@ -39,6 +39,7 @@ export async function processSyncJob(
       let filesCreated = 0
       let filesUpdated = 0
       let filesFailed = 0
+      const failedFilePaths: Array<{ path: string; error: string }> = []
 
       for (let i = 0; i < collectedFiles.length; i++) {
         const collectedFile = collectedFiles[i]
@@ -53,14 +54,22 @@ export async function processSyncJob(
             createdFiles: filesCreated,
             updatedFiles: filesUpdated,
             failedFiles: filesFailed,
+            failedFilePaths: JSON.stringify(failedFilePaths),
             currentFile: collectedFile.relativePath,
           })
 
           // Read file content
           const buffer = yield* Effect.tryPromise({
             try: () => readFile(collectedFile.absolutePath),
-            catch: (error) =>
-              new Error(`Failed to read file: ${String(error)}`),
+            catch: (error) => {
+              const errorMessage = `Failed to read file: ${String(error)}`
+              filesFailed++
+              failedFilePaths.push({
+                path: collectedFile.relativePath,
+                error: errorMessage,
+              })
+              return new Error(errorMessage)
+            },
           })
 
           // Create a File object from buffer
@@ -74,9 +83,13 @@ export async function processSyncJob(
 
           // Process file to extract text
           const fileResult = yield* processFile(file).pipe(
-            Effect.catchAll(() =>
+            Effect.catchAll((error) =>
               Effect.sync(() => {
                 filesFailed++
+                failedFilePaths.push({
+                  path: collectedFile.relativePath,
+                  error: `Failed to process file: ${String(error)}`,
+                })
                 return null
               })
             )
@@ -103,9 +116,13 @@ export async function processSyncJob(
             fileResult.originalContent,
             fileResult.convertedFormat
           ).pipe(
-            Effect.catchAll(() =>
+            Effect.catchAll((error) =>
               Effect.sync(() => {
                 filesFailed++
+                failedFilePaths.push({
+                  path: collectedFile.relativePath,
+                  error: `Failed to create embedding: ${String(error)}`,
+                })
               })
             )
           )
@@ -114,6 +131,10 @@ export async function processSyncJob(
         } catch (error) {
           console.error(`Failed to process file ${collectedFile.relativePath}:`, error)
           filesFailed++
+          failedFilePaths.push({
+            path: collectedFile.relativePath,
+            error: String(error),
+          })
         }
       }
 
@@ -126,6 +147,7 @@ export async function processSyncJob(
         createdFiles: filesCreated,
         updatedFiles: filesUpdated,
         failedFiles: filesFailed,
+        failedFilePaths: JSON.stringify(failedFilePaths),
         currentFile: null,
       })
     } catch (error) {

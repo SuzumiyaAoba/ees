@@ -177,6 +177,10 @@ export const SyncJobStatusSchema = z
       description: "Number of files that failed to process",
       example: 1,
     }),
+    failed_file_paths: z.string().nullable().openapi({
+      description: "JSON array of failed file paths with error messages",
+      example: JSON.stringify([{ path: "docs/file.txt", error: "Failed to read file" }]),
+    }),
     current_file: z.string().nullable().openapi({
       description: "Currently processing file",
       example: "docs/readme.md",
