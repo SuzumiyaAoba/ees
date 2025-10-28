@@ -46,6 +46,12 @@ const make = (config: OllamaConfig) =>
   Effect.gen(function* () {
     const baseUrl = config.baseUrl ?? "http://localhost:11434"
 
+    // Timeout for embedding requests in milliseconds
+    // Default: 10 minutes (600000ms)
+    // Can be configured via EES_OLLAMA_TIMEOUT environment variable
+    const envTimeout = Number(process.env["EES_OLLAMA_TIMEOUT"])
+    const timeoutMs = !Number.isNaN(envTimeout) && envTimeout > 0 ? envTimeout : 600000
+
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
@@ -63,6 +69,7 @@ const make = (config: OllamaConfig) =>
               model: modelName,
               input: request.text
             }),
+            signal: AbortSignal.timeout(timeoutMs),
           })
 
           if (!response.ok) {
