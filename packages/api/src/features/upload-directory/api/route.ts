@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi"
+import { z } from "zod"
 import {
   CreateUploadDirectoryRequestSchema,
   CreateUploadDirectoryResponseSchema,
@@ -209,6 +210,32 @@ export const getLatestSyncJobRoute = createRoute({
       content: {
         "application/json": {
           schema: SyncJobStatusSchema,
+        },
+      },
+    },
+  }),
+})
+
+/**
+ * Cancel incomplete sync jobs route
+ */
+export const cancelIncompleteSyncJobsRoute = createRoute({
+  method: "delete",
+  path: "/upload-directories/{id}/sync/jobs",
+  tags: ["Upload Directories"],
+  summary: "Cancel incomplete sync jobs",
+  description: "Cancel all pending or running sync jobs for a directory",
+  request: {
+    params: UploadDirectoryIdParamSchema,
+  },
+  responses: createResponsesWithErrors({
+    200: {
+      description: "Incomplete jobs cancelled successfully",
+      content: {
+        "application/json": {
+          schema: z.object({
+            message: z.string(),
+          }),
         },
       },
     },

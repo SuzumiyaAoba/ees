@@ -117,3 +117,14 @@ export async function getLatestSyncJob(directoryId: number) {
 
   return await Effect.runPromise(program.pipe(Effect.provide(AppLayer)))
 }
+
+/**
+ * Cancel all incomplete jobs for a directory
+ */
+export async function cancelIncompleteJobs(directoryId: number) {
+  const program = Effect.gen(function* () {
+    yield* SyncJobRepository.cancelIncompleteJobs(directoryId)
+  })
+
+  return await Effect.runPromise(program.pipe(Effect.provide(AppLayer)))
+}

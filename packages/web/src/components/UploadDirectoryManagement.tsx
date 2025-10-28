@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search } from 'lucide-react'
+import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -135,6 +135,50 @@ export function UploadDirectoryManagement() {
     }
   }
 
+  const handleResetJobs = async (id: number) => {
+    if (window.confirm('Are you sure you want to cancel all incomplete sync jobs for this directory?')) {
+      try {
+        await apiClient.cancelIncompleteSyncJobs(id)
+
+        // Stop any polling for this directory
+        if (pollIntervals[id]) {
+          clearInterval(pollIntervals[id])
+          setPollIntervals(prev => {
+            const newIntervals = { ...prev }
+            delete newIntervals[id]
+            return newIntervals
+          })
+        }
+
+        // Clear syncing state
+        setSyncingDirectories(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(id)
+          return newSet
+        })
+
+        // Clear progress
+        setSyncProgress(prev => {
+          const newProgress = { ...prev }
+          delete newProgress[id]
+          return newProgress
+        })
+
+        // Show success message
+        setLastSyncResult({
+          directory_id: id,
+          files_processed: 0,
+          files_created: 0,
+          files_updated: 0,
+          files_failed: 0,
+          message: 'All incomplete sync jobs have been cancelled successfully'
+        })
+      } catch (error) {
+        console.error('Failed to reset sync jobs:', error)
+      }
+    }
+  }
+
   // Start polling for a specific job
   const startPollingForJob = useCallback((directoryId: number, jobId: number) => {
     const interval = setInterval(async () => {
@@ -224,23 +268,15 @@ export function UploadDirectoryManagement() {
   // Check for running jobs on mount and resume polling
   useEffect(() => {
     if (!directories?.directories) {
-      console.log('No directories loaded yet, skipping job check')
       return
     }
 
-    console.log(`Checking for running jobs across ${directories.directories.length} directories`)
-
     const checkRunningJobs = async () => {
       for (const directory of directories.directories) {
-        console.log(`Checking latest job for directory ${directory.id} (${directory.name})`)
         const latestJob = await apiClient.getLatestSyncJob(directory.id)
-
-        console.log(`Latest job for directory ${directory.id}:`, latestJob)
 
         // If job is running or pending, start polling
         if (latestJob && (latestJob.status === 'running' || latestJob.status === 'pending')) {
-          console.log(`Found running job ${latestJob.id} for directory ${directory.id}, resuming polling`)
-
           // Mark as syncing
           setSyncingDirectories(prev => new Set(prev).add(directory.id))
 
@@ -265,8 +301,6 @@ export function UploadDirectoryManagement() {
 
           // Start polling for this job
           startPollingForJob(directory.id, latestJob.id)
-        } else {
-          console.log(`No running job for directory ${directory.id}`)
         }
       }
     }
@@ -552,6 +586,14 @@ export function UploadDirectoryManagement() {
                             Sync
                           </>
                         )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleResetJobs(directory.id)}
+                        title="Cancel all incomplete sync jobs"
+                      >
+                        <XCircle className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"

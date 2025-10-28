@@ -270,9 +270,14 @@ class ApiClient {
     } catch (error) {
       // If no job exists, return null instead of throwing
       // This is expected when checking for running jobs on page load
-      console.log(`No sync job found for directory ${directoryId}`)
       return null
     }
+  }
+
+  async cancelIncompleteSyncJobs(directoryId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/upload-directories/${directoryId}/sync/jobs`, {
+      method: 'DELETE',
+    })
   }
 
   // File System operations
@@ -527,7 +532,10 @@ const createMockApiClient = () => ({
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }),
-  
+  cancelIncompleteSyncJobs: async (_directoryId: number): Promise<{ message: string }> => ({
+    message: 'All incomplete sync jobs have been cancelled successfully',
+  }),
+
   // File system operations
   listDirectory: async (path: string): Promise<ListDirectoryResponse> => ({
     path,
