@@ -233,6 +233,11 @@ export interface SyncUploadDirectoryResponse {
   message: string
 }
 
+export interface FailedFile {
+  path: string
+  error: string
+}
+
 export interface SyncJobStatus {
   id: number
   directory_id: number
@@ -242,6 +247,7 @@ export interface SyncJobStatus {
   created_files: number
   updated_files: number
   failed_files: number
+  failed_file_paths: string | null
   current_file: string | null
   error_message: string | null
   started_at: string | null
