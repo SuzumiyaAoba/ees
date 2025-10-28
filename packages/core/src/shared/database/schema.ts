@@ -82,6 +82,7 @@ export const syncJobs = sqliteTable(
     createdFiles: integer("created_files").default(0),
     updatedFiles: integer("updated_files").default(0),
     failedFiles: integer("failed_files").default(0),
+    failedFilePaths: text("failed_file_paths"), // JSON array of failed file paths with error messages
     currentFile: text("current_file"), // Currently processing file
     errorMessage: text("error_message"), // Error message if failed
     startedAt: text("started_at"),
