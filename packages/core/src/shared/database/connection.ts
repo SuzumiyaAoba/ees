@@ -226,6 +226,7 @@ const make = Effect.gen(function* () {
           created_files INTEGER NOT NULL DEFAULT 0,
           updated_files INTEGER NOT NULL DEFAULT 0,
           failed_files INTEGER NOT NULL DEFAULT 0,
+          failed_file_paths TEXT,
           current_file TEXT,
           error_message TEXT,
           started_at TEXT,
