@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, Database, ArrowLeftRight, Plus, FolderOpen, Eye } from 'lucide-react'
+import { Search, List, Upload, Settings, ArrowLeftRight, Plus, FolderOpen, Eye } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
@@ -149,26 +149,6 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                <Database className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">EES Dashboard</h1>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  Embedding Engine Service
-                  <Badge variant="secondary" className="text-xs">v1.0.0</Badge>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Navigation */}
       <div className="border-b bg-background sticky top-0 z-10">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-2">
