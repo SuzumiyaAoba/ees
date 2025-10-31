@@ -210,15 +210,11 @@ function AppContent() {
         <footer className="border-t mt-auto bg-card/50 backdrop-blur-sm">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <Logo size="sm" variant={isDark ? 'white' : 'default'} />
-                <div className="flex items-center gap-2">
-                  <p>EES Dashboard v1.0.0</p>
-                  <Badge variant="outline" className="text-xs">
-                    <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
-                    Online
-                  </Badge>
-                </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
+                  Online
+                </Badge>
               </div>
               <p className="hidden sm:block">Built with React + TypeScript + Tailwind CSS</p>
             </div>
