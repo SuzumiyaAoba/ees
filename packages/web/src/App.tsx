@@ -13,7 +13,6 @@ import { EmbeddingVisualization } from '@/components/EmbeddingVisualization'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Logo } from '@/design-system/components/Logo'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { apiClient } from '@/services/api'
 import type { Embedding, SearchResult } from '@/types/api'
@@ -157,21 +156,34 @@ function AppContent() {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Logo size="md" variant={isDark ? 'white' : 'gradient'} />
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-                  Embedding Engine Service
-                </h1>
-                <p className="text-xs text-muted-foreground">Manage embeddings and vector search</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between gap-4">
+            {/* Navigation Tabs */}
+            <Tabs className="flex-1">
+              <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  return (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      active={activeTab === tab.id}
+                      onClick={() => handleTabChange(tab.id)}
+                      className="gap-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                    </TabsTrigger>
+                  )
+                })}
+              </TabsList>
+            </Tabs>
+
+            {/* Theme Toggle */}
             <Button
               size="icon"
               variant="ghost"
               onClick={toggleTheme}
-              className="rounded-full"
+              className="rounded-full shrink-0"
               aria-label="Toggle theme"
             >
               {isDark ? (
@@ -181,27 +193,6 @@ function AppContent() {
               )}
             </Button>
           </div>
-
-          {/* Navigation */}
-          <Tabs>
-            <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    active={activeTab === tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className="gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-          </Tabs>
         </div>
       </header>
 
@@ -215,15 +206,12 @@ function AppContent() {
         <footer className="border-t mt-auto bg-card/50 backdrop-blur-sm">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <Logo size="sm" variant={isDark ? 'white' : 'default'} />
-                <div className="flex items-center gap-2">
-                  <p>EES Dashboard v1.0.0</p>
-                  <Badge variant="outline" className="text-xs">
-                    <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
-                    Online
-                  </Badge>
-                </div>
+              <div className="flex items-center gap-2">
+                <p>EES Dashboard v1.0.0</p>
+                <Badge variant="outline" className="text-xs">
+                  <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
+                  Online
+                </Badge>
               </div>
               <p className="hidden sm:block">Built with React + TypeScript + Tailwind CSS</p>
             </div>
