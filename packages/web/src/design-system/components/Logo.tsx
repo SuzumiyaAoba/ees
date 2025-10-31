@@ -51,7 +51,7 @@ export const Logo: React.FC<LogoProps> = ({
   return (
     <svg
       className={cn(heightClass, 'w-auto', className)}
-      viewBox="0 0 200 60"
+      viewBox="0 0 60 60"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -80,18 +80,6 @@ export const Logo: React.FC<LogoProps> = ({
         <line x1="30" y1="30" x2="15" y2="45" stroke={colors.primary} strokeWidth="2" opacity="0.6" />
         <line x1="30" y1="30" x2="45" y2="45" stroke={colors.primary} strokeWidth="2" opacity="0.6" />
       </g>
-
-      {/* Text: EES */}
-      <text
-        x="70"
-        y="40"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="32"
-        fontWeight="700"
-        fill={colors.primary}
-      >
-        EES
-      </text>
     </svg>
   )
 }
