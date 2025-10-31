@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Trash2, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { getTextFileSize } from '@/utils/format'
 import type { Embedding } from '@/types/api'
 
 interface EmbeddingCardProps {
@@ -130,6 +131,7 @@ export function EmbeddingCard({
             <div className="flex gap-4 text-sm text-muted-foreground mt-1">
               <span>ID: {embedding.id}</span>
               <span>Model: {embedding.model_name}</span>
+              <span>Size: {getTextFileSize(embedding.text)}</span>
               <span>Created: {formatDate(embedding.created_at)}</span>
             </div>
           </div>

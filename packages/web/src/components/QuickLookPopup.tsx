@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { getTextFileSize } from '@/utils/format'
 import type { Embedding, SearchResult } from '@/types/api'
 
 interface QuickLookPopupProps {
@@ -131,7 +132,10 @@ export function QuickLookPopup({
               )}
             </div>
             <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground flex-shrink-0">
-              <span>Created: {formatDate(item.created_at)}</span>
+              <div className="flex gap-3">
+                <span>Created: {formatDate(item.created_at)}</span>
+                <span>Size: {getTextFileSize(item.text)}</span>
+              </div>
               {'embedding' in item && (
                 <span>Dimensions: {item.embedding.length}</span>
               )}

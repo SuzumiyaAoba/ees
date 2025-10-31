@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { getTextFileSize } from '@/utils/format'
 import type { SearchResult } from '@/types/api'
 
 interface SearchResultCardProps {
@@ -76,7 +77,10 @@ export function SearchResultCard({
         </p>
       )}
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>Model: {result.model_name}</span>
+        <div className="flex gap-3">
+          <span>Model: {result.model_name}</span>
+          <span>Size: {getTextFileSize(result.text)}</span>
+        </div>
         <span>Created: {new Date(result.created_at).toLocaleDateString()}</span>
       </div>
     </div>
