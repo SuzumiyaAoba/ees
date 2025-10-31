@@ -46,7 +46,7 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
           <DialogTitle>Embedding Details</DialogTitle>
           <Badge variant="secondary">{embedding.model_name}</Badge>
           {embedding.task_type && (
-            <Badge variant="outline" className="bg-blue-50">
+            <Badge variant="outline" className="bg-info/10 dark:bg-info/20 border-info/30">
               {embedding.task_type}
             </Badge>
           )}

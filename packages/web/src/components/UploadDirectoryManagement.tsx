@@ -608,13 +608,13 @@ export function UploadDirectoryManagement() {
 
                   {/* Progress indicator during sync */}
                   {syncingDirectories.has(directory.id) && syncProgress[directory.id] && (
-                    <div className="border-t pt-3 space-y-2 bg-blue-50 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
+                    <div className="border-t pt-3 space-y-2 bg-info/10 dark:bg-info/20 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
                       <div className="flex items-center justify-between text-sm pt-1">
-                        <span className="text-blue-700 font-medium flex items-center gap-2">
-                          <div className="h-4 w-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-info-foreground font-medium flex items-center gap-2">
+                          <div className="h-4 w-4 border-2 border-info border-t-transparent rounded-full animate-spin" />
                           Processing files...
                         </span>
-                        <span className="text-blue-700 font-semibold">
+                        <span className="text-info-foreground font-semibold">
                           {syncProgress[directory.id].current} / {syncProgress[directory.id].total}
                         </span>
                       </div>
@@ -629,9 +629,9 @@ export function UploadDirectoryManagement() {
                               : '0%'}
                           </span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-info/30 dark:bg-info/40">
                           <div
-                            className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                            className="h-full bg-info transition-all duration-300 ease-out"
                             style={{
                               width: syncProgress[directory.id].total > 0
                                 ? `${(syncProgress[directory.id].current / syncProgress[directory.id].total) * 100}%`
@@ -652,8 +652,8 @@ export function UploadDirectoryManagement() {
                           <div className="text-xs font-semibold text-red-700 mb-2">Failed Files:</div>
                           <div className="max-h-32 overflow-y-auto space-y-1">
                             {syncProgress[directory.id].failedFiles.map((failedFile, index) => (
-                              <div key={index} className="text-xs bg-red-50 border border-red-200 rounded px-2 py-1">
-                                <div className="font-medium text-red-800 truncate" title={failedFile.path}>
+                              <div key={index} className="text-xs bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded px-2 py-1">
+                                <div className="font-medium text-destructive-foreground truncate" title={failedFile.path}>
                                   {failedFile.path}
                                 </div>
                                 <div className="text-red-600 text-[10px] mt-0.5" title={failedFile.error}>
@@ -693,9 +693,9 @@ export function UploadDirectoryManagement() {
 
       {/* Sync Success Message */}
       {lastSyncResult && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-success/30 bg-success/10 dark:bg-success/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-green-700 mb-4">
+            <div className="flex items-center gap-2 text-success-foreground mb-4">
               <CheckCircle className="h-5 w-5" />
               <div className="flex-1">
                 <p className="font-medium">Directory synced successfully!</p>
@@ -711,11 +711,11 @@ export function UploadDirectoryManagement() {
               <div className="bg-white rounded-lg p-4 border border-green-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-muted-foreground">Total Files</span>
-                  <span className="text-2xl font-bold text-green-700">{lastSyncResult.files_processed}</span>
+                  <span className="text-2xl font-bold text-success-foreground">{lastSyncResult.files_processed}</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-green-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-success/20 dark:bg-success/30">
                   <div
-                    className="h-full bg-green-600 transition-all"
+                    className="h-full bg-success transition-all"
                     style={{
                       width: `${lastSyncResult.files_processed > 0
                         ? ((lastSyncResult.files_created + lastSyncResult.files_updated) / lastSyncResult.files_processed) * 100
@@ -737,11 +737,11 @@ export function UploadDirectoryManagement() {
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-xl font-semibold text-green-700">{lastSyncResult.files_created}</p>
+                  <p className="text-xl font-semibold text-success-foreground">{lastSyncResult.files_created}</p>
                 </div>
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Updated</p>
-                  <p className="text-xl font-semibold text-green-700">{lastSyncResult.files_updated}</p>
+                  <p className="text-xl font-semibold text-success-foreground">{lastSyncResult.files_updated}</p>
                 </div>
                 <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-muted-foreground text-xs">Failed</p>

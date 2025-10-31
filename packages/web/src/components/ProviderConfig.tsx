@@ -68,7 +68,7 @@ export function ProviderConfig() {
               ) : status && status.status === 'online' ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-success rounded-full"></div>
                     <span className="font-medium">Service Online</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -77,7 +77,7 @@ export function ProviderConfig() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-destructive rounded-full"></div>
                   <span className="font-medium">Service Offline</span>
                 </div>
               )}
@@ -100,18 +100,24 @@ export function ProviderConfig() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add New Model */}
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter model name (e.g., embeddinggemma:300m)"
-              value={newModelName}
-              onChange={(e) => setNewModelName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handlePullModel()}
-              className="flex-1"
-            />
-            <Button onClick={handlePullModel} disabled={!newModelName.trim()}>
-              <Plus className="h-4 w-4" />
-              Pull Model
-            </Button>
+          <div className="p-4 rounded-lg border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/5 dark:from-primary/10 dark:via-accent/10 dark:to-secondary/10">
+            <label className="text-sm font-semibold mb-2 block">Add New Model</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter model name (e.g., embeddinggemma:300m)"
+                value={newModelName}
+                onChange={(e) => setNewModelName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePullModel()}
+                className="flex-1"
+              />
+              <Button onClick={handlePullModel} disabled={!newModelName.trim()} variant="gradient">
+                <Plus className="h-4 w-4 mr-2" />
+                Pull Model
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Enter the name of an embedding model to download from Ollama
+            </p>
           </div>
 
           {/* Models List */}
@@ -134,7 +140,7 @@ export function ProviderConfig() {
                 {(models as any).map((model: any) => (
                   <div
                     key={model.name}
-                    className="border rounded-lg p-4 flex items-center justify-between"
+                    className="border border-border rounded-lg p-4 flex items-center justify-between bg-card hover:bg-accent/5 transition-colors"
                   >
                     <div className="space-y-1">
                       <h5 className="font-medium">{model.name}</h5>

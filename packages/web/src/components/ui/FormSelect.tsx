@@ -1,3 +1,11 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './Select'
+
 interface FormSelectOption {
   value: string
   label: string
@@ -29,33 +37,39 @@ export function FormSelect({
   className = '',
   required = false,
 }: FormSelectProps) {
+  // Filter out empty string options and use their label as placeholder
+  const filteredOptions = options.filter(opt => opt.value !== '')
+  const emptyOption = options.find(opt => opt.value === '')
+  const effectivePlaceholder = emptyOption?.label || placeholder
+
   return (
     <div className={className}>
       {label && (
-        <label className="text-sm font-medium">
+        <label className="text-sm font-medium block mb-2">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </label>
       )}
-      <select
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <Select
+        value={value || undefined}
+        onValueChange={(newValue) => onChange(newValue || '')}
         disabled={disabled}
       >
-        {placeholder && (
-          <option value="">{placeholder}</option>
-        )}
-        {options.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-            disabled={option.disabled}
-          >
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger>
+          <SelectValue placeholder={effectivePlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {filteredOptions.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && (
         <p className="text-xs text-destructive mt-1">{error}</p>
       )}
