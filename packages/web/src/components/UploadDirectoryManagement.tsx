@@ -695,7 +695,7 @@ export function UploadDirectoryManagement() {
       {lastSyncResult && (
         <Card className="border-success/30 bg-success/10 dark:bg-success/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-success-foreground mb-4">
+            <div className="flex items-center gap-2 text-success mb-4">
               <CheckCircle className="h-5 w-5" />
               <div className="flex-1">
                 <p className="font-medium">Directory synced successfully!</p>
@@ -708,10 +708,10 @@ export function UploadDirectoryManagement() {
             {/* Statistics */}
             <div className="space-y-3 mb-4">
               {/* Summary card */}
-              <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="bg-background rounded-lg p-4 border border-success/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-muted-foreground">Total Files</span>
-                  <span className="text-2xl font-bold text-success-foreground">{lastSyncResult.files_processed}</span>
+                  <span className="text-2xl font-bold text-success">{lastSyncResult.files_processed}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-success/20 dark:bg-success/30">
                   <div
@@ -735,17 +735,17 @@ export function UploadDirectoryManagement() {
 
               {/* Detailed statistics */}
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="bg-white rounded p-3 border border-green-200">
+                <div className="bg-background rounded p-3 border border-success/30">
                   <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-xl font-semibold text-success-foreground">{lastSyncResult.files_created}</p>
+                  <p className="text-xl font-semibold text-success">{lastSyncResult.files_created}</p>
                 </div>
-                <div className="bg-white rounded p-3 border border-green-200">
+                <div className="bg-background rounded p-3 border border-success/30">
                   <p className="text-muted-foreground text-xs">Updated</p>
-                  <p className="text-xl font-semibold text-success-foreground">{lastSyncResult.files_updated}</p>
+                  <p className="text-xl font-semibold text-success">{lastSyncResult.files_updated}</p>
                 </div>
-                <div className="bg-white rounded p-3 border border-green-200">
+                <div className="bg-background rounded p-3 border border-success/30">
                   <p className="text-muted-foreground text-xs">Failed</p>
-                  <p className="text-xl font-semibold text-red-600">{lastSyncResult.files_failed}</p>
+                  <p className="text-xl font-semibold text-destructive">{lastSyncResult.files_failed}</p>
                 </div>
               </div>
             </div>
