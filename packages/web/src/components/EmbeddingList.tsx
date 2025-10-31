@@ -238,7 +238,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                 {data.embeddings.map((embedding) => (
                   <div
                     key={embedding.id}
-                    className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedIds.has(embedding.id) ? 'bg-accent' : 'hover:bg-accent'}`}
+                    className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedIds.has(embedding.id) ? 'bg-muted' : 'hover:bg-muted/50'}`}
                     onClick={() => toggleSelect(embedding.id)}
                   >
                     <div className="flex justify-between items-start mb-3">

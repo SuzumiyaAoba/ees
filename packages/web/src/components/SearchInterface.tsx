@@ -353,7 +353,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               {searchResults.results.map((result) => (
                 <div
                   key={result.id}
-                  className="border rounded-lg p-4 hover:bg-accent cursor-pointer transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => onResultSelect?.(result)}
                 >
                   <div className="flex justify-between items-start mb-2">

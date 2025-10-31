@@ -140,7 +140,7 @@ export function ProviderConfig() {
                 {(models as any).map((model: any) => (
                   <div
                     key={model.name}
-                    className="border border-border rounded-lg p-4 flex items-center justify-between bg-card hover:bg-accent/5 transition-colors"
+                    className="border border-border rounded-lg p-4 flex items-center justify-between bg-card hover:bg-muted/50 transition-colors"
                   >
                     <div className="space-y-1">
                       <h5 className="font-medium">{model.name}</h5>
