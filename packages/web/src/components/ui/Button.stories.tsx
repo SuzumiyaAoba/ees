@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { Button } from './Button'
+import { Download, Upload, Trash2, Plus, Search } from 'lucide-react'
 
 const meta: Meta<typeof Button> = {
   title: 'UI/Button',
@@ -11,11 +12,11 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: { type: 'select' },
-      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
+      options: ['default', 'gradient', 'destructive', 'outline', 'secondary', 'ghost', 'link', 'success', 'warning'],
     },
     size: {
       control: { type: 'select' },
-      options: ['default', 'sm', 'lg', 'icon'],
+      options: ['default', 'sm', 'lg', 'xl', 'icon'],
     },
     disabled: {
       control: { type: 'boolean' },
@@ -28,7 +29,14 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    children: 'Button',
+    children: 'Primary Button',
+  },
+}
+
+export const Gradient: Story = {
+  args: {
+    variant: 'gradient',
+    children: 'Gradient Button',
   },
 }
 
@@ -67,6 +75,36 @@ export const Link: Story = {
   },
 }
 
+export const Success: Story = {
+  args: {
+    variant: 'success',
+    children: 'Success',
+  },
+}
+
+export const Warning: Story = {
+  args: {
+    variant: 'warning',
+    children: 'Warning',
+  },
+}
+
+export const AllVariants: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-4">
+      <Button variant="default">Default</Button>
+      <Button variant="gradient">Gradient</Button>
+      <Button variant="destructive">Destructive</Button>
+      <Button variant="outline">Outline</Button>
+      <Button variant="secondary">Secondary</Button>
+      <Button variant="ghost">Ghost</Button>
+      <Button variant="link">Link</Button>
+      <Button variant="success">Success</Button>
+      <Button variant="warning">Warning</Button>
+    </div>
+  ),
+}
+
 export const Small: Story = {
   args: {
     size: 'sm',
@@ -81,23 +119,91 @@ export const Large: Story = {
   },
 }
 
-export const Icon: Story = {
+export const ExtraLarge: Story = {
   args: {
-    size: 'icon',
-    children: '🚀',
+    size: 'xl',
+    children: 'Extra Large',
   },
+}
+
+export const AllSizes: Story = {
+  render: () => (
+    <div className="flex items-center gap-4">
+      <Button size="sm">Small</Button>
+      <Button size="default">Default</Button>
+      <Button size="lg">Large</Button>
+      <Button size="xl">Extra Large</Button>
+    </div>
+  ),
+}
+
+export const WithIcons: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-4">
+      <Button>
+        <Download className="mr-2 h-4 w-4" />
+        Download
+      </Button>
+      <Button variant="gradient">
+        <Upload className="mr-2 h-4 w-4" />
+        Upload
+      </Button>
+      <Button variant="destructive">
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete
+      </Button>
+      <Button variant="outline">
+        <Plus className="mr-2 h-4 w-4" />
+        Create
+      </Button>
+      <Button variant="secondary">
+        <Search className="mr-2 h-4 w-4" />
+        Search
+      </Button>
+    </div>
+  ),
+}
+
+export const Icon: Story = {
+  render: () => (
+    <div className="flex gap-4">
+      <Button size="icon">
+        <Download className="h-4 w-4" />
+      </Button>
+      <Button size="icon" variant="gradient">
+        <Upload className="h-4 w-4" />
+      </Button>
+      <Button size="icon" variant="outline">
+        <Plus className="h-4 w-4" />
+      </Button>
+      <Button size="icon" variant="destructive">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  ),
 }
 
 export const Disabled: Story = {
-  args: {
-    disabled: true,
-    children: 'Disabled',
-  },
+  render: () => (
+    <div className="flex gap-4">
+      <Button disabled>Default Disabled</Button>
+      <Button variant="gradient" disabled>Gradient Disabled</Button>
+      <Button variant="outline" disabled>Outline Disabled</Button>
+    </div>
+  ),
 }
 
 export const Loading: Story = {
-  args: {
-    disabled: true,
-    children: 'Loading...',
-  },
+  render: () => (
+    <div className="flex gap-4">
+      <Button disabled>
+        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        Loading...
+      </Button>
+      <Button variant="gradient" disabled>
+        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        Processing
+      </Button>
+    </div>
+  ),
 }

@@ -1,0 +1,260 @@
+import { Meta } from '@storybook/blocks'
+import { Logo } from './components/Logo'
+
+<Meta title="Design System/Introduction" />
+
+<div className="sb-container">
+  <div className="sb-section-title flex items-center gap-4 mb-8">
+    <Logo size="xl" variant="gradient" />
+  </div>
+
+  # EES Design System
+
+  Welcome to the **Embedding Engine Service (EES)** design system documentation. This comprehensive design system provides a consistent, modern, and accessible foundation for building AI-powered embedding applications.
+
+  ## Design Philosophy
+
+  The EES design system is built on three core principles:
+
+  ### 🎨 Intelligence & Technology
+  Our color palette features blue-purple gradients that represent artificial intelligence and machine learning, complemented by cyan tones symbolizing data connectivity.
+
+  ### 🚀 Modern & Dynamic
+  Interactive components with smooth transitions, subtle shadows, and micro-interactions create an engaging user experience.
+
+  ### 📊 Data-Driven
+  Purpose-built data visualization components help users understand complex embedding metrics and performance data at a glance.
+
+  ## Design Tokens
+
+  ### Color System
+  - **Primary (Indigo)**: `hsl(239, 84%, 67%)` - AI/ML theme color
+  - **Secondary (Cyan)**: `hsl(189, 94%, 43%)` - Data/connectivity
+  - **Accent (Purple)**: `hsl(271, 91%, 65%)` - Innovation
+  - **Semantic Colors**: Success, Warning, Error, Info
+
+  ### Typography
+  - **Font Family**: System fonts for optimal performance and native feel
+  - **Font Sizes**: From 12px (xs) to 48px (5xl)
+  - **Font Weights**: Normal (400) to Extrabold (800)
+
+  ### Spacing
+  Based on a 4px grid system, our spacing scale ensures consistent layouts across all components.
+
+  ### Shadows & Effects
+  Layered shadow system with glow effects for featured elements, creating depth and visual hierarchy.
+
+  ## Component Categories
+
+  ### Brand Components
+  - **Logo**: Scalable EES logo with multiple variants
+  - **BrandColors**: Color palette showcase
+
+  ### Typography
+  - **Heading**: H1-H6 with optional gradient
+  - **Text**: Multiple variants (body, lead, caption, etc.)
+  - **Code**: Inline and block code formatting
+  - **DisplayText**: Large hero text with gradient
+
+  ### Layout
+  - **Container**: Responsive content containers
+  - **Section**: Page sections with variants
+  - **Grid**: Flexible grid layouts (1-6 columns)
+  - **Stack**: Vertical and horizontal stacking
+  - **Divider**: Horizontal and vertical dividers
+
+  ### Data Visualization
+  - **StatCard**: Metric cards with trend indicators
+  - **MetricDisplay**: Compact metric displays
+  - **ChartCard**: Container for charts
+  - **ProgressBar**: Visual progress indicators
+
+  ### UI Components
+  - **Button**: 9 variants including gradient
+  - **Card**: Content containers
+  - **Badge**: Status indicators
+  - **Input**: Form inputs
+  - **Alert**: Notification messages
+  - And more...
+
+  ## Getting Started
+
+  ### Installation
+
+  The design system is built into the EES web package. All components can be imported from their respective locations:
+
+  ```tsx
+  // Brand Components
+  import { Logo } from '@/design-system/components/Logo'
+
+  // Typography
+  import { Heading, Text } from '@/design-system/components/Typography'
+
+  // Layout
+  import { Container, Grid } from '@/design-system/components/Layout'
+
+  // Data Visualization
+  import { StatCard } from '@/design-system/components/DataVisualization'
+
+  // UI Components
+  import { Button } from '@/components/ui/Button'
+  ```
+
+  ### Using Design Tokens
+
+  ```tsx
+  import { colors, spacing, typography } from '@/design-system/tokens'
+
+  const MyComponent = () => (
+    <div style={{
+      color: colors.brand.primary,
+      padding: spacing[4],
+      fontSize: typography.fontSize.lg
+    }}>
+      Content
+    </div>
+  )
+  ```
+
+  ### Tailwind Classes
+
+  All design tokens are available as Tailwind CSS custom properties:
+
+  ```tsx
+  <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-lg">
+    Content
+  </div>
+  ```
+
+  ## Theming
+
+  The design system supports both light and dark themes automatically through CSS custom properties. Toggle between themes using the `.dark` class on a parent element.
+
+  ## Accessibility
+
+  All components are built with accessibility in mind:
+  - Semantic HTML
+  - ARIA attributes
+  - Keyboard navigation
+  - Focus visible states
+  - Screen reader support
+
+  ## Best Practices
+
+  ### Component Composition
+  Build complex interfaces by composing simple, reusable components:
+
+  ```tsx
+  <Section variant="accent">
+    <Container>
+      <Grid cols={3}>
+        <StatCard title="Embeddings" value="12,345" />
+        <StatCard title="Users" value="2,451" />
+        <StatCard title="Queries" value="156/s" />
+      </Grid>
+    </Container>
+  </Section>
+  ```
+
+  ### Consistent Spacing
+  Use the spacing scale for margins and padding to maintain visual rhythm.
+
+  ### Color Usage
+  - Use primary color for main actions
+  - Use semantic colors (success, warning, error) appropriately
+  - Maintain sufficient contrast for readability
+
+  ### Typography Hierarchy
+  Establish clear content hierarchy using heading levels and text variants.
+
+  ## Resources
+
+  - **GitHub**: [EES Repository](https://github.com/your-org/ees)
+  - **Documentation**: Browse components in the sidebar
+  - **Figma**: Design files (coming soon)
+
+  ## Contributing
+
+  We welcome contributions to the design system! Please follow these guidelines:
+  1. Maintain consistency with existing patterns
+  2. Include comprehensive Storybook documentation
+  3. Ensure accessibility compliance
+  4. Add tests for new components
+  5. Update this documentation
+
+  ---
+
+  Built with ❤️ for the EES community
+</div>
+
+<style>
+  {`
+  .sb-container {
+    margin-bottom: 48px;
+  }
+
+  .sb-section-title {
+    margin-bottom: 32px;
+  }
+
+  .sb-container h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(to right, hsl(239, 84%, 67%), hsl(271, 91%, 65%), hsl(189, 94%, 43%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+  }
+
+  .sb-container h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .sb-container h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sb-container p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+  }
+
+  .sb-container code {
+    background: hsl(220, 13%, 91%);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+    font-size: 0.875rem;
+  }
+
+  .sb-container pre {
+    background: hsl(220, 13%, 91%);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+
+  .sb-container pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .sb-container ul {
+    list-style: disc;
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .sb-container li {
+    margin-bottom: 0.5rem;
+  }
+  `}
+</style>

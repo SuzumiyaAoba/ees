@@ -31,19 +31,19 @@ const methods: MethodConfig[] = [
     id: 'pca',
     label: 'PCA',
     description: 'Principal Component Analysis - Fast, deterministic, preserves global variance',
-    color: 'bg-blue-500',
+    color: 'bg-info dark:bg-info',
   },
   {
     id: 'tsne',
     label: 't-SNE',
     description: 't-SNE - Preserves local structure, good for clusters',
-    color: 'bg-green-500',
+    color: 'bg-success dark:bg-success',
   },
   {
     id: 'umap',
     label: 'UMAP',
     description: 'UMAP - Fast, preserves both local and global structure',
-    color: 'bg-purple-500',
+    color: 'bg-accent dark:bg-accent',
   },
 ]
 

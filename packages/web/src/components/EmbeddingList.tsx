@@ -211,7 +211,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                 onClick={handleDeleteAll}
                 disabled={!data || data.total === 0 || deleteAllMutation.isPending}
                 title="Delete all embeddings"
-                className="bg-red-600 hover:bg-red-700 text-white"
+                variant="destructive"
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 Delete All ({data?.total ?? 0})
@@ -262,7 +262,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
                               </Badge>
                             )}
                             {embedding.task_type && (
-                              <Badge variant="outline" className="bg-blue-50">
+                              <Badge variant="outline" className="bg-info/10 dark:bg-info/20 border-info/30">
                                 {embedding.task_type}
                               </Badge>
                             )}

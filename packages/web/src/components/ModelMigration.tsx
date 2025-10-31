@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { FormSelect } from '@/components/ui/FormSelect'
 import { apiClient } from '@/services/api'
 import type { ModelInfo, MigrationResponse, CompatibilityResponse } from '@/types/api'
 
@@ -99,47 +100,43 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
 
         {/* Model Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">From Model</label>
-            <select
-              value={fromModel}
-              onChange={(e) => {
-                setFromModel(e.target.value)
-                setCompatibility(null)
-                setMigrationResult(null)
-              }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading || migrating}
-            >
-              <option value="">Select source model</option>
-              {models.map((model) => (
-                <option key={model.name} value={model.name}>
-                  {model.displayName || model.name} ({model.provider})
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormSelect
+            label="From Model"
+            value={fromModel}
+            onChange={(value) => {
+              setFromModel(value)
+              setCompatibility(null)
+              setMigrationResult(null)
+            }}
+            options={[
+              { value: '', label: 'Select source model' },
+              ...models.map((model) => ({
+                value: model.name,
+                label: `${model.displayName || model.name} (${model.provider})`,
+              })),
+            ]}
+            placeholder="Select source model"
+            disabled={loading || migrating}
+          />
 
-          <div>
-            <label className="block text-sm font-medium mb-2">To Model</label>
-            <select
-              value={toModel}
-              onChange={(e) => {
-                setToModel(e.target.value)
-                setCompatibility(null)
-                setMigrationResult(null)
-              }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading || migrating}
-            >
-              <option value="">Select target model</option>
-              {models.map((model) => (
-                <option key={model.name} value={model.name}>
-                  {model.displayName || model.name} ({model.provider})
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormSelect
+            label="To Model"
+            value={toModel}
+            onChange={(value) => {
+              setToModel(value)
+              setCompatibility(null)
+              setMigrationResult(null)
+            }}
+            options={[
+              { value: '', label: 'Select target model' },
+              ...models.map((model) => ({
+                value: model.name,
+                label: `${model.displayName || model.name} (${model.provider})`,
+              })),
+            ]}
+            placeholder="Select target model"
+            disabled={loading || migrating}
+          />
         </div>
 
         {/* Compatibility Check */}
@@ -153,7 +150,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
           </Button>
 
           {compatibility && (
-            <div className={`p-4 rounded-md border ${compatibility.compatible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`p-4 rounded-md border ${compatibility.compatible ? 'bg-success/10 dark:bg-success/20 border-success/30' : 'bg-destructive/10 dark:bg-destructive/20 border-destructive/30'}`}>
               <div className={`font-medium ${getCompatibilityColor(compatibility.compatible, compatibility.similarityScore)}`}>
                 {compatibility.compatible ? '✓ Models are compatible' : '✗ Models are incompatible'}
               </div>
@@ -220,7 +217,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             <Button
               onClick={performMigration}
               disabled={migrating}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              variant="gradient"
             >
               {migrating ? 'Migrating...' : 'Start Migration'}
             </Button>
@@ -229,7 +226,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
 
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+          <div className="mb-6 p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md">
             <div className="text-red-800 font-medium">Error</div>
             <div className="text-red-600 text-sm mt-1">{error}</div>
           </div>
@@ -237,7 +234,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
 
         {/* Migration Results */}
         {migrationResult && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="p-4 bg-info/10 dark:bg-info/20 border border-info/30 rounded-md">
             <h3 className="font-medium text-blue-800 mb-3">Migration Results</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>

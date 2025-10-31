@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Search, List, Upload, Settings, ArrowLeftRight, Plus, FolderOpen, Eye } from 'lucide-react'
+import { Search, List, Upload, Settings, ArrowLeftRight, Plus, FolderOpen, Eye, Moon, Sun } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
@@ -12,6 +12,9 @@ import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagemen
 import { EmbeddingVisualization } from '@/components/EmbeddingVisualization'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Logo } from '@/design-system/components/Logo'
+import { useDarkMode } from '@/hooks/useDarkMode'
 import { apiClient } from '@/services/api'
 import type { Embedding, SearchResult } from '@/types/api'
 
@@ -47,6 +50,8 @@ const tabs: TabItem[] = [
 const VALID_TABS: TabType[] = ['search', 'list', 'create', 'upload', 'directories', 'visualize', 'migration', 'config']
 
 function AppContent() {
+  const { isDark, toggleTheme } = useDarkMode()
+
   // Get initial tab from URL hash or default to 'search'
   const getInitialTab = (): TabType => {
     const hash = window.location.hash.slice(1) as TabType
@@ -149,11 +154,37 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation */}
-      <div className="border-b bg-background sticky top-0 z-10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-2">
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Logo size="md" variant={isDark ? 'white' : 'gradient'} />
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+                  Embedding Engine Service
+                </h1>
+                <p className="text-xs text-muted-foreground">Manage embeddings and vector search</p>
+              </div>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleTheme}
+              className="rounded-full"
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+
+          {/* Navigation */}
           <Tabs>
-            <TabsList className="inline-flex h-auto p-1 bg-muted/50">
+            <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 return (
@@ -172,7 +203,7 @@ function AppContent() {
             </TabsList>
           </Tabs>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
       <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
@@ -181,14 +212,20 @@ function AppContent() {
 
       {/* Footer */}
       {!isFullWidthTab && (
-        <footer className="border-t mt-auto bg-card">
+        <footer className="border-t mt-auto bg-card/50 backdrop-blur-sm">
           <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <p>EES Dashboard - Embedding Engine Service Management</p>
-                <Badge variant="outline" className="text-xs">Powered by shadcn/ui</Badge>
+              <div className="flex items-center gap-3">
+                <Logo size="sm" variant={isDark ? 'white' : 'default'} />
+                <div className="flex items-center gap-2">
+                  <p>EES Dashboard v1.0.0</p>
+                  <Badge variant="outline" className="text-xs">
+                    <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
+                    Online
+                  </Badge>
+                </div>
               </div>
-              <p>Built with React + TypeScript + Tailwind CSS</p>
+              <p className="hidden sm:block">Built with React + TypeScript + Tailwind CSS</p>
             </div>
           </div>
         </footer>
