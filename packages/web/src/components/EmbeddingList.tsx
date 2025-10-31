@@ -1,8 +1,7 @@
-import { List, Trash2, Eye, Edit, AlertTriangle } from 'lucide-react'
+import { List, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
@@ -11,6 +10,8 @@ import { useFilters } from '@/hooks/useFilters'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { PaginationControls } from '@/components/shared/PaginationControls'
+import { QuickLookPopup } from '@/components/QuickLookPopup'
+import { EmbeddingCard } from '@/components/EmbeddingCard'
 import type { Embedding } from '@/types/api'
 import { useMemo, useState, useCallback } from 'react'
 
@@ -28,6 +29,10 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
       modelName: '',
     }
   })
+
+  // Quick look state
+  const [quickLookItem, setQuickLookItem] = useState<Embedding | null>(null)
+  const [quickLookMarkdown, setQuickLookMarkdown] = useState(false)
 
   // Reset to page 1 when filters change
   const handleFilterChange = useCallback(<K extends keyof typeof filters>(key: K, value: typeof filters[K]) => {
@@ -105,29 +110,6 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
     } catch (error) {
       console.error('Failed to delete all embeddings:', error)
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const truncateText = (text: string, maxLength: number = 100) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
-
-  const formatUri = (uri: string) => {
-    // Extract filename from file paths or show full URI for other types
-    if (uri.startsWith('file://')) {
-      return uri.split('/').pop() || uri
-    }
-    return uri
   }
 
   if (error) {
@@ -236,92 +218,20 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             <>
               <div className="space-y-4">
                 {data.embeddings.map((embedding) => (
-                  <div
+                  <EmbeddingCard
                     key={embedding.id}
-                    className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedIds.has(embedding.id) ? 'bg-muted' : 'hover:bg-muted/50'}`}
-                    onClick={() => toggleSelect(embedding.id)}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(embedding.id)}
-                          onChange={() => toggleSelect(embedding.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`Select embedding ${embedding.id}`}
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-medium truncate" title={embedding.uri}>
-                              {formatUri(embedding.uri)}
-                            </h4>
-                            {embedding.converted_format && (
-                              <Badge variant="secondary">
-                                org → {embedding.converted_format}
-                              </Badge>
-                            )}
-                            {embedding.task_type && (
-                              <Badge variant="outline" className="bg-info/10 dark:bg-info/20 border-info/30">
-                                {embedding.task_type}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                            <span>ID: {embedding.id}</span>
-                            <span>Model: {embedding.model_name}</span>
-                            <span>Created: {formatDate(embedding.created_at)}</span>
-                          </div>
-                        </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => { e.stopPropagation(); onEmbeddingSelect?.(embedding) }}
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => { e.stopPropagation(); onEmbeddingEdit?.(embedding) }}
-                          title="Edit embedding"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Always call global.confirm if present so test spies observe the call
-                            if (typeof global !== 'undefined' && (global as unknown as { confirm?: (m: string) => boolean }).confirm) {
-                              ;(global as unknown as { confirm: (m: string) => boolean }).confirm('Are you sure you want to delete this embedding?')
-                            }
-                            const shouldDelete = (typeof window !== 'undefined' && typeof window.confirm === 'function')
-                              ? window.confirm('Are you sure you want to delete this embedding?')
-                              : true
-                            if (shouldDelete) void deleteMutation.mutateAsync(embedding.id)
-                          }}
-                          disabled={deleteMutation.isPending}
-                          title="Delete embedding"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {truncateText(embedding.text)}
-                    </p>
-
-                    <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
-                      <span>Embedding dimensions: {embedding.embedding.length}</span>
-                      <span>Last updated: {formatDate(embedding.updated_at)}</span>
-                    </div>
-                  </div>
+                    embedding={embedding}
+                    isSelected={selectedIds.has(embedding.id)}
+                    onLongPress={(embedding) => {
+                      setQuickLookItem(embedding)
+                      setQuickLookMarkdown(false)
+                    }}
+                    onToggleSelect={toggleSelect}
+                    onView={(emb) => onEmbeddingSelect?.(emb)}
+                    onEdit={(emb) => onEmbeddingEdit?.(emb)}
+                    onDelete={(id) => void deleteMutation.mutateAsync(id)}
+                    isDeleting={deleteMutation.isPending}
+                  />
                 ))}
               </div>
 
@@ -348,6 +258,16 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
           )}
         </CardContent>
       </Card>
+
+      {/* Quick Look Popup */}
+      {quickLookItem && (
+        <QuickLookPopup
+          item={quickLookItem}
+          onClose={() => setQuickLookItem(null)}
+          renderMarkdown={quickLookMarkdown}
+          onToggleMarkdown={() => setQuickLookMarkdown(!quickLookMarkdown)}
+        />
+      )}
     </div>
   )
 }
