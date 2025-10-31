@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Zap, FileText, FileCode } from 'lucide-react'
 import type { Embedding } from '@/types/api'
 import { MarkdownRenderer } from './MarkdownRenderer'
@@ -16,10 +17,12 @@ interface EmbeddingDetailModalProps {
 
 export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDetailModalProps) {
   const [renderMarkdown, setRenderMarkdown] = useState(false)
+  const [activeTab, setActiveTab] = useState<'markdown' | 'original'>('markdown')
 
   if (!embedding) return null
 
   const isMarkdownContent = embedding.converted_format === 'markdown' || embedding.text.includes('```') || embedding.text.includes('#')
+  const hasOriginalContent = Boolean(embedding.original_content)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -83,18 +86,43 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
           </Alert>
         )}
 
-        {/* Text Content */}
+        {/* Content Tabs */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              {embedding.converted_format ? 'Converted Content (Markdown)' : 'Text Content'}
-            </label>
-            {isMarkdownContent && (
+          <div className="flex items-center justify-between mb-3">
+            {hasOriginalContent ? (
+              <Tabs className="flex-1">
+                <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
+                  <TabsTrigger
+                    value="markdown"
+                    active={activeTab === 'markdown'}
+                    onClick={() => setActiveTab('markdown')}
+                    className="gap-2"
+                  >
+                    <FileCode className="h-4 w-4" />
+                    {embedding.converted_format ? 'Converted (Markdown)' : 'Text Content'}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="original"
+                    active={activeTab === 'original'}
+                    onClick={() => setActiveTab('original')}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Original (Org-mode)
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            ) : (
+              <label className="text-sm font-medium text-muted-foreground">
+                {embedding.converted_format ? 'Converted Content (Markdown)' : 'Text Content'}
+              </label>
+            )}
+            {activeTab === 'markdown' && isMarkdownContent && (
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setRenderMarkdown(!renderMarkdown)}
-                className="gap-2"
+                className="gap-2 ml-auto"
               >
                 {renderMarkdown ? (
                   <>
@@ -110,30 +138,25 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
               </Button>
             )}
           </div>
-          <Card className="mt-2 p-4 bg-muted/30">
-            {renderMarkdown && isMarkdownContent ? (
-              <div className="max-h-96 overflow-y-auto">
-                <MarkdownRenderer content={embedding.text} />
-              </div>
+
+          <Card className="p-4 bg-muted/30">
+            {activeTab === 'markdown' ? (
+              renderMarkdown && isMarkdownContent ? (
+                <div className="max-h-96 overflow-y-auto">
+                  <MarkdownRenderer content={embedding.text} />
+                </div>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                  {embedding.text}
+                </p>
+              )
             ) : (
-              <p className="text-sm whitespace-pre-wrap break-words max-h-60 overflow-y-auto">
-                {embedding.text}
+              <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                {embedding.original_content}
               </p>
             )}
           </Card>
         </div>
-
-        {/* Original Content */}
-        {embedding.original_content && (
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Original Content (Org-mode)</label>
-            <Card className="mt-2 p-4 bg-muted/30">
-              <p className="text-sm whitespace-pre-wrap break-words max-h-60 overflow-y-auto font-mono">
-                {embedding.original_content}
-              </p>
-            </Card>
-          </div>
-        )}
 
         {/* Embedding Vector Information */}
         <div>
