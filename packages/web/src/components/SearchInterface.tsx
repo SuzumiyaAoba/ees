@@ -3,15 +3,15 @@ import { Search, Loader2, FileText, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { FormField } from '@/components/ui/FormField'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSearchEmbeddings, useModels, useEmbeddings } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
+import { QuickLookPopup } from '@/components/QuickLookPopup'
+import { SearchResultCard } from '@/components/SearchResultCard'
 import { apiClient } from '@/services/api'
-import { MarkdownRenderer } from './MarkdownRenderer'
 import type { SearchResult, TaskType, TaskTypeMetadata } from '@/types/api'
 
 interface SearchInterfaceProps {
@@ -25,6 +25,10 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const [isLoadingTaskTypes, setIsLoadingTaskTypes] = useState(false)
   const [renderMarkdown, setRenderMarkdown] = useState(false)
   const [searchMode, setSearchMode] = useState<'semantic' | 'keyword'>('semantic')
+
+  // Quick look state
+  const [quickLookItem, setQuickLookItem] = useState<SearchResult | null>(null)
+  const [quickLookMarkdown, setQuickLookMarkdown] = useState(false)
 
   // Use shared filters hook
   const { filters: searchParams, updateFilter } = useFilters({
@@ -167,10 +171,6 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
       updateFilter('query', query)
       updateFilter('query_title', title || undefined)
     }
-  }
-
-  const formatSimilarity = (similarity: number) => {
-    return `${Math.round(similarity * 100)}%`
   }
 
   return (
@@ -351,31 +351,16 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
           <CardContent>
             <div className="space-y-4">
               {searchResults.results.map((result) => (
-                <div
+                <SearchResultCard
                   key={result.id}
-                  className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => onResultSelect?.(result)}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">{result.uri}</h4>
-                    <Badge variant="default" className="font-mono">
-                      {formatSimilarity(result.similarity)}
-                    </Badge>
-                  </div>
-                  {renderMarkdown ? (
-                    <div className="mb-2 max-h-48 overflow-y-auto">
-                      <MarkdownRenderer content={result.text} />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
-                      {result.text}
-                    </p>
-                  )}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Model: {result.model_name}</span>
-                    <span>Created: {new Date(result.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
+                  result={result}
+                  renderMarkdown={renderMarkdown}
+                  onLongPress={(result) => {
+                    setQuickLookItem(result)
+                    setQuickLookMarkdown(renderMarkdown)
+                  }}
+                  onSelect={() => onResultSelect?.(result)}
+                />
               ))}
             </div>
           </CardContent>
@@ -393,6 +378,16 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
             />
           </CardContent>
         </Card>
+      )}
+
+      {/* Quick Look Popup */}
+      {quickLookItem && (
+        <QuickLookPopup
+          item={quickLookItem}
+          onClose={() => setQuickLookItem(null)}
+          renderMarkdown={quickLookMarkdown}
+          onToggleMarkdown={() => setQuickLookMarkdown(!quickLookMarkdown)}
+        />
       )}
     </div>
   )
