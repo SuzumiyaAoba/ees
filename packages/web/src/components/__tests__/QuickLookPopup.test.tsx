@@ -9,7 +9,7 @@ import { QuickLookPopup } from '../QuickLookPopup'
 import type { Embedding, SearchResult } from '@/types/api'
 
 // Mock MarkdownRenderer to avoid complex dependencies
-vi.mock('../MarkdownRenderer', () => ({
+vi.mock('@/components/MarkdownRenderer', () => ({
   MarkdownRenderer: ({ content }: { content: string }) => (
     <div data-testid="markdown-renderer">{content}</div>
   ),
