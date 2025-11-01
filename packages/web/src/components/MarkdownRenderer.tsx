@@ -7,17 +7,68 @@ interface MarkdownRendererProps {
   className?: string
 }
 
+// Global cache for rendered Markdown content
+// Key: content hash (or content itself for simplicity)
+// Value: rendered HTML string
+const renderCache = new Map<string, string>()
+const MAX_CACHE_SIZE = 100 // Limit cache size to prevent memory issues
+
+// Simple hash function for content
+function hashContent(content: string): string {
+  let hash = 0
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  return hash.toString(36)
+}
+
+// LRU cache management
+function getCachedRender(key: string): string | undefined {
+  const cached = renderCache.get(key)
+  if (cached) {
+    // Move to end (most recently used)
+    renderCache.delete(key)
+    renderCache.set(key, cached)
+  }
+  return cached
+}
+
+function setCachedRender(key: string, html: string): void {
+  // Remove oldest entries if cache is full
+  if (renderCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = renderCache.keys().next().value
+    if (firstKey) {
+      renderCache.delete(firstKey)
+    }
+  }
+  renderCache.set(key, html)
+}
+
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
   const [html, setHtml] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const highlighterRef = useRef<Highlighter | null>(null)
+  const contentHashRef = useRef<string>('')
 
   useEffect(() => {
     let mounted = true
 
+    const contentHash = hashContent(content)
+    contentHashRef.current = contentHash
+
+    // Check cache first
+    const cachedHtml = getCachedRender(contentHash)
+    if (cachedHtml) {
+      setHtml(cachedHtml)
+      setIsLoading(false)
+      return
+    }
+
     const initializeHighlighter = async () => {
       if (highlighterRef.current) {
-        renderMarkdown(content)
+        renderMarkdown(content, contentHash)
         return
       }
 
@@ -30,19 +81,22 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         if (!mounted) return
 
         highlighterRef.current = highlighter
-        renderMarkdown(content)
+        renderMarkdown(content, contentHash)
       } catch (error) {
         console.error('Failed to initialize highlighter:', error)
         if (mounted) {
           // Fallback to rendering without syntax highlighting
           const md = new MarkdownIt()
-          setHtml(md.render(content))
+          const renderedHtml = md.render(content)
+          setHtml(renderedHtml)
           setIsLoading(false)
+          // Cache the fallback result too
+          setCachedRender(contentHash, renderedHtml)
         }
       }
     }
 
-    const renderMarkdown = (text: string) => {
+    const renderMarkdown = (text: string, hash: string) => {
       if (!highlighterRef.current) return
 
       const md = new MarkdownIt({
@@ -71,8 +125,12 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         },
       })
 
-      setHtml(md.render(text))
+      const renderedHtml = md.render(text)
+      setHtml(renderedHtml)
       setIsLoading(false)
+
+      // Cache the rendered result
+      setCachedRender(hash, renderedHtml)
     }
 
     initializeHighlighter()
