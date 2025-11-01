@@ -11,7 +11,7 @@ vi.mock('shiki', () => ({
   createHighlighter: vi.fn(() =>
     Promise.resolve({
       getLoadedLanguages: () => ['javascript', 'typescript', 'python', 'text'],
-      codeToHtml: (code: string, options: unknown) => `<pre><code>${code}</code></pre>`,
+      codeToHtml: (code: string) => `<pre><code>${code}</code></pre>`,
     })
   ),
   bundledLanguages: {},

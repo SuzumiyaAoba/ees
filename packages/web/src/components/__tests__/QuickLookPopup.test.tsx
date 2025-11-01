@@ -29,7 +29,6 @@ const mockEmbedding: Embedding = {
 const mockSearchResult: SearchResult = {
   ...mockEmbedding,
   similarity: 0.95,
-  distance: 0.05,
 }
 
 describe('QuickLookPopup', () => {
@@ -331,13 +330,13 @@ describe('QuickLookPopup', () => {
     })
 
     it('should handle embedding without dimensions', () => {
-      const itemWithoutEmbedding = { ...mockSearchResult }
-      delete (itemWithoutEmbedding as Partial<typeof itemWithoutEmbedding>).embedding
+      const itemWithoutEmbedding = { ...mockSearchResult, embedding: [] }
       const onClose = vi.fn()
 
       render(<QuickLookPopup item={itemWithoutEmbedding} onClose={onClose} />)
 
-      expect(screen.queryByText(/Dimensions:/)).not.toBeInTheDocument()
+      // Empty embedding array should still show dimensions: 0
+      expect(screen.getByText(/Dimensions: 0/)).toBeInTheDocument()
     })
   })
 })
