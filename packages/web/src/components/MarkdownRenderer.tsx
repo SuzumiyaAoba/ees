@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import MarkdownIt from 'markdown-it'
 import frontMatter from 'markdown-it-front-matter'
+import { load as parseYaml } from 'js-yaml'
 import { bundledLanguages, createHighlighter, type Highlighter } from 'shiki'
 
 interface MarkdownRendererProps {
@@ -50,6 +51,7 @@ function setCachedRender(key: string, html: string): void {
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
   const [html, setHtml] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [frontMatterData, setFrontMatterData] = useState<Record<string, unknown> | null>(null)
   const highlighterRef = useRef<Highlighter | null>(null)
   const contentHashRef = useRef<string>('')
 
@@ -88,8 +90,15 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         if (mounted) {
           // Fallback to rendering without syntax highlighting
           const md = new MarkdownIt()
-          md.use(frontMatter, () => {
-            // Front matter is automatically removed from the rendered output
+          md.use(frontMatter, (fm: string) => {
+            try {
+              const parsed = parseYaml(fm)
+              if (parsed && typeof parsed === 'object') {
+                setFrontMatterData(parsed as Record<string, unknown>)
+              }
+            } catch (error) {
+              console.error('Failed to parse front matter:', error)
+            }
           })
           const renderedHtml = md.render(content)
           setHtml(renderedHtml)
@@ -129,8 +138,15 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         },
       })
 
-      md.use(frontMatter, () => {
-        // Front matter is automatically removed from the rendered output
+      md.use(frontMatter, (fm: string) => {
+        try {
+          const parsed = parseYaml(fm)
+          if (parsed && typeof parsed === 'object') {
+            setFrontMatterData(parsed as Record<string, unknown>)
+          }
+        } catch (error) {
+          console.error('Failed to parse front matter:', error)
+        }
       })
 
       const renderedHtml = md.render(text)
@@ -158,10 +174,40 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
     )
   }
 
+  const formatValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return ''
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value)
+    }
+    return String(value)
+  }
+
   return (
-    <div
-      className={`markdown-content prose prose-sm max-w-none dark:prose-invert ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={className}>
+      {frontMatterData && Object.keys(frontMatterData).length > 0 && (
+        <div className="mb-4 border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <tbody>
+              {Object.entries(frontMatterData).map(([key, value]) => (
+                <tr key={key} className="border-b last:border-b-0">
+                  <td className="py-2 px-3 bg-muted/50 font-medium w-1/4 align-top">
+                    {key}
+                  </td>
+                  <td className="py-2 px-3 break-words">
+                    {formatValue(value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div
+        className="markdown-content prose prose-sm max-w-none dark:prose-invert"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   )
 }
