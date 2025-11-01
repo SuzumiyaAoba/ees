@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useFilters } from '../useFilters'
 
-interface TestFilters {
+interface TestFilters extends Record<string, unknown> {
   search: string
   status: string
   category: string
@@ -43,7 +43,7 @@ describe('useFilters', () => {
     })
 
     it('should work with different filter types', () => {
-      interface SimpleFilters {
+      interface SimpleFilters extends Record<string, unknown> {
         name: string
         age: number
       }
@@ -175,7 +175,7 @@ describe('useFilters', () => {
         result.current.setFilters(prev => ({
           ...prev,
           search: 'updated',
-          minPrice: prev.minPrice + 100,
+          minPrice: (prev as TestFilters).minPrice + 100,
         }))
       })
 
@@ -198,7 +198,7 @@ describe('useFilters', () => {
       act(() => {
         result.current.setFilters(prev => ({
           ...prev,
-          maxPrice: prev.minPrice + 200,
+          maxPrice: (prev as TestFilters).minPrice + 200,
         }))
       })
 
@@ -429,7 +429,7 @@ describe('useFilters', () => {
     })
 
     it('should handle filters with null values', () => {
-      interface NullableFilters {
+      interface NullableFilters extends Record<string, unknown> {
         name: string | null
         value: number | null
       }
@@ -452,7 +452,7 @@ describe('useFilters', () => {
     })
 
     it('should handle filters with undefined values', () => {
-      interface OptionalFilters {
+      interface OptionalFilters extends Record<string, unknown> {
         name?: string
         value?: number
       }

@@ -180,8 +180,8 @@ describe('cn', () => {
 
   describe('Real-world Usage Patterns', () => {
     it('should work for button variant pattern', () => {
-      const variant = 'primary'
-      const size = 'lg'
+      const variant = 'primary' as 'primary' | 'secondary'
+      const size = 'lg' as 'sm' | 'lg'
 
       expect(cn(
         'btn',
