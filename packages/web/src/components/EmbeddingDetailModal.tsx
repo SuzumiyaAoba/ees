@@ -140,8 +140,8 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
           </div>
 
           <Card className="p-4 bg-muted/30">
-            {activeTab === 'markdown' ? (
-              renderMarkdown && isMarkdownContent ? (
+            <div className={activeTab === 'markdown' ? 'block' : 'hidden'}>
+              {renderMarkdown && isMarkdownContent ? (
                 <div className="max-h-96 overflow-y-auto">
                   <MarkdownRenderer content={embedding.text} />
                 </div>
@@ -149,11 +149,14 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
                 <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                   {embedding.text}
                 </p>
-              )
-            ) : (
-              <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
-                {embedding.original_content}
-              </p>
+              )}
+            </div>
+            {hasOriginalContent && (
+              <div className={activeTab === 'original' ? 'block' : 'hidden'}>
+                <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                  {embedding.original_content}
+                </p>
+              </div>
             )}
           </Card>
         </div>
