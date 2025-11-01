@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import MarkdownIt from 'markdown-it'
+import frontMatter from 'markdown-it-front-matter'
 import { bundledLanguages, createHighlighter, type Highlighter } from 'shiki'
 
 interface MarkdownRendererProps {
@@ -87,6 +88,9 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         if (mounted) {
           // Fallback to rendering without syntax highlighting
           const md = new MarkdownIt()
+          md.use(frontMatter, () => {
+            // Front matter is automatically removed from the rendered output
+          })
           const renderedHtml = md.render(content)
           setHtml(renderedHtml)
           setIsLoading(false)
@@ -123,6 +127,10 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             return `<pre><code>${code}</code></pre>`
           }
         },
+      })
+
+      md.use(frontMatter, () => {
+        // Front matter is automatically removed from the rendered output
       })
 
       const renderedHtml = md.render(text)
