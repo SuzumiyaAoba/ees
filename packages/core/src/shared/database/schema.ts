@@ -99,3 +99,31 @@ export const syncJobs = sqliteTable(
 
 export type SyncJob = typeof syncJobs.$inferSelect
 export type NewSyncJob = typeof syncJobs.$inferInsert
+
+/**
+ * Connection configurations table
+ * Stores provider connection settings for OpenAPI-compatible endpoints
+ */
+export const connectionConfigs = sqliteTable(
+  "connection_configs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(), // User-friendly name (e.g., "Local LM Studio", "Production Ollama")
+    type: text("type").notNull(), // Provider type: "ollama" | "openai-compatible"
+    baseUrl: text("base_url").notNull(), // API endpoint URL (e.g., "http://localhost:11434")
+    apiKey: text("api_key"), // API key for authentication (null for local services)
+    defaultModel: text("default_model"), // Default model to use for this connection
+    metadata: text("metadata"), // JSON string for additional provider-specific settings
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Is this the currently active connection?
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    nameIdx: index("idx_connection_configs_name").on(table.name),
+    typeIdx: index("idx_connection_configs_type").on(table.type),
+    isActiveIdx: index("idx_connection_configs_is_active").on(table.isActive),
+  })
+)
+
+export type ConnectionConfig = typeof connectionConfigs.$inferSelect
+export type NewConnectionConfig = typeof connectionConfigs.$inferInsert

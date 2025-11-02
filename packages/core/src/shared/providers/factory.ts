@@ -4,9 +4,14 @@
 
 import { Context, Effect, Layer } from "effect"
 import { createOllamaProvider, OllamaProviderService } from "./ollama-provider"
+import {
+  createOpenAICompatibleProvider,
+  OpenAICompatibleProviderService,
+} from "./openai-compatible-provider"
 import type {
   EmbeddingProvider,
   OllamaConfig,
+  OpenAICompatibleConfig,
   ProviderConfig,
 } from "./types"
 
@@ -39,6 +44,8 @@ export const createProviderLayer = (config: ProviderConfig) => {
   switch (config.type) {
     case "ollama":
       return createOllamaProvider(config as OllamaConfig)
+    case "openai-compatible":
+      return createOpenAICompatibleProvider(config as OpenAICompatibleConfig)
     default:
       throw new Error(
         `Unsupported provider type: ${config.type}`
@@ -53,6 +60,8 @@ const getProviderService = (providerType: string) => {
   switch (providerType) {
     case "ollama":
       return OllamaProviderService
+    case "openai-compatible":
+      return OpenAICompatibleProviderService
     default:
       throw new Error(`Unsupported provider type: ${providerType}`)
   }
@@ -156,6 +165,17 @@ export const createOllamaConfig = (
   baseUrl: options.baseUrl ?? "http://localhost:11434",
   defaultModel: options.defaultModel ?? "embeddinggemma",
   ...options,
+})
+
+export const createOpenAICompatibleConfig = (
+  baseUrl: string,
+  options: Partial<Omit<OpenAICompatibleConfig, "type" | "baseUrl">> = {}
+): OpenAICompatibleConfig => ({
+  type: "openai-compatible",
+  baseUrl,
+  ...(options.apiKey !== undefined && { apiKey: options.apiKey }),
+  ...(options.defaultModel !== undefined && { defaultModel: options.defaultModel }),
+  ...(options.customHeaders !== undefined && { customHeaders: options.customHeaders }),
 })
 
 export const createOpenAIConfig = (

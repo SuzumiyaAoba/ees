@@ -1,6 +1,6 @@
 /**
  * Provider system exports
- * Unified interface for embedding provider (Ollama only)
+ * Unified interface for embedding providers (Ollama and OpenAI-compatible)
  */
 
 // Configuration helpers
@@ -12,6 +12,7 @@ export {
   createEmbeddingProviderService,
   createMultiProviderConfig,
   createOllamaConfig,
+  createOpenAICompatibleConfig,
   createProviderLayer,
   EmbeddingProviderService,
 } from "./factory"
@@ -19,6 +20,10 @@ export {
   createOllamaProvider,
   OllamaProviderService,
 } from "./ollama-provider"
+export {
+  createOpenAICompatibleProvider,
+  OpenAICompatibleProviderService,
+} from "./openai-compatible-provider"
 // Core types
 export type {
   EmbeddingProvider,
@@ -26,6 +31,7 @@ export type {
   EmbeddingResponse,
   ModelInfo,
   OllamaConfig,
+  OpenAICompatibleConfig,
   ProviderConfig,
 } from "./types"
 // Error types
