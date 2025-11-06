@@ -80,11 +80,11 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Connection Name</label>
+              <label className="text-sm font-medium">Provider Name</label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="My Ollama Server"
+                placeholder="Local Ollama"
                 required
               />
             </div>
@@ -171,9 +171,13 @@ function ConnectionCard({
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium truncate">{connection.name}</h4>
-              <Badge variant="secondary">{connection.type}</Badge>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <h4 className="font-medium truncate">
+                {connection.name}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({connection.type} - {connection.defaultModel})
+                </span>
+              </h4>
               {isActive && (
                 <Badge variant="success">
                   <CheckCircle className="h-3 w-3 mr-1" />
@@ -185,9 +189,6 @@ function ConnectionCard({
             <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground">
               <div>
                 <span className="font-medium">Base URL:</span> {connection.baseUrl}
-              </div>
-              <div>
-                <span className="font-medium">Model:</span> {connection.defaultModel}
               </div>
               {connection.createdAt && (
                 <div className="text-xs">
@@ -345,19 +346,16 @@ export function ConnectionManagement() {
         <Alert>
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
-            <span className="font-medium">Active Connection: {activeConnection.name}</span>
+            <div className="font-medium">
+              Active: {activeConnection.name}
+              <span className="font-normal text-muted-foreground ml-2">
+                ({activeConnection.type} - {activeConnection.defaultModel})
+              </span>
+            </div>
             <div className="space-y-1 text-sm mt-2">
-              <div>
-                <span className="text-muted-foreground">Type:</span>{' '}
-                <span className="font-mono">{activeConnection.type}</span>
-              </div>
               <div>
                 <span className="text-muted-foreground">Base URL:</span>{' '}
                 <span className="font-mono">{activeConnection.baseUrl}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Model:</span>{' '}
-                <span className="font-mono">{activeConnection.defaultModel}</span>
               </div>
             </div>
           </AlertDescription>
