@@ -123,7 +123,7 @@ export const getConnectionRoute = createRoute({
   description: "Get a specific connection configuration by its ID",
   request: {
     params: z.object({
-      id: z.string().transform(Number).openapi({ example: "1" }),
+      id: z.string().regex(/^\d+$/, "ID must be a positive integer").transform(Number).openapi({ example: "1" }),
     }),
   },
   responses: {
@@ -240,7 +240,7 @@ export const updateConnectionRoute = createRoute({
   description: "Update an existing connection configuration",
   request: {
     params: z.object({
-      id: z.string().transform(Number).openapi({ example: "1" }),
+      id: z.string().regex(/^\d+$/, "ID must be a positive integer").transform(Number).openapi({ example: "1" }),
     }),
     body: {
       content: {
@@ -289,7 +289,7 @@ export const deleteConnectionRoute = createRoute({
   description: "Delete a connection configuration",
   request: {
     params: z.object({
-      id: z.string().transform(Number).openapi({ example: "1" }),
+      id: z.string().regex(/^\d+$/, "ID must be a positive integer").transform(Number).openapi({ example: "1" }),
     }),
   },
   responses: {
@@ -326,7 +326,7 @@ export const setActiveConnectionRoute = createRoute({
   description: "Set a connection as the currently active provider",
   request: {
     params: z.object({
-      id: z.string().transform(Number).openapi({ example: "1" }),
+      id: z.string().regex(/^\d+$/, "ID must be a positive integer").transform(Number).openapi({ example: "1" }),
     }),
   },
   responses: {
