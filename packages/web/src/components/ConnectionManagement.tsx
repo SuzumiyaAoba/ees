@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Plus,
   Trash2,
@@ -43,12 +43,25 @@ interface ConnectionModalProps {
 
 function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: ConnectionModalProps) {
   const [formData, setFormData] = useState<ConnectionFormData>({
-    name: initialData?.name || '',
-    type: initialData?.type || 'ollama',
-    baseUrl: initialData?.baseUrl || '',
+    name: '',
+    type: 'ollama',
+    baseUrl: '',
     apiKey: '',
-    defaultModel: initialData?.defaultModel || '',
+    defaultModel: '',
   })
+
+  // Reset form when modal opens or initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: initialData?.name || '',
+        type: initialData?.type || 'ollama',
+        baseUrl: initialData?.baseUrl || '',
+        apiKey: '',
+        defaultModel: initialData?.defaultModel || '',
+      })
+    }
+  }, [isOpen, initialData])
 
   if (!isOpen) return null
 
