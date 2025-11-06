@@ -8,46 +8,41 @@ import userEvent from '@testing-library/user-event'
 import { ModelMigration } from '../ModelMigration'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
 import * as apiClientModule from '@/services/api'
+import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
 
 // Mock the API client
 vi.mock('@/services/api', () => ({
   apiClient: {
-    getModels: vi.fn(),
     checkModelCompatibility: vi.fn(),
     migrateEmbeddings: vi.fn(),
   },
 }))
 
+// Mock the useEmbeddings hooks
+vi.mock('@/hooks/useEmbeddings', () => ({
+  useProviderModels: vi.fn(),
+}))
+
 // Mock data
-const mockModels = {
-  models: [
-    {
-      name: 'nomic-embed-text',
-      displayName: 'Nomic Embed Text',
-      provider: 'ollama',
-      dimensions: 768,
-      maxTokens: 8192,
-      available: true,
-    },
-    {
-      name: 'text-embedding-3-small',
-      displayName: 'Text Embedding 3 Small',
-      provider: 'openai',
-      dimensions: 1536,
-      maxTokens: 8191,
-      available: true,
-    },
-    {
-      name: 'text-embedding-3-large',
-      provider: 'openai',
-      dimensions: 3072,
-      maxTokens: 8191,
-      available: true,
-    },
-  ],
-  count: 3,
-  providers: ['ollama', 'openai'],
-}
+const mockModels = [
+  {
+    name: 'nomic-embed-text',
+    displayName: 'Nomic Embed Text',
+    provider: 'ollama',
+    dimensions: 768,
+  },
+  {
+    name: 'text-embedding-3-small',
+    displayName: 'Text Embedding 3 Small',
+    provider: 'openai',
+    dimensions: 1536,
+  },
+  {
+    name: 'text-embedding-3-large',
+    provider: 'openai',
+    dimensions: 3072,
+  },
+]
 
 const mockCompatibilitySuccess = {
   compatible: true,
@@ -76,23 +71,23 @@ const mockMigrationResult = {
 describe('ModelMigration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // Default mock for useProviderModels
+    vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+      data: mockModels,
+      isLoading: false,
+      error: null,
+    } as any)
   })
 
   describe('Rendering', () => {
     it('should render model migration component without crashing', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
-
       renderWithQueryClient(<ModelMigration />)
 
       expect(screen.getByText('Model Migration')).toBeInTheDocument()
-
-      await waitFor(() => {
-        expect(apiClientModule.apiClient.getModels).toHaveBeenCalled()
-      })
     })
 
     it('should render model selection dropdowns', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -103,7 +98,6 @@ describe('ModelMigration', () => {
     })
 
     it('should render check compatibility button', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -115,17 +109,14 @@ describe('ModelMigration', () => {
 
   describe('Model Selection', () => {
     it('should load models on mount', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
-
       renderWithQueryClient(<ModelMigration />)
 
       await waitFor(() => {
-        expect(apiClientModule.apiClient.getModels).toHaveBeenCalled()
+        expect(useEmbeddingsModule.useProviderModels).toHaveBeenCalled()
       })
     })
 
     it('should display loaded models in dropdowns', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -139,7 +130,6 @@ describe('ModelMigration', () => {
 
     it('should update from model on selection', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -155,7 +145,6 @@ describe('ModelMigration', () => {
 
     it('should update to model on selection', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -170,7 +159,6 @@ describe('ModelMigration', () => {
     })
 
     it('should disable check compatibility button when models not selected', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -184,7 +172,6 @@ describe('ModelMigration', () => {
   describe('Compatibility Check', () => {
     it('should call compatibility check API when button clicked', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -212,7 +199,6 @@ describe('ModelMigration', () => {
 
     it('should display success message when models are compatible', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -237,7 +223,6 @@ describe('ModelMigration', () => {
 
     it('should display error message when models are incompatible', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilityFailure)
 
       renderWithQueryClient(<ModelMigration />)
@@ -263,7 +248,6 @@ describe('ModelMigration', () => {
 
     it('should display similarity score when available', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -290,7 +274,6 @@ describe('ModelMigration', () => {
   describe('Migration Options', () => {
     it('should display migration options when models are compatible', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -317,7 +300,6 @@ describe('ModelMigration', () => {
 
     it('should toggle preserve original option', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -349,7 +331,6 @@ describe('ModelMigration', () => {
 
     it('should update batch size input', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -383,7 +364,6 @@ describe('ModelMigration', () => {
   describe('Migration Execution', () => {
     it('should display start migration button when compatible', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
 
       renderWithQueryClient(<ModelMigration />)
@@ -408,7 +388,6 @@ describe('ModelMigration', () => {
 
     it('should call migration API when start button clicked', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
       vi.mocked(apiClientModule.apiClient.migrateEmbeddings).mockResolvedValue(mockMigrationResult)
 
@@ -449,7 +428,6 @@ describe('ModelMigration', () => {
 
     it('should display migration results after completion', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
       vi.mocked(apiClientModule.apiClient.migrateEmbeddings).mockResolvedValue(mockMigrationResult)
 
@@ -486,7 +464,6 @@ describe('ModelMigration', () => {
     it('should call onMigrationComplete callback when provided', async () => {
       const onMigrationComplete = vi.fn()
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
       vi.mocked(apiClientModule.apiClient.migrateEmbeddings).mockResolvedValue(mockMigrationResult)
 
@@ -519,7 +496,6 @@ describe('ModelMigration', () => {
 
     it('should display failed items when present', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
       vi.mocked(apiClientModule.apiClient.migrateEmbeddings).mockResolvedValue(mockMigrationResult)
 
@@ -555,7 +531,12 @@ describe('ModelMigration', () => {
 
   describe('Error Handling', () => {
     it('should display error when model loading fails', async () => {
-      vi.mocked(apiClientModule.apiClient.getModels).mockRejectedValue(new Error('Failed to load models'))
+      // Mock error state
+      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Failed to load models'),
+      } as any)
 
       renderWithQueryClient(<ModelMigration />)
 
@@ -567,7 +548,6 @@ describe('ModelMigration', () => {
 
     it('should display error when compatibility check fails', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockRejectedValue(new Error('Check failed'))
 
       renderWithQueryClient(<ModelMigration />)
@@ -593,7 +573,6 @@ describe('ModelMigration', () => {
 
     it('should display error when migration fails', async () => {
       const user = userEvent.setup()
-      vi.mocked(apiClientModule.apiClient.getModels).mockResolvedValue(mockModels)
       vi.mocked(apiClientModule.apiClient.checkModelCompatibility).mockResolvedValue(mockCompatibilitySuccess)
       vi.mocked(apiClientModule.apiClient.migrateEmbeddings).mockRejectedValue(new Error('Migration failed'))
 

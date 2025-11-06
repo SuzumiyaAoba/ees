@@ -373,3 +373,53 @@ export interface VisualizeEmbeddingResponse {
     include_uris_failed?: string[]
   }
 }
+
+// Connection Management Types
+export interface Connection {
+  id: number
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  defaultModel: string
+  metadata?: Record<string, unknown> | null
+  isActive: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreateConnectionRequest {
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  apiKey?: string
+  defaultModel: string
+  metadata?: Record<string, unknown>
+  isActive?: boolean
+}
+
+export interface UpdateConnectionRequest {
+  name?: string
+  baseUrl?: string
+  apiKey?: string
+  defaultModel?: string
+  metadata?: Record<string, unknown>
+  isActive?: boolean
+}
+
+export interface ConnectionTestRequest {
+  id?: number
+  baseUrl?: string
+  apiKey?: string
+  type?: 'ollama' | 'openai-compatible'
+}
+
+export interface ConnectionTestResponse {
+  success: boolean
+  message: string
+  models?: string[]
+}
+
+export interface ConnectionsListResponse {
+  connections: Connection[]
+  total: number
+}

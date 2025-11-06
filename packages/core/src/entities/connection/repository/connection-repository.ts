@@ -153,7 +153,7 @@ const make = Effect.gen(function* () {
       }
     })
 
-  const findActive = () =>
+  const findActive = (): Effect.Effect<ConnectionConfig | null, DatabaseQueryError> =>
     Effect.gen(function* () {
       try {
         const result = yield* Effect.tryPromise({
@@ -170,7 +170,7 @@ const make = Effect.gen(function* () {
             }),
         })
 
-        return result
+        return result as ConnectionConfig | null
       } catch (error) {
         return yield* Effect.fail(
           new DatabaseQueryError({

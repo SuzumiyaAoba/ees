@@ -14,7 +14,6 @@ import type {
   MigrationResponse,
   CompatibilityCheckRequest,
   CompatibilityResponse,
-  ListModelsResponse,
   CreateUploadDirectoryRequest,
   CreateUploadDirectoryResponse,
   UpdateUploadDirectoryRequest,
@@ -25,10 +24,15 @@ import type {
   ListDirectoryResponse,
   VisualizeEmbeddingRequest,
   VisualizeEmbeddingResponse,
-  OllamaStatusResponse,
   ProviderResponse,
   CurrentProviderResponse,
   ProviderModelResponse,
+  Connection,
+  CreateConnectionRequest,
+  UpdateConnectionRequest,
+  ConnectionTestRequest,
+  ConnectionTestResponse,
+  ConnectionsListResponse,
 } from '@/types/api'
 
 const API_BASE_URL = '/api'
@@ -153,10 +157,6 @@ class ApiClient {
     return this.request('/providers/current')
   }
 
-  async getOllamaStatus(): Promise<OllamaStatusResponse> {
-    return this.request('/providers/ollama/status')
-  }
-
   // File upload helper
   async uploadFile(file: File, modelName?: string): Promise<BatchCreateEmbeddingResponse> {
     const formData = new FormData()
@@ -211,10 +211,6 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     })
-  }
-
-  async getModels(): Promise<ListModelsResponse> {
-    return this.request<ListModelsResponse>('/models')
   }
 
   async getTaskTypes(modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> {
@@ -291,6 +287,52 @@ class ApiClient {
   // Visualization operations
   async visualizeEmbeddings(data: VisualizeEmbeddingRequest): Promise<VisualizeEmbeddingResponse> {
     return this.request<VisualizeEmbeddingResponse>('/embeddings/visualize', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Connection Management operations
+  async getConnections(): Promise<ConnectionsListResponse> {
+    return this.request<ConnectionsListResponse>('/connections')
+  }
+
+  async getConnection(id: number): Promise<Connection> {
+    return this.request<Connection>(`/connections/${id}`)
+  }
+
+  async getActiveConnection(): Promise<Connection | null> {
+    return this.request<Connection | null>('/connections/active')
+  }
+
+  async createConnection(data: CreateConnectionRequest): Promise<Connection> {
+    return this.request<Connection>('/connections', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateConnection(id: number, data: UpdateConnectionRequest): Promise<Connection> {
+    return this.request<Connection>(`/connections/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteConnection(id: number): Promise<void> {
+    return this.request<void>(`/connections/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async activateConnection(id: number): Promise<void> {
+    return this.request<void>(`/connections/${id}/activate`, {
+      method: 'POST',
+    })
+  }
+
+  async testConnection(data: ConnectionTestRequest): Promise<ConnectionTestResponse> {
+    return this.request<ConnectionTestResponse>('/connections/test', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -397,12 +439,7 @@ const createMockApiClient = () => ({
     provider: 'ollama',
     configuration: { baseUrl: 'http://localhost:11434' },
   }),
-  getOllamaStatus: async (): Promise<OllamaStatusResponse> => ({
-    status: 'online',
-    models: ['nomic-embed-text'],
-    version: '0.1.0',
-  }),
-  
+
   // File operations
   uploadFile: async (file: File, modelName?: string): Promise<BatchCreateEmbeddingResponse> => ({
     results: Array.from({ length: 3 }, (_, i) => ({
@@ -427,14 +464,6 @@ const createMockApiClient = () => ({
   }),
   checkModelCompatibility: async (_data: CompatibilityCheckRequest): Promise<CompatibilityResponse> => ({
     compatible: true,
-  }),
-  getModels: async (): Promise<ListModelsResponse> => ({
-    models: [
-      { name: 'nomic-embed-text', provider: 'ollama', dimensions: 768, maxTokens: 8192, available: true },
-      { name: 'text-embedding-3-small', provider: 'openai', dimensions: 1536, maxTokens: 8192, available: true },
-    ],
-    count: 2,
-    providers: ['ollama', 'openai'],
   }),
   getTaskTypes: async (_modelName: string): Promise<import('@/types/api').ListTaskTypesResponse> => ({
     model_name: _modelName,
@@ -568,6 +597,84 @@ const createMockApiClient = () => ({
       },
     }
   },
+
+  // Connection Management operations
+  getConnections: async (): Promise<ConnectionsListResponse> => ({
+    connections: Array.from({ length: 2 }, (_, i) => ({
+      id: i + 1,
+      name: `Connection ${i + 1}`,
+      type: i === 0 ? 'ollama' as const : 'openai-compatible' as const,
+      baseUrl: i === 0 ? 'http://localhost:11434' : 'http://localhost:1234',
+      defaultModel: i === 0 ? 'nomic-embed-text' : 'text-embedding-3-small',
+      metadata: null,
+      isActive: i === 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
+    total: 2,
+  }),
+
+  getConnection: async (id: number): Promise<Connection> => ({
+    id,
+    name: `Connection ${id}`,
+    type: 'ollama',
+    baseUrl: 'http://localhost:11434',
+    defaultModel: 'nomic-embed-text',
+    metadata: null,
+    isActive: id === 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  getActiveConnection: async (): Promise<Connection | null> => ({
+    id: 1,
+    name: 'Default Ollama',
+    type: 'ollama',
+    baseUrl: 'http://localhost:11434',
+    defaultModel: 'nomic-embed-text',
+    metadata: null,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  createConnection: async (data: CreateConnectionRequest): Promise<Connection> => ({
+    id: Math.floor(Math.random() * 10000),
+    name: data.name,
+    type: data.type,
+    baseUrl: data.baseUrl,
+    defaultModel: data.defaultModel,
+    metadata: data.metadata || null,
+    isActive: data.isActive || false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  updateConnection: async (id: number, data: UpdateConnectionRequest): Promise<Connection> => ({
+    id,
+    name: data.name || `Connection ${id}`,
+    type: 'ollama',
+    baseUrl: data.baseUrl || 'http://localhost:11434',
+    defaultModel: data.defaultModel || 'nomic-embed-text',
+    metadata: data.metadata || null,
+    isActive: data.isActive || false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  deleteConnection: async (_id: number): Promise<void> => {
+    // Mock delete - no return value
+  },
+
+  activateConnection: async (_id: number): Promise<void> => {
+    // Mock activate - no return value
+  },
+
+  testConnection: async (_data: ConnectionTestRequest): Promise<ConnectionTestResponse> => ({
+    success: true,
+    message: 'Connection test successful',
+    models: ['nomic-embed-text', 'text-embedding-3-small'],
+  }),
 })
 
 // Use mock in Storybook environment or when STORYBOOK_MOCK is set

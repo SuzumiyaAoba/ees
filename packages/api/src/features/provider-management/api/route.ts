@@ -77,37 +77,6 @@ const ProviderModelSchema = z.object({
   })
 })
 
-/**
- * Ollama status schema
- */
-const OllamaStatusSchema = z.object({
-  status: z.enum(["online", "offline"]).openapi({
-    description: "Ollama service status",
-    example: "online"
-  }),
-  version: z.string().optional().openapi({
-    description: "Ollama version if available",
-    example: "0.1.0"
-  }),
-  models: z.array(z.string()).optional().openapi({
-    description: "Available model names",
-    example: ["nomic-embed-text", "llama2"]
-  }),
-  responseTime: z.number().optional().openapi({
-    description: "Response time in milliseconds",
-    example: 25
-  }),
-  baseUrl: z.string().optional().openapi({
-    description: "Ollama service base URL",
-    example: "http://localhost:11434"
-  }),
-  memory: z.object({
-    used: z.number().optional(),
-    total: z.number().optional()
-  }).optional().openapi({
-    description: "Memory usage information"
-  })
-})
 
 /**
  * Current provider response schema
@@ -181,6 +150,14 @@ export const getCurrentProviderRoute = createRoute({
       },
       description: "Current provider information",
     },
+    404: {
+      content: {
+        "application/json": {
+          schema: ErrorResponseSchema,
+        },
+      },
+      description: "No active connection configured",
+    },
     500: {
       content: {
         "application/json": {
@@ -238,49 +215,8 @@ export const listProviderModelsRoute = createRoute({
   },
 })
 
-/**
- * Get Ollama status route
- * Returns Ollama service status and available models
- */
-export const getOllamaStatusRoute = createRoute({
-  method: "get",
-  path: "/providers/ollama/status",
-  summary: "Get Ollama status",
-  description: "Check Ollama service status and get list of available models",
-  tags: ["Providers"],
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: OllamaStatusSchema,
-        },
-      },
-      description: "Ollama status information",
-    },
-    503: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            status: z.literal("offline"),
-            error: z.string()
-          }),
-        },
-      },
-      description: "Ollama service unavailable",
-    },
-    500: {
-      content: {
-        "application/json": {
-          schema: ErrorResponseSchema,
-        },
-      },
-      description: "Internal server error",
-    },
-  },
-})
 
 // Export types for use in handlers
 export type ProviderInfo = z.infer<typeof ProviderInfoSchema>
 export type ProviderModel = z.infer<typeof ProviderModelSchema>
-export type OllamaStatus = z.infer<typeof OllamaStatusSchema>
 export type CurrentProvider = z.infer<typeof CurrentProviderSchema>

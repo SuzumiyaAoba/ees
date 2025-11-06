@@ -14,7 +14,7 @@ import {
   ConnectionRepositoryLive,
 } from "@/entities/connection/repository/connection-repository"
 import { EmbeddingProviderService } from "@/shared/providers"
-import { createProviderLayer } from "@/shared/providers/factory"
+import { createEmbeddingProviderService } from "@/shared/providers/factory"
 import type { ProviderConfig } from "@/shared/providers/types"
 import type {
   CreateConnectionRequest,
@@ -24,6 +24,7 @@ import type {
   ConnectionResponse,
   ConnectionsListResponse,
 } from "@/entities/connection/model/connection"
+import type { ConnectionConfig } from "@/shared/database/schema"
 
 /**
  * Connection service interface
@@ -57,6 +58,15 @@ export interface ConnectionService {
    */
   readonly getActiveConnection: () => Effect.Effect<
     ConnectionResponse | null,
+    DatabaseQueryError
+  >
+
+  /**
+   * Get the currently active connection with API key
+   * For internal use only (e.g., provider initialization)
+   */
+  readonly getActiveConnectionConfig: () => Effect.Effect<
+    ConnectionConfig | null,
     DatabaseQueryError
   >
 
@@ -107,7 +117,7 @@ const toConnectionResponse = (config: {
   type: string
   baseUrl: string
   apiKey: string | null
-  defaultModel: string | null
+  defaultModel: string
   metadata: string | null
   isActive: boolean
   createdAt: string | null
@@ -122,7 +132,7 @@ const toConnectionResponse = (config: {
     name: config.name,
     type: config.type as "ollama" | "openai-compatible",
     baseUrl: config.baseUrl,
-    defaultModel: config.defaultModel ?? null,
+    defaultModel: config.defaultModel,
     metadata,
     isActive: config.isActive,
     createdAt: config.createdAt,
@@ -143,7 +153,7 @@ const make = Effect.gen(function* () {
         type: request.type,
         baseUrl: request.baseUrl,
         apiKey: request.apiKey ?? null,
-        defaultModel: request.defaultModel ?? null,
+        defaultModel: request.defaultModel,
         metadata: request.metadata ? JSON.stringify(request.metadata) : null,
         isActive: request.isActive ?? false,
       }
@@ -175,13 +185,16 @@ const make = Effect.gen(function* () {
       return connection ? toConnectionResponse(connection) : null
     })
 
+  const getActiveConnectionConfig = (): Effect.Effect<ConnectionConfig | null, DatabaseQueryError> =>
+    repository.findActive()
+
   const updateConnection = (id: number, request: UpdateConnectionRequest) =>
     Effect.gen(function* () {
       const updateData: Partial<{
         name: string
         baseUrl: string
         apiKey: string | null
-        defaultModel: string | null
+        defaultModel: string
         metadata: string | null
         isActive: boolean
       }> = {}
@@ -209,79 +222,67 @@ const make = Effect.gen(function* () {
       yield* repository.setActive(id)
     })
 
-  const testConnection = (request: ConnectionTestRequest) =>
-    Effect.gen(function* () {
-      try {
-        // If testing an existing connection, fetch it
-        let config: ProviderConfig
-        if (request.id) {
-          const connection = yield* repository.findById(request.id)
-          if (!connection) {
-            return yield* Effect.fail(
-              new DatabaseQueryError({
-                message: `Connection with id ${request.id} not found`,
-              })
-            )
-          }
-
-          config = {
-            type: connection.type,
-            baseUrl: connection.baseUrl,
-            ...(connection.apiKey && { apiKey: connection.apiKey }),
-            ...(connection.defaultModel && { defaultModel: connection.defaultModel }),
-          }
-        } else {
-          // Testing a new connection configuration
-          if (!request.baseUrl || !request.type) {
-            return yield* Effect.fail(
-              new DatabaseQueryError({
-                message: "baseUrl and type are required for testing",
-              })
-            )
-          }
-
-          config = {
+  const testConnection = (request: ConnectionTestRequest): Effect.Effect<
+    ConnectionTestResponse,
+    ProviderConnectionError | ProviderAuthenticationError | DatabaseQueryError
+  > => {
+    // Helper to get the config from request
+    const getConfig: Effect.Effect<ProviderConfig, DatabaseQueryError> = request.id
+      ? Effect.flatMap(repository.findById(request.id), (connection) =>
+          connection
+            ? Effect.succeed({
+                type: connection.type,
+                baseUrl: connection.baseUrl,
+                ...(connection.apiKey && { apiKey: connection.apiKey }),
+                ...(connection.defaultModel && { defaultModel: connection.defaultModel }),
+              } as ProviderConfig)
+            : Effect.fail(
+                new DatabaseQueryError({
+                  message: `Connection with id ${request.id} not found`,
+                })
+              )
+        )
+      : request.baseUrl && request.type
+        ? Effect.succeed({
             type: request.type,
             baseUrl: request.baseUrl,
             ...(request.apiKey && { apiKey: request.apiKey }),
-          }
-        }
+          } as ProviderConfig)
+        : Effect.fail(
+            new DatabaseQueryError({
+              message: "baseUrl and type are required for testing",
+            })
+          )
 
-        // Create a temporary provider to test the connection
-        const providerLayer = createProviderLayer(config)
-        const testResult = yield* Effect.gen(function* () {
-          const provider = yield* EmbeddingProviderService
-          const models = yield* provider.listModels()
-          return models.map((m) => m.name)
-        }).pipe(Effect.provide(providerLayer))
-
-        return {
-          success: true,
-          message: "Connection successful",
-          models: testResult,
-        }
-      } catch (error) {
-        if (
-          error instanceof ProviderConnectionError ||
-          error instanceof ProviderAuthenticationError
-        ) {
-          return yield* Effect.fail(error)
-        }
-
-        return yield* Effect.fail(
-          new ProviderConnectionError({
-            provider: "unknown",
-            message: `Connection test failed: ${error}`,
-          })
-        )
+    // Get config, create provider, test connection
+    return Effect.flatMap(getConfig, (config) => {
+      const factoryConfig = {
+        defaultProvider: config,
+        availableProviders: [config],
       }
+      const providerLayer = createEmbeddingProviderService(factoryConfig)
+
+      // Test the connection by listing models
+      // This Effect is self-contained and doesn't leak EmbeddingProviderService requirement
+      const testProgram = Effect.flatMap(
+        EmbeddingProviderService,
+        (provider) => Effect.map(provider.listModels(), (models) => models.map((m) => m.name))
+      ).pipe(Effect.provide(providerLayer))
+
+      return Effect.map(testProgram, (models) => ({
+        success: true as const,
+        message: "Connection successful",
+        models,
+      }))
     })
+  }
 
   return {
     createConnection,
     getConnection,
     listConnections,
     getActiveConnection,
+    getActiveConnectionConfig,
     updateConnection,
     deleteConnection,
     setActiveConnection,

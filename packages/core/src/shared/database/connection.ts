@@ -250,6 +250,37 @@ const make = Effect.gen(function* () {
         CREATE INDEX IF NOT EXISTS idx_sync_jobs_created_at ON sync_jobs(created_at)
       `)
 
+      // Create connection_configs table for provider connection management
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS connection_configs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          base_url TEXT NOT NULL,
+          api_key TEXT,
+          default_model TEXT,
+          metadata TEXT,
+          is_active INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+
+      // Index on name: Enables fast lookups by connection name
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_connection_configs_name ON connection_configs(name)
+      `)
+
+      // Index on type: Enables filtering by connection type
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_connection_configs_type ON connection_configs(type)
+      `)
+
+      // Index on is_active: Enables fast lookup of active connection
+      await client.execute(`
+        CREATE INDEX IF NOT EXISTS idx_connection_configs_is_active ON connection_configs(is_active)
+      `)
+
       if (needsMigration) {
         logger.info("✅ Database migration completed successfully")
       }

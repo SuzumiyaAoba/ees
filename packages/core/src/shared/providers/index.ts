@@ -1,10 +1,13 @@
 /**
  * Provider system exports
  * Unified interface for embedding providers (Ollama and OpenAI-compatible)
+ *
+ * Note: Provider configuration is now managed through the Connection system.
+ * Environment-based configuration functions are deprecated.
  */
 
-// Configuration helpers
-export { getAvailableProviders, getDefaultProvider, getOllamaConfig, getProviderConfigSummary, validateProviderConfig } from "@/shared/config/providers"
+// Configuration helpers (deprecated - use ConnectionService instead)
+export { getAvailableProviders, validateProviderConfig } from "@/shared/config/providers"
 export { ENV_KEYS } from "@/shared/config/env-keys"
 // Provider implementations
 // Factory and multi-provider support

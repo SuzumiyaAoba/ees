@@ -5,7 +5,7 @@ import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
-import { ProviderManagement } from '@/components/ProviderManagement'
+import { ConnectionManagement } from '@/components/ConnectionManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
@@ -143,7 +143,7 @@ function AppContent() {
           // You could show a notification or refresh the embeddings list
         }} />
       case 'config':
-        return <ProviderManagement />
+        return <ConnectionManagement />
       default:
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
     }

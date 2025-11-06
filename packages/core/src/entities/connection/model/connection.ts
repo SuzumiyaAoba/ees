@@ -8,7 +8,7 @@ export interface ConnectionConfig {
   type: "ollama" | "openai-compatible"
   baseUrl: string
   apiKey?: string | null
-  defaultModel?: string | null
+  defaultModel: string
   metadata?: string | null // JSON string for additional settings
   isActive: boolean
   createdAt: string | null
@@ -20,7 +20,7 @@ export interface CreateConnectionRequest {
   type: "ollama" | "openai-compatible"
   baseUrl: string
   apiKey?: string
-  defaultModel?: string
+  defaultModel: string
   metadata?: Record<string, unknown>
   isActive?: boolean
 }
@@ -52,7 +52,7 @@ export interface ConnectionResponse {
   name: string
   type: "ollama" | "openai-compatible"
   baseUrl: string
-  defaultModel: string | null
+  defaultModel: string
   metadata: Record<string, unknown> | null
   isActive: boolean
   createdAt: string | null

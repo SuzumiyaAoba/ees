@@ -448,9 +448,9 @@ export function UploadDirectoryManagement() {
                   onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
                 >
                   <option value="">Use default model (nomic-embed-text)</option>
-                  {(models as any)?.map((model: any) => (
+                  {models?.map((model) => (
                     <option key={model.name} value={model.name}>
-                      {model.name}
+                      {model.displayName || model.name}
                     </option>
                   ))}
                 </select>

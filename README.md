@@ -5,6 +5,7 @@ A modern TypeScript monorepo service for generating and managing text embeddings
 ## Features
 
 - 🤖 **Multi-Provider AI**: Support for Ollama, OpenAI, Google AI, Cohere, Mistral, and Azure OpenAI
+- 🔌 **Connection Management**: Database-backed provider connection configuration with multi-connection support
 - 🗄️ **Vector Storage**: Efficient storage and retrieval with libSQL
 - 🔧 **Type Safety**: Built with Effect for composable, type-safe operations
 - ⚡ **Modern Stack**: Hono, TypeScript, Vitest, Biome
@@ -69,6 +70,16 @@ npm run dev
 - `GET /providers/ollama/status` - Check Ollama service status
 - `GET /models` - List all available models
 
+### Connection Management
+- `GET /connections` - List all configured connections
+- `GET /connections/{id}` - Get specific connection by ID
+- `GET /connections/active` - Get the currently active connection
+- `POST /connections` - Create a new connection configuration
+- `PATCH /connections/{id}` - Update an existing connection
+- `DELETE /connections/{id}` - Delete a connection
+- `POST /connections/{id}/activate` - Set a connection as active
+- `POST /connections/test` - Test connection configuration
+
 ### Example Usage
 
 ```bash
@@ -108,6 +119,29 @@ curl "http://localhost:3000/embeddings?page=1&limit=10&uri_filter=example*"
 
 # Get specific embedding
 curl http://localhost:3000/embeddings/example.txt
+
+# List all connections
+curl http://localhost:3000/connections
+
+# Create a new connection
+curl -X POST http://localhost:3000/connections \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Local LM Studio",
+    "type": "openai-compatible",
+    "baseUrl": "http://localhost:1234",
+    "defaultModel": "text-embedding-3-small"
+  }'
+
+# Activate a connection
+curl -X POST http://localhost:3000/connections/1/activate
+
+# Test a connection
+curl -X POST http://localhost:3000/connections/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1
+  }'
 ```
 
 ## Development
@@ -149,6 +183,25 @@ curl http://localhost:3000/embeddings/example.txt
 - **Cohere** - `embed-english-v3.0`, `embed-multilingual-v3.0`
 - **Mistral** - `mistral-embed`
 - **Azure OpenAI** - Compatible with OpenAI models
+
+### Connection Management
+
+EES supports database-backed connection management, allowing you to configure and switch between multiple provider connections:
+
+**Features:**
+- **Multiple Connections**: Configure multiple provider endpoints (Ollama, LM Studio, OpenAI-compatible APIs)
+- **Active Connection**: Only one connection is active at a time for embedding operations
+- **Connection Testing**: Verify connections before activation to ensure they work
+- **Persistence**: All connections are stored in the database and survive restarts
+- **Web UI**: Full-featured UI for managing connections (add, edit, delete, activate, test)
+- **CLI Support**: Complete command-line interface for connection management
+- **API-First**: RESTful API endpoints for programmatic connection management
+
+**Use Cases:**
+- Switch between local Ollama and cloud providers
+- Configure multiple Ollama instances on different ports
+- Manage connections to LM Studio and other OpenAI-compatible servers
+- Test connection configurations before making them active
 
 ### Effect-based Architecture
 
@@ -277,6 +330,16 @@ ees providers ollama-status
 
 # List available models
 ees models
+
+# Connection management
+ees connections list                    # List all connections
+ees connections create                  # Create new connection (interactive)
+ees connections get <id>                # Get connection details
+ees connections update <id>             # Update connection (interactive)
+ees connections delete <id>             # Delete connection
+ees connections activate <id>           # Set connection as active
+ees connections test <id>               # Test connection
+ees connections active                  # Show active connection
 ```
 
 ## Web Interface
@@ -287,6 +350,19 @@ Start the web frontend for a graphical interface:
 npm run dev:web
 # Visit http://localhost:5173
 ```
+
+**Features:**
+- 🔍 **Search**: Search embeddings with similarity metrics
+- 📄 **Browse**: List and manage all embeddings
+- ➕ **Create**: Create new embeddings with interactive form
+- 📤 **Upload**: Upload files to create embeddings
+- 📁 **Directories**: Manage upload directories with auto-sync
+- 📊 **Visualize**: 2D/3D visualization of embedding vectors
+- 🔄 **Migration**: Migrate embeddings between models
+- ⚙️ **Config**:
+  - **Connection Management**: Add, edit, delete, and activate provider connections
+  - **Provider Status**: Monitor provider health and available models
+  - **Connection Testing**: Verify connections before activation
 
 ## Contributing
 

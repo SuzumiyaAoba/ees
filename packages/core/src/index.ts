@@ -18,6 +18,17 @@ export type {
   Embedding
 } from './entities/embedding/model/embedding'
 
+export { ConnectionService } from './entities/connection/index'
+export type {
+  ConnectionConfig,
+  CreateConnectionRequest,
+  UpdateConnectionRequest,
+  ConnectionTestRequest,
+  ConnectionTestResponse,
+  ConnectionResponse,
+  ConnectionsListResponse,
+} from './entities/connection/model/connection'
+
 // Export OpenAPI schemas for API package consumption
 export {
   TaskTypeSchema,

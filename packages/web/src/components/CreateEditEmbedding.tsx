@@ -3,7 +3,7 @@ import { FileText, Loader2, Plus, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useCreateEmbedding, useUpdateEmbedding, useModels } from '@/hooks/useEmbeddings'
+import { useCreateEmbedding, useUpdateEmbedding, useProviderModels } from '@/hooks/useEmbeddings'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { apiClient } from '@/services/api'
 import type { Embedding, TaskType, TaskTypeMetadata } from '@/types/api'
@@ -34,7 +34,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
 
   const { mutate: createEmbedding, isPending: isCreating, error: createError } = useCreateEmbedding()
   const { mutate: updateEmbedding, isPending: isUpdating, error: updateError } = useUpdateEmbedding()
-  const { data: modelsData } = useModels()
+  const { data: modelsData } = useProviderModels()
 
   const isSubmitting = isCreating || isUpdating
   const error = createError || updateError
@@ -62,8 +62,8 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
       // If no model selected, use default model to check task type support
       let modelToCheck = modelName
 
-      if (!modelToCheck && modelsData?.models) {
-        const firstAvailable = modelsData.models.find((m) => m.available)
+      if (!modelToCheck && modelsData) {
+        const firstAvailable = modelsData[0]
         modelToCheck = firstAvailable?.name || ''
       }
 
@@ -199,13 +199,11 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                 disabled={isSubmitting}
               >
                 <option value="">Default Model</option>
-                {modelsData?.models
-                  .filter((model) => model.available)
-                  .map((model) => (
-                    <option key={model.name} value={model.name}>
-                      {model.displayName || model.name}
-                    </option>
-                  ))}
+                {modelsData?.map((model) => (
+                  <option key={model.name} value={model.name}>
+                    {model.displayName || model.name}
+                  </option>
+                ))}
               </select>
             </div>
 
