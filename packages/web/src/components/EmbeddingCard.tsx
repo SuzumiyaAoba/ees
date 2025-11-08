@@ -95,7 +95,11 @@ export function EmbeddingCard({
 
   return (
     <div
-      className={`border rounded-lg p-4 transition-colors cursor-pointer select-none ${isSelected ? 'bg-muted' : 'hover:bg-muted/50'}`}
+      className={`rounded-xl p-4 cursor-pointer select-none transition-all relative overflow-hidden ${
+        isSelected
+          ? 'bg-primary-container'
+          : 'bg-surface-variant before:absolute before:inset-0 before:bg-primary before:opacity-0 before:transition-opacity hover:before:opacity-[0.08] active:before:opacity-[0.12]'
+      }`}
       onMouseDown={handleStart}
       onMouseUp={handleEnd}
       onMouseLeave={handleCancel}
@@ -114,7 +118,7 @@ export function EmbeddingCard({
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-medium truncate" title={embedding.uri}>
+              <h4 className="title-medium truncate" title={embedding.uri}>
                 {formatUri(embedding.uri)}
               </h4>
               {embedding.converted_format && (
@@ -128,7 +132,7 @@ export function EmbeddingCard({
                 </Badge>
               )}
             </div>
-            <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+            <div className="flex gap-4 body-small text-muted-foreground mt-2">
               <span>ID: {embedding.id}</span>
               <span>Model: {embedding.model_name}</span>
               <span>Size: {getTextFileSize(embedding.text)}</span>
@@ -165,11 +169,11 @@ export function EmbeddingCard({
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground line-clamp-2">
+      <p className="body-medium text-muted-foreground line-clamp-2 mt-3">
         {truncateText(embedding.text)}
       </p>
 
-      <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
+      <div className="flex justify-between items-center mt-3 body-small text-muted-foreground">
         <span>Embedding dimensions: {embedding.embedding.length}</span>
         <span>Last updated: {formatDate(embedding.updated_at)}</span>
       </div>

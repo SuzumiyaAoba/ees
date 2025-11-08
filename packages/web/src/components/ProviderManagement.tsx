@@ -55,8 +55,8 @@ export function ProviderManagement() {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <p className="text-red-800 dark:text-red-200">Error: {error}</p>
+      <div className="bg-error-container text-on-error-container rounded-xl p-6">
+        <p className="body-medium">Error: {error}</p>
       </div>
     )
   }
@@ -65,8 +65,8 @@ export function ProviderManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Providers</h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="headline-medium">Providers</h2>
+          <p className="mt-2 body-medium text-muted-foreground">
             Manage embedding provider configurations
           </p>
         </div>
@@ -77,34 +77,34 @@ export function ProviderManagement() {
 
       <div className="space-y-4">
         {loading && providers.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading providers...</div>
+          <div className="text-center py-12 body-large text-muted-foreground">Loading providers...</div>
         ) : providers.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+          <div className="text-center py-12 body-large text-muted-foreground">
             No providers found. Add a provider to get started.
           </div>
         ) : (
           providers.map((provider) => (
             <div
               key={provider.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700"
+              className="bg-surface-variant rounded-xl p-6"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="title-large">
                     {provider.name}
                   </h3>
-                  <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                    <p><span className="font-medium">Type:</span> {provider.type}</p>
-                    <p><span className="font-medium">Base URL:</span> {provider.baseUrl}</p>
+                  <div className="mt-3 space-y-2 body-medium text-muted-foreground">
+                    <p><span className="label-medium">Type:</span> {provider.type}</p>
+                    <p><span className="label-medium">Base URL:</span> {provider.baseUrl}</p>
                     {provider.apiKey && (
-                      <p><span className="font-medium">API Key:</span> ********</p>
+                      <p><span className="label-medium">API Key:</span> ********</p>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                    <p className="body-small">
                       Created: {new Date(provider.createdAt || '').toLocaleString()}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button
                     variant="outline"
                     size="sm"

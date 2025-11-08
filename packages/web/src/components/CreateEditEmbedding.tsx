@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react'
 import { FileText, Loader2, Plus, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { FormField } from '@/components/ui/FormField'
+import { FormSelect } from '@/components/ui/FormSelect'
 import { useCreateEmbedding, useUpdateEmbedding, useProviderModels } from '@/hooks/useEmbeddings'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { apiClient } from '@/services/api'
@@ -163,8 +166,10 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">URI</label>
+            <FormField
+              label="URI"
+              helpText={isEditMode ? 'URI cannot be changed when editing' : 'Unique identifier for the embedding'}
+            >
               <Input
                 placeholder="e.g., file://document.txt or doc:12345"
                 value={uri}
@@ -173,46 +178,39 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                 disabled={isSubmitting || isEditMode}
                 className={isEditMode ? 'bg-muted cursor-not-allowed' : ''}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {isEditMode ? 'URI cannot be changed when editing' : 'Unique identifier for the embedding'}
-              </p>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="text-sm font-medium">Text Content</label>
-              <textarea
-                className="flex min-h-[400px] max-h-[600px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+            <FormField label="Text Content">
+              <Textarea
+                className="min-h-[400px] max-h-[600px]"
                 placeholder="Enter the text content to generate embedding for..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 required
                 disabled={isSubmitting}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="text-sm font-medium">Model (Optional)</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                disabled={isSubmitting}
-              >
-                <option value="">Default Model</option>
-                {modelsData?.map((model) => (
-                  <option key={model.name} value={model.name}>
-                    {model.displayName || model.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              label="Model (Optional)"
+              value={modelName}
+              onChange={setModelName}
+              disabled={isSubmitting}
+              options={[
+                { value: '', label: 'Default Model' },
+                ...(modelsData?.map((model) => ({
+                  value: model.name,
+                  label: model.displayName || model.name,
+                })) || [])
+              ]}
+            />
 
             {!isEditMode && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
               <div>
-                <label className="text-sm font-medium block mb-2">
+                <label className="block label-large mb-3">
                   Task Types (Optional - for models that support it)
                 </label>
-                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
                   {taskTypeOptions.map((taskType) => {
                     const taskTypeInfo = TASK_TYPES.find(t => t.value === taskType.value)
                     if (!taskTypeInfo) return null
@@ -220,7 +218,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                     return (
                       <label
                         key={taskType.value}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                        className="flex items-start gap-2 cursor-pointer hover:bg-primary/[0.08] p-2 rounded-lg transition-colors"
                       >
                         <input
                           type="checkbox"
@@ -230,14 +228,14 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                           className="mt-1 h-4 w-4 rounded border-gray-300"
                         />
                         <div className="flex-1">
-                          <div className="text-sm font-medium">{taskTypeInfo.label}</div>
-                          <div className="text-xs text-muted-foreground">{taskTypeInfo.description}</div>
+                          <div className="label-large">{taskTypeInfo.label}</div>
+                          <div className="body-small text-on-surface-variant">{taskTypeInfo.description}</div>
                         </div>
                       </label>
                     )
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="body-small text-on-surface-variant mt-2">
                   {selectedTaskTypes.length > 0
                     ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s)`
                     : 'Select one or more task types to create specialized embeddings (e.g., "Document Retrieval" + "Clustering")'}

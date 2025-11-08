@@ -54,15 +54,17 @@ export function SearchResultCard({
 
   return (
     <div
-      className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors select-none"
+      className="rounded-xl p-4 bg-surface-variant cursor-pointer transition-all select-none relative overflow-hidden
+                 before:absolute before:inset-0 before:bg-primary before:opacity-0 before:transition-opacity
+                 hover:before:opacity-[0.08] active:before:opacity-[0.12]"
       onMouseDown={handleStart}
       onMouseUp={handleEnd}
       onMouseLeave={handleCancel}
       onTouchStart={handleStart}
       onTouchEnd={handleEnd}
     >
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium">{result.uri}</h4>
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="title-medium">{result.uri}</h4>
         <Badge variant="default" className="font-mono">
           {formatSimilarity(result.similarity)}
         </Badge>
@@ -72,11 +74,11 @@ export function SearchResultCard({
           <MarkdownRenderer content={result.text} />
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
+        <p className="body-medium text-muted-foreground mb-3 line-clamp-3">
           {result.text}
         </p>
       )}
-      <div className="flex justify-between text-xs text-muted-foreground">
+      <div className="flex justify-between body-small text-muted-foreground">
         <div className="flex gap-3">
           <span>Model: {result.model_name}</span>
           <span>Size: {getTextFileSize(result.text)}</span>

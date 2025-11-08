@@ -71,8 +71,8 @@ export function ModelManagement() {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <p className="text-red-800 dark:text-red-200">Error: {error}</p>
+      <div className="bg-error-container text-on-error-container rounded-xl p-6">
+        <p className="body-medium">Error: {error}</p>
       </div>
     )
   }
@@ -81,8 +81,8 @@ export function ModelManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Models</h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="headline-medium">Models</h2>
+          <p className="mt-2 body-medium text-muted-foreground">
             Manage models for each provider
           </p>
         </div>
@@ -93,8 +93,8 @@ export function ModelManagement() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div className="bg-surface-variant rounded-xl p-6">
+        <label className="block label-large mb-3">
           Filter by Provider
         </label>
         <select
@@ -103,7 +103,7 @@ export function ModelManagement() {
             const id = e.target.value ? Number(e.target.value) : undefined
             setSelectedProviderId(id)
           }}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          className="w-full h-14 px-4 py-3 border border-outline rounded-lg bg-surface body-large focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
         >
           <option value="">All Providers</option>
           {providers.map((provider) => (
@@ -116,9 +116,9 @@ export function ModelManagement() {
 
       <div className="space-y-4">
         {loading && models.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading models...</div>
+          <div className="text-center py-12 body-large text-muted-foreground">Loading models...</div>
         ) : models.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+          <div className="text-center py-12 body-large text-muted-foreground">
             {selectedProvider
               ? `No models found for ${selectedProvider.name}. Add a model to get started.`
               : 'Select a provider to view and manage its models.'
@@ -130,39 +130,38 @@ export function ModelManagement() {
             return (
               <div
                 key={model.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border ${model.isActive ? 'border-green-500 ring-2 ring-green-500' : 'border-gray-200 dark:border-gray-700'}`}
+                className={`rounded-xl p-6 ${model.isActive ? 'bg-primary-container' : 'bg-surface-variant'}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-3">
+                      <h3 className="title-large">
                         {model.displayName || model.name}
                       </h3>
                       {model.isActive && (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-xs font-medium rounded">
+                        <span className="px-3 py-1 bg-primary-container text-on-primary-container label-small rounded-lg">
                           Active
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-3 space-y-2 body-medium text-muted-foreground">
                       {model.displayName && model.displayName !== model.name && (
-                        <p><span className="font-medium">Model ID:</span> {model.name}</p>
+                        <p><span className="label-medium">Model ID:</span> {model.name}</p>
                       )}
                       {provider && (
-                        <p><span className="font-medium">Provider:</span> {provider.name}</p>
+                        <p><span className="label-medium">Provider:</span> {provider.name}</p>
                       )}
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                      <p className="body-small">
                         Created: {new Date(model.createdAt || '').toLocaleString()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     {!model.isActive && (
                       <Button
-                        variant="outline"
+                        variant="filled-tonal"
                         size="sm"
                         onClick={() => handleActivate(model.id)}
-                        className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
                       >
                         Activate
                       </Button>

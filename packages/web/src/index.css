@@ -4,100 +4,165 @@
 
 @layer base {
   :root {
-    /* EES Brand Colors - Light Theme */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-
-    /* Primary: Indigo (AI/ML Theme) */
-    --primary: 239 84% 67%;
+    /* Material Design 3 - Light Theme */
+    /* Primary Colors (Indigo - AI/ML Theme) */
+    --primary: 263 70% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 243 75% 59%;
+    --primary-container: 263 100% 95%;
+    --on-primary-container: 263 100% 10%;
 
-    /* Secondary: Cyan (Data/Connectivity) */
-    --secondary: 189 94% 43%;
+    /* Secondary Colors (Teal - Data/Connectivity) */
+    --secondary: 174 63% 36%;
     --secondary-foreground: 0 0% 100%;
-    --secondary-hover: 189 85% 37%;
+    --secondary-container: 174 63% 90%;
+    --on-secondary-container: 174 100% 10%;
 
-    /* Accent: Purple (Innovation) */
-    --accent: 271 91% 65%;
-    --accent-foreground: 0 0% 100%;
-    --accent-hover: 271 81% 56%;
+    /* Tertiary Colors (Purple - Innovation) */
+    --tertiary: 291 64% 42%;
+    --tertiary-foreground: 0 0% 100%;
+    --tertiary-container: 291 64% 92%;
+    --on-tertiary-container: 291 100% 10%;
 
-    /* Semantic Colors */
+    /* Error Colors */
+    --error: 0 72% 51%;
+    --error-foreground: 0 0% 100%;
+    --error-container: 0 100% 95%;
+    --on-error-container: 0 100% 10%;
+
+    /* Surface Colors */
+    --background: 0 0% 99%;
+    --foreground: 0 0% 10%;
+    --surface: 0 0% 99%;
+    --surface-variant: 263 15% 92%;
+    --on-surface-variant: 263 10% 30%;
+
+    /* Outline */
+    --outline: 263 10% 50%;
+    --outline-variant: 263 10% 80%;
+
+    /* Surface tint for elevation */
+    --surface-tint: var(--primary);
+
+    /* Legacy compatibility */
+    --accent: var(--tertiary);
+    --accent-foreground: var(--tertiary-foreground);
+    --destructive: var(--error);
+    --destructive-foreground: var(--error-foreground);
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+    --muted: var(--surface-variant);
+    --muted-foreground: var(--on-surface-variant);
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --border: var(--outline-variant);
+    --input: var(--outline);
+    --ring: var(--primary);
 
-    /* Neutral */
-    --muted: 220 13% 91%;
-    --muted-foreground: 220 9% 46%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    /* Material Design 3 Elevation & Shape */
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.75rem;
+    --radius: var(--radius-lg);
 
-    /* Design Tokens */
-    --radius: 0.75rem;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    /* Material Design 3 Elevation Shadows */
+    --elevation-0: none;
+    --elevation-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+    --elevation-2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+    --elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.3);
+    --elevation-4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.3);
+    --elevation-5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px 0px rgba(0, 0, 0, 0.3);
+
+    /* Material Design 3 State Layers */
+    --state-hover-opacity: 0.08;
+    --state-focus-opacity: 0.12;
+    --state-press-opacity: 0.12;
+    --state-drag-opacity: 0.16;
+
+    /* Legacy shadow mappings */
+    --shadow-sm: var(--elevation-1);
+    --shadow: var(--elevation-2);
+    --shadow-lg: var(--elevation-3);
+    --shadow-xl: var(--elevation-5);
   }
 
   .dark {
-    /* EES Brand Colors - Dark Theme */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Material Design 3 - Dark Theme */
+    /* Primary Colors */
+    --primary: 263 80% 67%;
+    --primary-foreground: 263 100% 10%;
+    --primary-container: 263 70% 30%;
+    --on-primary-container: 263 100% 90%;
 
-    /* Primary: Indigo */
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 239 84% 75%;
+    /* Secondary Colors */
+    --secondary: 174 50% 60%;
+    --secondary-foreground: 174 100% 10%;
+    --secondary-container: 174 40% 30%;
+    --on-secondary-container: 174 80% 85%;
 
-    /* Secondary: Cyan */
-    --secondary: 189 94% 43%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-hover: 189 94% 53%;
+    /* Tertiary Colors */
+    --tertiary: 291 55% 65%;
+    --tertiary-foreground: 291 100% 10%;
+    --tertiary-container: 291 50% 30%;
+    --on-tertiary-container: 291 80% 90%;
 
-    /* Accent: Purple */
-    --accent: 271 91% 65%;
-    --accent-foreground: 0 0% 100%;
-    --accent-hover: 271 91% 75%;
+    /* Error Colors */
+    --error: 0 80% 63%;
+    --error-foreground: 0 100% 10%;
+    --error-container: 0 60% 30%;
+    --on-error-container: 0 100% 90%;
 
-    /* Semantic Colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
-    --info-foreground: 0 0% 100%;
+    /* Surface Colors */
+    --background: 0 0% 10%;
+    --foreground: 0 0% 90%;
+    --surface: 0 0% 14%;
+    --surface-variant: 263 10% 20%;
+    --on-surface-variant: 263 10% 70%;
 
-    /* Neutral */
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 239 84% 67%;
+    /* Outline */
+    --outline: 263 10% 60%;
+    --outline-variant: 263 10% 30%;
 
-    /* Design Tokens */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6);
+    /* Legacy compatibility */
+    --accent: var(--tertiary);
+    --accent-foreground: var(--tertiary-foreground);
+    --destructive: var(--error);
+    --destructive-foreground: var(--error-foreground);
+    --success: 142 60% 50%;
+    --success-foreground: 142 100% 10%;
+    --warning: 38 80% 60%;
+    --warning-foreground: 38 100% 10%;
+    --info: 217 80% 70%;
+    --info-foreground: 217 100% 10%;
+    --muted: var(--surface-variant);
+    --muted-foreground: var(--on-surface-variant);
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --border: var(--outline-variant);
+    --input: var(--outline);
+    --ring: var(--primary);
+
+    /* Material Design 3 Elevation Shadows (darker for dark theme) */
+    --elevation-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+    --elevation-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+    --elevation-3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.3);
+    --elevation-4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.3);
+    --elevation-5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px 0px rgba(0, 0, 0, 0.3);
+
+    /* Legacy shadow mappings */
+    --shadow-sm: var(--elevation-1);
+    --shadow: var(--elevation-2);
+    --shadow-lg: var(--elevation-3);
+    --shadow-xl: var(--elevation-5);
   }
 }
 
@@ -105,16 +170,122 @@
   * {
     border-color: hsl(var(--border));
   }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
   }
+
   html {
     height: 100%;
   }
+
   #root {
     min-height: 100vh;
+  }
+
+  /* Material Design 3 Typography Scale */
+  .display-large {
+    font-size: 57px;
+    line-height: 64px;
+    font-weight: 400;
+    letter-spacing: -0.25px;
+  }
+
+  .display-medium {
+    font-size: 45px;
+    line-height: 52px;
+    font-weight: 400;
+  }
+
+  .display-small {
+    font-size: 36px;
+    line-height: 44px;
+    font-weight: 400;
+  }
+
+  .headline-large {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 400;
+  }
+
+  .headline-medium {
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 400;
+  }
+
+  .headline-small {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 400;
+  }
+
+  .title-large {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 400;
+  }
+
+  .title-medium {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    letter-spacing: 0.15px;
+  }
+
+  .title-small {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+  }
+
+  .label-large {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+  }
+
+  .label-medium {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .label-small {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .body-large {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+
+  .body-medium {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    letter-spacing: 0.25px;
+  }
+
+  .body-small {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    letter-spacing: 0.4px;
   }
 }
 

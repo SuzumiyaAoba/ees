@@ -3,6 +3,7 @@ import { Upload, FileText, X, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { FormSelect } from '@/components/ui/FormSelect'
 import { useUploadFile, useProviderModels } from '@/hooks/useEmbeddings'
 
 interface FileWithStatus {
@@ -166,21 +167,18 @@ export function FileUpload() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Embedding Model</label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              <option value="">Use default model</option>
-              {models && models.map((model) => (
-                <option key={model.name} value={model.name}>
-                  {model.displayName || model.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormSelect
+            label="Embedding Model"
+            value={selectedModel}
+            onChange={setSelectedModel}
+            options={[
+              { value: '', label: 'Use default model' },
+              ...(models?.map((model) => ({
+                value: model.name,
+                label: model.displayName || model.name,
+              })) || [])
+            ]}
+          />
         </CardContent>
       </Card>
 
@@ -205,10 +203,10 @@ export function FileUpload() {
           >
             <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <div className="space-y-2">
-              <p className="text-lg font-medium">
+              <p className="title-large">
                 {dragActive ? 'Drop files here' : 'Drag & drop files here'}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="body-medium text-on-surface-variant">
                 or click to select files
               </p>
               <Input

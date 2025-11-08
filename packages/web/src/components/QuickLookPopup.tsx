@@ -74,11 +74,11 @@ export function QuickLookPopup({
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-4xl max-h-[80vh] animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <Card className="shadow-xl border-2 h-full flex flex-col">
+        <Card variant="elevated" className="shadow-elevation3 h-full flex flex-col">
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg truncate" title={item.uri}>
+                <CardTitle className="truncate" title={item.uri}>
                   {item.uri}
                 </CardTitle>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -126,12 +126,12 @@ export function QuickLookPopup({
               {renderMarkdown ? (
                 <MarkdownRenderer content={item.text} />
               ) : (
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <p className="body-medium whitespace-pre-wrap break-words">
                   {item.text}
                 </p>
               )}
             </div>
-            <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground flex-shrink-0">
+            <div className="flex justify-between items-center mt-3 body-small text-muted-foreground flex-shrink-0">
               <div className="flex gap-3">
                 <span>Created: {formatDate(item.created_at)}</span>
                 <span>Size: {getTextFileSize(item.text)}</span>

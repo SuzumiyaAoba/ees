@@ -229,8 +229,10 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
 
           {/* Title input for retrieval_document task type - Semantic search only */}
           {searchMode === 'semantic' && searchParams.task_type === 'retrieval_document' && (
-            <div>
-              <label className="text-sm font-medium">Title (optional)</label>
+            <FormField
+              label="Title (optional)"
+              helpText="Providing a title improves search accuracy for document retrieval"
+            >
               <Input
                 placeholder="Enter document title for better accuracy..."
                 value={title}
@@ -238,10 +240,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Providing a title improves search accuracy for document retrieval
-              </p>
-            </div>
+            </FormField>
           )}
 
           {/* Search Options */}
