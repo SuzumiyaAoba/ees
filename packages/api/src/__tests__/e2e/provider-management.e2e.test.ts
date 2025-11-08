@@ -92,6 +92,11 @@ describe("Provider Management E2E Tests", () => {
     it("should return current active provider", async () => {
       const response = await app.request("/providers/current")
 
+      if (response.status !== 200) {
+        const errorBody = await response.text()
+        throw new Error(`GET /providers/current returned ${response.status}: ${errorBody}`)
+      }
+
       expect(response.status).toBe(200)
       expect(response.headers.get("content-type")).toContain("application/json")
 

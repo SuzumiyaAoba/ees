@@ -129,14 +129,21 @@ const make = Effect.gen(function* () {
    */
   const createConnection = (request: CreateConnectionRequest) =>
     Effect.gen(function* () {
-      // Create provider
-      const provider = yield* providerRepository.create({
+      // Debug logging
+      console.error("CreateConnection request:", JSON.stringify(request, null, 2))
+
+      const providerData = {
         name: request.name,
         type: request.type,
         baseUrl: request.baseUrl,
         apiKey: request.apiKey,
         metadata: request.metadata ? JSON.stringify(request.metadata) : undefined,
-      })
+      }
+
+      console.error("Provider data to create:", JSON.stringify(providerData, null, 2))
+
+      // Create provider
+      const provider = yield* providerRepository.create(providerData)
 
       // If this should be active, deactivate all other models first
       if (request.isActive) {

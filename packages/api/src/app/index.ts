@@ -144,6 +144,13 @@ app.route("/", uploadApp)
 app.route("/", connectionApp)
 
 /**
+ * Provider management routes - Provider status and model discovery
+ * IMPORTANT: Must be registered before providerCrudApp to ensure
+ * specific routes like /providers/current match before /providers/{id}
+ */
+app.route("/", providerApp)
+
+/**
  * Provider CRUD routes - Database CRUD operations for providers
  */
 app.route("/", providerCrudApp)
@@ -152,11 +159,6 @@ app.route("/", providerCrudApp)
  * Model CRUD routes - Database CRUD operations for models
  */
 app.route("/", modelCrudApp)
-
-/**
- * Provider management routes - Provider status and model discovery
- */
-app.route("/", providerApp)
 
 /**
  * Create embedding endpoint
