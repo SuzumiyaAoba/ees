@@ -21,18 +21,41 @@ export interface DatabaseService {
 export const DatabaseService =
   Context.GenericTag<DatabaseService>("DatabaseService")
 
+/**
+ * Global cached database client and instance for test environment
+ * This ensures all requests in E2E tests share the same in-memory database
+ */
+let globalTestClient: ReturnType<typeof createClient> | null = null
+let globalTestDb: ReturnType<typeof drizzle> | null = null
+
 const make = Effect.gen(function* () {
   const isTest = isTestEnv()
 
-  // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
-  const dataDir = getEnvWithDefault(
-    "EES_DATA_DIR",
-    resolve(process.cwd(), "data")
-  )
-  const DB_PATH = isTest ? ":memory:" : resolve(dataDir, "embeddings.db")
+  let client: ReturnType<typeof createClient>
+  let db: ReturnType<typeof drizzle>
 
-  // Ensure data directory exists for non-test environments
-  if (!isTest) {
+  // In test environment, reuse the same client and db instance
+  if (isTest) {
+    if (!globalTestClient) {
+      logger.debug("Creating global test database client (first time)")
+      globalTestClient = createClient({ url: ":memory:" })
+      globalTestDb = drizzle(globalTestClient, { schema })
+    } else {
+      logger.debug("Reusing existing global test database client")
+    }
+
+    client = globalTestClient
+    db = globalTestDb!
+  } else {
+    // Production/development environment: create new client each time
+    // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
+    const dataDir = getEnvWithDefault(
+      "EES_DATA_DIR",
+      resolve(process.cwd(), "data")
+    )
+    const DB_PATH = resolve(dataDir, "embeddings.db")
+
+    // Ensure data directory exists for non-test environments
     yield* Effect.try({
       try: () => {
         if (!existsSync(dataDir)) {
@@ -45,21 +68,21 @@ const make = Effect.gen(function* () {
           cause: error,
         }),
     })
+
+    client = yield* Effect.try({
+      try: () =>
+        createClient({
+          url: `file:${DB_PATH}`,
+        }),
+      catch: (error) =>
+        new DatabaseConnectionError({
+          message: "Failed to create database client",
+          cause: error,
+        }),
+    })
+
+    db = drizzle(client, { schema })
   }
-
-  const client = yield* Effect.try({
-    try: () =>
-      createClient({
-        url: isTest ? ":memory:" : `file:${DB_PATH}`,
-      }),
-    catch: (error) =>
-      new DatabaseConnectionError({
-        message: "Failed to create database client",
-        cause: error,
-      }),
-  })
-
-  const db = drizzle(client, { schema })
 
   /**
    * Initialize database schema with automatic migration support

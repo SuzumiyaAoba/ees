@@ -42,10 +42,12 @@ export interface E2ETestOptions {
  */
 export async function setupE2ETests(options: E2ETestOptions = {}): Promise<void> {
   beforeAll(async () => {
+    // Save original console functions before suppression
+    const originalConsoleLog = console.log
+    const originalConsoleError = console.error
+
     // Disable console output during tests (optional)
     if (process.env["TEST_SILENCE"] !== "false") {
-      const originalConsoleLog = console.log
-      const originalConsoleError = console.error
       console.log = () => {}
       console.error = () => {}
 
@@ -62,34 +64,45 @@ export async function setupE2ETests(options: E2ETestOptions = {}): Promise<void>
     // Create and activate default connection for tests (unless skipped)
     if (!options.skipDefaultConnection) {
       try {
+        const requestBody = {
+          name: "E2E Test Connection",
+          type: "ollama",
+          baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
+          defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
+          isActive: true, // Set active during creation
+        }
+
+        originalConsoleError("🔧 Creating default connection with:", JSON.stringify(requestBody, null, 2))
+
         const connectionResponse = await app.request("/connections", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            name: "E2E Test Connection",
-            type: "ollama",
-            baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
-            defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
-            isActive: true, // Set active during creation
-          }),
+          body: JSON.stringify(requestBody),
         })
+
+        originalConsoleError(`   Response status: ${connectionResponse.status}`)
 
         if (connectionResponse.status === 201) {
           const connection = await connectionResponse.json() as { id?: number }
           if (connection.id) {
             testState.defaultConnectionId = connection.id
-            console.log("🔧 Default connection created and activated for E2E tests")
+            originalConsoleError(`✅ Default connection created and activated (ID: ${connection.id})`)
+          } else {
+            originalConsoleError("⚠️  Connection created but no ID returned")
           }
         } else {
-          console.warn("⚠️  Failed to create default connection for E2E tests - status:", connectionResponse.status)
+          const errorBody = await connectionResponse.text()
+          originalConsoleError("❌ Failed to create default connection for E2E tests")
+          originalConsoleError(`   Status: ${connectionResponse.status}`)
+          originalConsoleError(`   Body: ${errorBody}`)
         }
       } catch (error) {
-        console.warn("⚠️  Error setting up default connection:", error)
+        originalConsoleError("❌ Error setting up default connection:", error)
       }
     } else {
-      console.log("⏭️  Skipping default connection setup (test manages connections)")
+      originalConsoleLog("⏭️  Skipping default connection setup (test manages connections)")
     }
 
     testState.isSetupComplete = true

@@ -12,15 +12,26 @@ import { parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 setupE2ETests()
 
 describe("Provider Management E2E Tests", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     if (!testState.isSetupComplete) {
       throw new Error("E2E test environment not properly initialized")
     }
+
+    // Verify default connection exists
+    const connectionsResponse = await app.request("/connections")
+    if (connectionsResponse.status === 200) {
+      const data = await connectionsResponse.json() as { connections?: unknown[], total?: number }
+      console.log(`✓ Default connections available: ${data.total || 0}`)
+
+      if (data.total === 0) {
+        console.warn("⚠️  No connections found - tests may fail")
+      }
+    }
   })
 
-  describe("GET /providers", () => {
+  describe("GET /provider-info", () => {
     it("should list all available providers", async () => {
-      const response = await app.request("/providers")
+      const response = await app.request("/provider-info")
 
       expect(response.status).toBe(200)
       expect(response.headers.get("content-type")).toContain("application/json")
@@ -53,7 +64,7 @@ describe("Provider Management E2E Tests", () => {
     })
 
     it("should include Ollama provider", async () => {
-      const response = await app.request("/providers")
+      const response = await app.request("/provider-info")
 
       expect(response.status).toBe(200)
 
@@ -68,7 +79,7 @@ describe("Provider Management E2E Tests", () => {
 
     it("should handle requests with various query parameters", async () => {
       // Test that endpoint ignores unexpected query params
-      const response = await app.request("/providers?foo=bar")
+      const response = await app.request("/provider-info?foo=bar")
 
       expect(response.status).toBe(200)
 
@@ -324,7 +335,7 @@ describe("Provider Management E2E Tests", () => {
   describe("Provider Integration", () => {
     it("should have consistent provider information across endpoints", async () => {
       // Get all providers
-      const providersResponse = await app.request("/providers")
+      const providersResponse = await app.request("/provider-info")
       expect(providersResponse.status).toBe(200)
       const providers = await parseUnknownJsonResponse(providersResponse)
 
@@ -368,7 +379,7 @@ describe("Provider Management E2E Tests", () => {
       const ollamaStatus = await parseUnknownJsonResponse(statusResponse)
 
       // Get all providers
-      const providersResponse = await app.request("/providers")
+      const providersResponse = await app.request("/provider-info")
       expect(providersResponse.status).toBe(200)
       const providers = await parseUnknownJsonResponse(providersResponse)
 
@@ -417,7 +428,7 @@ describe("Provider Management E2E Tests", () => {
   describe("Performance", () => {
     it("should respond quickly to provider listing", async () => {
       const startTime = Date.now()
-      const response = await app.request("/providers")
+      const response = await app.request("/provider-info")
       const duration = Date.now() - startTime
 
       expect(response.status).toBe(200)
@@ -438,7 +449,7 @@ describe("Provider Management E2E Tests", () => {
       const requestCount = 10
 
       for (let i = 0; i < requestCount; i++) {
-        requests.push(app.request("/providers"))
+        requests.push(app.request("/provider-info"))
       }
 
       const responses = await Promise.all(requests)

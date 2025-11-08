@@ -9,37 +9,28 @@ const logger = createPinoLogger(createLoggerConfig())
 /**
  * Create application layer with environment-specific configuration
  *
- * CRITICAL: In test environment, the ApplicationLayer MUST be memoized to ensure
- * the same in-memory database is shared across all Effect program executions.
- * Without memoization, each `Effect.runPromise(program.pipe(Effect.provide(AppLayer)))`
- * creates a fresh `:memory:` database, causing data to not persist between requests.
+ * IMPORTANT: In test environment, database connection sharing is handled at the
+ * DatabaseService level by caching the database client globally.
+ * See packages/core/src/shared/database/connection.ts for implementation details.
  *
- * This is essential for E2E tests where:
- * 1. POST request creates data in database #1
- * 2. GET request tries to fetch from database #2 (empty!) ❌
- *
- * With memoization:
- * 1. POST request creates data in shared database
+ * This ensures:
+ * 1. POST request creates data in shared in-memory database
  * 2. GET request fetches from same database ✅
+ *
+ * The ApplicationLayer itself doesn't need special handling for tests.
  */
 function createAppLayer() {
-  // In test environment, memoize the layer to share database connection
   if (process.env["NODE_ENV"] === "test") {
-    logger.debug("Initializing test environment app layer with memoization...")
-
-    // Layer.memoize returns Effect<Layer, E, R>
-    // We need to extract the memoized layer synchronously for static export
-    // Instead, we'll create a cached layer using Effect runtime
-    return ApplicationLayer
+    logger.debug("Initializing test environment app layer")
   }
 
-  // For production/development, use standard application layer
+  // Use the standard application layer for all environments
+  // Database sharing is handled internally by DatabaseService
   return ApplicationLayer
 }
 
 /**
  * Web application layer
  * Uses the shared application layer for consistency with CLI and other interfaces
- * Provides environment-specific configuration for testing
  */
 export const AppLayer = createAppLayer()
