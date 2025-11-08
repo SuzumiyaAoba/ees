@@ -8,8 +8,9 @@ import app from "@/app"
 import { setupE2ETests, testState } from "@/__tests__/e2e-setup"
 import { parseUnknownJsonResponse } from "@/__tests__/types/test-types"
 
-// Setup E2E test environment
-setupE2ETests()
+// Setup E2E test environment without default connection
+// This test file manages its own connections
+setupE2ETests({ skipDefaultConnection: true })
 
 describe("Connection Management E2E Tests", () => {
   beforeAll(() => {
