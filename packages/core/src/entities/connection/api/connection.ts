@@ -138,17 +138,23 @@ const make = Effect.gen(function* () {
         metadata: request.metadata ? JSON.stringify(request.metadata) : undefined,
       })
 
-      // Create model for this provider
+      // If this should be active, deactivate all other models first
+      if (request.isActive) {
+        // Deactivate all existing models before creating the new one
+        const allModels = yield* modelRepository.findAll()
+        for (const existingModel of allModels) {
+          if (existingModel.isActive) {
+            yield* modelRepository.update(existingModel.id, { isActive: false })
+          }
+        }
+      }
+
+      // Create model for this provider with the correct isActive state
       const model = yield* modelRepository.create({
         providerId: provider.id,
         name: request.defaultModel,
         isActive: request.isActive || false,
       })
-
-      // If this should be active, set it as active
-      if (request.isActive) {
-        yield* modelRepository.setActive(model.id)
-      }
 
       return toConnectionResponse(provider, model)
     })
