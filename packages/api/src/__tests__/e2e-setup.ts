@@ -64,6 +64,7 @@ export async function setupE2ETests(): Promise<void> {
           type: "ollama",
           baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
           defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
+          isActive: true, // Set active during creation
         }),
       })
 
@@ -71,20 +72,10 @@ export async function setupE2ETests(): Promise<void> {
         const connection = await connectionResponse.json() as { id?: number }
         if (connection.id) {
           testState.defaultConnectionId = connection.id
-
-          // Activate the connection
-          const activateResponse = await app.request(`/connections/${connection.id}/activate`, {
-            method: "POST",
-          })
-
-          if (activateResponse.status === 200) {
-            console.log("🔧 Default connection created and activated for E2E tests")
-          } else {
-            console.warn("⚠️  Failed to activate default connection")
-          }
+          console.log("🔧 Default connection created and activated for E2E tests")
         }
       } else {
-        console.warn("⚠️  Failed to create default connection for E2E tests")
+        console.warn("⚠️  Failed to create default connection for E2E tests - status:", connectionResponse.status)
       }
     } catch (error) {
       console.warn("⚠️  Error setting up default connection:", error)
