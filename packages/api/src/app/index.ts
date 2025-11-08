@@ -151,6 +151,14 @@ app.route("/", connectionApp)
 app.route("/", providerApp)
 
 /**
+ * List task types endpoint
+ * Returns supported task types for a specific model
+ * IMPORTANT: Must be registered before modelCrudApp to ensure
+ * /models/task-types matches before /models/{id}
+ */
+registerListTaskTypesRoutes(app)
+
+/**
  * Provider CRUD routes - Database CRUD operations for providers
  */
 app.route("/", providerCrudApp)
@@ -366,13 +374,6 @@ app.openapi(updateEmbeddingRoute, async (c) => {
     )
   ) as never
 })
-
-
-/**
- * List task types endpoint
- * Returns supported task types for a specific model
- */
-registerListTaskTypesRoutes(app)
 
 /**
  * Upload Directory Management Endpoints
