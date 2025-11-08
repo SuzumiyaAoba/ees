@@ -26,7 +26,8 @@ interface GlobalWithConsole {
 export const testState = {
   createdEmbeddingIds: [] as number[],
   testStartTime: 0,
-  isSetupComplete: false
+  isSetupComplete: false,
+  defaultConnectionId: null as number | null
 }
 
 /**
@@ -50,6 +51,45 @@ export async function setupE2ETests(): Promise<void> {
 
     // Initialize test timing
     testState.testStartTime = Date.now()
+
+    // Create and activate default connection for tests
+    try {
+      const connectionResponse = await app.request("/connections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: "E2E Test Connection",
+          type: "ollama",
+          baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
+          defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
+        }),
+      })
+
+      if (connectionResponse.status === 201) {
+        const connection = await connectionResponse.json() as { id?: number }
+        if (connection.id) {
+          testState.defaultConnectionId = connection.id
+
+          // Activate the connection
+          const activateResponse = await app.request(`/connections/${connection.id}/activate`, {
+            method: "POST",
+          })
+
+          if (activateResponse.status === 200) {
+            console.log("🔧 Default connection created and activated for E2E tests")
+          } else {
+            console.warn("⚠️  Failed to activate default connection")
+          }
+        }
+      } else {
+        console.warn("⚠️  Failed to create default connection for E2E tests")
+      }
+    } catch (error) {
+      console.warn("⚠️  Error setting up default connection:", error)
+    }
+
     testState.isSetupComplete = true
 
     console.log("🔧 E2E Test environment initialized")
@@ -75,6 +115,18 @@ export async function setupE2ETests(): Promise<void> {
 
     // Final cleanup
     await cleanupTestEmbeddings()
+
+    // Clean up default connection if it was created
+    if (testState.defaultConnectionId) {
+      try {
+        await app.request(`/connections/${testState.defaultConnectionId}`, {
+          method: "DELETE"
+        })
+        console.log("🧹 Default connection cleaned up")
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
 
     const testDuration = Date.now() - testState.testStartTime
     console.log(`✅ E2E Tests completed in ${testDuration}ms`)
