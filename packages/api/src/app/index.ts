@@ -22,6 +22,8 @@ import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { connectionApp } from "@/features/connection-management"
+import { providerCrudApp } from "@/features/provider-crud"
+import { modelCrudApp } from "@/features/model-crud"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
@@ -137,14 +139,24 @@ app.route("/", migrationApp)
 app.route("/", uploadApp)
 
 /**
- * Provider management routes - Provider status and model discovery
- */
-app.route("/", providerApp)
-
-/**
  * Connection management routes - Provider connection CRUD operations
  */
 app.route("/", connectionApp)
+
+/**
+ * Provider CRUD routes - Database CRUD operations for providers
+ */
+app.route("/", providerCrudApp)
+
+/**
+ * Model CRUD routes - Database CRUD operations for models
+ */
+app.route("/", modelCrudApp)
+
+/**
+ * Provider management routes - Provider status and model discovery
+ */
+app.route("/", providerApp)
 
 /**
  * Create embedding endpoint

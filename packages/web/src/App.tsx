@@ -5,7 +5,8 @@ import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
-import { ConnectionManagement } from '@/components/ConnectionManagement'
+import { ProviderManagement } from '@/components/ProviderManagement'
+import { ModelManagement } from '@/components/ModelManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
@@ -143,7 +144,15 @@ function AppContent() {
           // You could show a notification or refresh the embeddings list
         }} />
       case 'config':
-        return <ConnectionManagement />
+        return (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configuration</h1>
+            </div>
+            <ProviderManagement />
+            <ModelManagement />
+          </div>
+        )
       default:
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
     }

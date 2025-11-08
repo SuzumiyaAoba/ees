@@ -16,40 +16,67 @@ import { UploadDirectoryRepositoryLive } from "@/entities/upload-directory/repos
 import { FileSystemServiceLive } from "@/entities/file-system/api/file-system"
 import { VisualizationServiceLive } from "@/entities/visualization/api/visualization-service"
 import { ConnectionServiceLive } from "@/entities/connection/api/connection"
+import { ProviderRepositoryLive } from "@/entities/provider/repository/provider-repository"
+import { ModelRepositoryLive } from "@/entities/model/repository/model-repository"
 
 /**
  * Core application layer including all business logic services
  * Independent of presentation layer (web, CLI, etc.)
  *
- * Layer composition:
- * 1. ConnectionServiceLive provides ConnectionService
- * 2. EmbeddingProviderServiceFromConnection uses ConnectionService to provide EmbeddingProviderService
- * 3. EmbeddingServiceLive uses EmbeddingProviderService to provide EmbeddingService
- * 4. EmbeddingApplicationServiceLive uses EmbeddingService to provide EmbeddingApplicationService
+ * Layer composition strategy:
+ * Build layers bottom-up, providing dependencies as we go:
+ * 1. Base layer: self-contained services and repositories
+ * 2. ConnectionService layer (needs repositories)
+ * 3. EmbeddingProvider layer (needs ConnectionService)
+ * 4. EmbeddingService layer (needs EmbeddingProviderService)
+ * 5. ModelManager layer (needs EmbeddingProviderService and DatabaseService)
+ * 6. EmbeddingApplicationService layer (needs EmbeddingService)
+ *
+ * Using Layer.provide instead of Layer.provideMerge for explicit dependency injection
  */
-export const CoreApplicationLayer = Layer.mergeAll(
-  ModelManagerLive,
-  EmbeddingApplicationServiceLive,
-  UploadDirectoryRepositoryLive,
+
+// Base layer with self-contained services and repositories
+// Note: DatabaseServiceLive is included here to ensure it's available externally,
+// even though repositories provide their own internally (Effect shares the same instance)
+const BaseLayer = Layer.mergeAll(
+  DatabaseServiceLive,
+  MetricsLayer,
+  CacheServiceLiveDefault,
   FileSystemServiceLive,
   VisualizationServiceLive,
-  ConnectionServiceLive
-).pipe(
-  // Provide EmbeddingServiceLive (which needs EmbeddingProviderService)
-  Layer.provide(EmbeddingServiceLive),
-  // Provide EmbeddingProviderServiceFromConnection (which needs ConnectionService, provided by ConnectionServiceLive above)
-  Layer.provide(EmbeddingProviderServiceFromConnection.pipe(Layer.provide(ConnectionServiceLive)))
+  ProviderRepositoryLive,
+  ModelRepositoryLive,
+  UploadDirectoryRepositoryLive
 )
+
+// ConnectionService needs repositories
+const ConnectionLayer = Layer.provide(ConnectionServiceLive, BaseLayer)
+
+// EmbeddingProvider needs ConnectionService
+const BaseWithConnectionLayer = Layer.merge(BaseLayer, ConnectionLayer)
+const EmbeddingProviderLayer = Layer.provide(EmbeddingProviderServiceFromConnection, BaseWithConnectionLayer)
+
+// EmbeddingService needs EmbeddingProviderService
+const BaseWithConnectionAndProviderLayer = Layer.merge(BaseWithConnectionLayer, EmbeddingProviderLayer)
+const EmbeddingServiceLayer = Layer.provide(EmbeddingServiceLive, BaseWithConnectionAndProviderLayer)
+
+// ModelManager needs EmbeddingProviderService and DatabaseService (provided by repositories)
+const BaseWithAllEmbeddingServicesLayer = Layer.merge(BaseWithConnectionAndProviderLayer, EmbeddingServiceLayer)
+const ModelManagerLayer = Layer.provide(ModelManagerLive, BaseWithAllEmbeddingServicesLayer)
+
+// EmbeddingApplicationService needs EmbeddingService
+const BaseWithModelManagerLayer = Layer.merge(BaseWithAllEmbeddingServicesLayer, ModelManagerLayer)
+const EmbeddingApplicationLayer = Layer.provide(EmbeddingApplicationServiceLive, BaseWithModelManagerLayer)
+
+// Final layer merges everything
+export const CoreApplicationLayer = Layer.merge(BaseWithModelManagerLayer, EmbeddingApplicationLayer)
 
 /**
  * Full application layer with all dependencies
  * Ready to use for any interface (web, CLI, test)
- * Includes database service, metrics, and cache as the foundational layers
+ *
+ * Note: All services are now included in CoreApplicationLayer, which builds
+ * the complete dependency graph from foundational services up to application services.
+ * This alias is maintained for backward compatibility.
  */
-export const ApplicationLayer = CoreApplicationLayer.pipe(
-  Layer.provideMerge(Layer.mergeAll(
-    DatabaseServiceLive,
-    MetricsLayer,
-    CacheServiceLiveDefault
-  ))
-)
+export const ApplicationLayer = CoreApplicationLayer

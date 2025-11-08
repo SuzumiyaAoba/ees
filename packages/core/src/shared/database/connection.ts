@@ -250,36 +250,173 @@ const make = Effect.gen(function* () {
         CREATE INDEX IF NOT EXISTS idx_sync_jobs_created_at ON sync_jobs(created_at)
       `)
 
-      // Create connection_configs table for provider connection management
-      await client.execute(`
-        CREATE TABLE IF NOT EXISTS connection_configs (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          type TEXT NOT NULL,
-          base_url TEXT NOT NULL,
-          api_key TEXT,
-          default_model TEXT,
-          metadata TEXT,
-          is_active INTEGER NOT NULL DEFAULT 0,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
+      // Check if connection_configs exists (old schema)
+      const connectionConfigsExists = await client.execute(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='connection_configs'
       `)
 
-      // Index on name: Enables fast lookups by connection name
-      await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_connection_configs_name ON connection_configs(name)
-      `)
+      // Migrate from connection_configs to providers + models if old schema exists
+      if (connectionConfigsExists.rows.length > 0) {
+        logger.info("🔄 Migrating connection_configs to providers and models...")
 
-      // Index on type: Enables filtering by connection type
-      await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_connection_configs_type ON connection_configs(type)
-      `)
+        // Get all existing connections
+        const existingConnections = await client.execute(`
+          SELECT * FROM connection_configs
+        `)
 
-      // Index on is_active: Enables fast lookup of active connection
-      await client.execute(`
-        CREATE INDEX IF NOT EXISTS idx_connection_configs_is_active ON connection_configs(is_active)
-      `)
+        // Create providers table first
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            api_key TEXT,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_name ON providers(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_type ON providers(type)
+        `)
+
+        // Create models table
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            display_name TEXT,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_is_active ON models(is_active)
+        `)
+
+        await client.execute(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_models_provider_name ON models(provider_id, name)
+        `)
+
+        // Migrate data
+        for (const row of existingConnections.rows) {
+          // Extract values with proper type handling
+          const name = row["name"] as string
+          const type = row["type"] as string
+          const baseUrl = row["base_url"] as string
+          const apiKey = row["api_key"] as string | null
+          const metadata = row["metadata"] as string | null
+          const defaultModel = row["default_model"] as string
+          const createdAt = row["created_at"] as string | null
+          const updatedAt = row["updated_at"] as string | null
+          const isActiveValue = row["is_active"] as number | boolean | null
+
+          // Insert provider
+          const providerResult = await client.execute({
+            sql: `INSERT INTO providers (name, type, base_url, api_key, metadata, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            args: [name, type, baseUrl, apiKey, metadata, createdAt, updatedAt],
+          })
+
+          // Get the provider ID
+          const providerId = providerResult.lastInsertRowid
+          if (providerId === undefined) {
+            throw new Error("Failed to get provider ID after insert")
+          }
+
+          // Insert model for this provider
+          const isActive = isActiveValue === 1 || isActiveValue === true
+          await client.execute({
+            sql: `INSERT INTO models (provider_id, name, is_active, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?)`,
+            args: [
+              Number(providerId),
+              defaultModel,
+              isActive ? 1 : 0,
+              createdAt,
+              updatedAt,
+            ],
+          })
+        }
+
+        // Drop old table
+        await client.execute(`DROP TABLE connection_configs`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_name`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_type`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_is_active`)
+
+        logger.info(`✅ Migrated ${existingConnections.rows.length} connections to providers and models`)
+      } else {
+        // Fresh install - create new tables directly
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            api_key TEXT,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_name ON providers(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_type ON providers(type)
+        `)
+
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            display_name TEXT,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_is_active ON models(is_active)
+        `)
+
+        await client.execute(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_models_provider_name ON models(provider_id, name)
+        `)
+      }
 
       if (needsMigration) {
         logger.info("✅ Database migration completed successfully")

@@ -27,6 +27,16 @@ import type {
   ProviderResponse,
   CurrentProviderResponse,
   ProviderModelResponse,
+  Provider,
+  CreateProviderRequest,
+  UpdateProviderRequest,
+  ProvidersListResponse,
+  ProviderTestRequest,
+  ProviderTestResponse,
+  Model,
+  CreateModelRequest,
+  UpdateModelRequest,
+  ModelsListResponse,
   Connection,
   CreateConnectionRequest,
   UpdateConnectionRequest,
@@ -335,6 +345,78 @@ class ApiClient {
     return this.request<ConnectionTestResponse>('/connections/test', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  }
+
+  // Provider Management operations
+  async getProvidersList(): Promise<ProvidersListResponse> {
+    return this.request<ProvidersListResponse>('/providers')
+  }
+
+  async getProvider(id: number): Promise<Provider> {
+    return this.request<Provider>(`/providers/${id}`)
+  }
+
+  async createProvider(data: CreateProviderRequest): Promise<Provider> {
+    return this.request<Provider>('/providers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateProvider(id: number, data: UpdateProviderRequest): Promise<Provider> {
+    return this.request<Provider>(`/providers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteProvider(id: number): Promise<void> {
+    return this.request<void>(`/providers/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async testProvider(data: ProviderTestRequest): Promise<ProviderTestResponse> {
+    return this.request<ProviderTestResponse>('/providers/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Model Management operations
+  async getModelsList(providerId?: number): Promise<ModelsListResponse> {
+    const url = providerId ? `/providers/${providerId}/models` : '/models'
+    return this.request<ModelsListResponse>(url)
+  }
+
+  async getModel(id: number): Promise<Model> {
+    return this.request<Model>(`/models/${id}`)
+  }
+
+  async createModel(data: CreateModelRequest): Promise<Model> {
+    return this.request<Model>('/models', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateModel(id: number, data: UpdateModelRequest): Promise<Model> {
+    return this.request<Model>(`/models/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteModel(id: number): Promise<void> {
+    return this.request<void>(`/models/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async activateModel(id: number): Promise<void> {
+    return this.request<void>(`/models/${id}/activate`, {
+      method: 'POST',
     })
   }
 }
@@ -675,6 +757,120 @@ const createMockApiClient = () => ({
     message: 'Connection test successful',
     models: ['nomic-embed-text', 'text-embedding-3-small'],
   }),
+
+  // Provider Management operations
+  getProvidersList: async (): Promise<ProvidersListResponse> => ({
+    providers: Array.from({ length: 2 }, (_, i) => ({
+      id: i + 1,
+      name: i === 0 ? 'Local Ollama' : 'LM Studio',
+      type: i === 0 ? 'ollama' as const : 'openai-compatible' as const,
+      baseUrl: i === 0 ? 'http://localhost:11434' : 'http://localhost:1234',
+      apiKey: null,
+      metadata: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
+    total: 2,
+  }),
+
+  getProvider: async (id: number): Promise<Provider> => ({
+    id,
+    name: `Provider ${id}`,
+    type: 'ollama',
+    baseUrl: 'http://localhost:11434',
+    apiKey: null,
+    metadata: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  createProvider: async (data: CreateProviderRequest): Promise<Provider> => ({
+    id: Math.floor(Math.random() * 10000),
+    name: data.name,
+    type: data.type,
+    baseUrl: data.baseUrl,
+    apiKey: data.apiKey || null,
+    metadata: data.metadata || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  updateProvider: async (id: number, data: UpdateProviderRequest): Promise<Provider> => ({
+    id,
+    name: data.name || `Provider ${id}`,
+    type: 'ollama',
+    baseUrl: data.baseUrl || 'http://localhost:11434',
+    apiKey: data.apiKey || null,
+    metadata: data.metadata || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  deleteProvider: async (_id: number): Promise<void> => {
+    // Mock delete - no return value
+  },
+
+  testProvider: async (_data: ProviderTestRequest): Promise<ProviderTestResponse> => ({
+    success: true,
+    message: 'Provider test successful',
+    models: ['nomic-embed-text', 'text-embedding-3-small'],
+  }),
+
+  // Model Management operations
+  getModelsList: async (providerId?: number): Promise<ModelsListResponse> => ({
+    models: Array.from({ length: 3 }, (_, i) => ({
+      id: i + 1,
+      providerId: providerId || 1,
+      name: i === 0 ? 'nomic-embed-text' : i === 1 ? 'text-embedding-3-small' : 'text-embedding-3-large',
+      displayName: i === 0 ? 'Nomic Embed Text' : i === 1 ? 'Text Embedding 3 Small' : 'Text Embedding 3 Large',
+      isActive: i === 0,
+      metadata: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
+    total: 3,
+  }),
+
+  getModel: async (id: number): Promise<Model> => ({
+    id,
+    providerId: 1,
+    name: 'nomic-embed-text',
+    displayName: 'Nomic Embed Text',
+    isActive: id === 1,
+    metadata: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  createModel: async (data: CreateModelRequest): Promise<Model> => ({
+    id: Math.floor(Math.random() * 10000),
+    providerId: data.providerId,
+    name: data.name,
+    displayName: data.displayName || null,
+    isActive: data.isActive || false,
+    metadata: data.metadata || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  updateModel: async (id: number, data: UpdateModelRequest): Promise<Model> => ({
+    id,
+    providerId: 1,
+    name: data.name || 'nomic-embed-text',
+    displayName: data.displayName || 'Nomic Embed Text',
+    isActive: false,
+    metadata: data.metadata || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+
+  deleteModel: async (_id: number): Promise<void> => {
+    // Mock delete - no return value
+  },
+
+  activateModel: async (_id: number): Promise<void> => {
+    // Mock activate - no return value
+  },
 })
 
 // Use mock in Storybook environment or when STORYBOOK_MOCK is set

@@ -286,6 +286,14 @@ connectionApp.openapi(listAvailableModelsRoute, async (c) => {
     const { AppLayer } = await import("@/app/providers/main")
 
     const listAvailableModelsProgram = Effect.gen(function* () {
+      const connectionService = yield* ConnectionService
+      const activeConnection = yield* connectionService.getActiveConnection()
+
+      // If no active connection, return empty list
+      if (!activeConnection) {
+        return { models: [] }
+      }
+
       const embeddingService = yield* EmbeddingService
       const models = yield* embeddingService.getProviderModels()
 
@@ -299,7 +307,6 @@ connectionApp.openapi(listAvailableModelsRoute, async (c) => {
     })
 
     const result = await Effect.runPromise(
-      // @ts-expect-error - AppLayer provides all required services
       listAvailableModelsProgram.pipe(Effect.provide(AppLayer))
     )
 

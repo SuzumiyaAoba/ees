@@ -107,7 +107,7 @@ const ErrorResponseSchema = z.object({
  */
 export const listProvidersRoute = createRoute({
   method: "get",
-  path: "/providers",
+  path: "/provider-info",
   summary: "List available providers",
   description: "Get a list of all configured embedding providers with their current status",
   tags: ["Providers"],

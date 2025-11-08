@@ -14,7 +14,6 @@ import {
   ProviderRateLimitError,
 } from "@/shared/providers"
 import { createEmbeddingProviderService } from "@/shared/providers/factory"
-import type { OllamaConfig, OpenAICompatibleConfig } from "@/shared/providers/types"
 import { MetricsServiceTag } from "@/shared/observability/metrics"
 import {
   EmbeddingRepository,
@@ -33,7 +32,6 @@ import {
   TaskType,
 } from "@/shared/models/task-type"
 import { ConnectionService } from "@/entities/connection/api/connection"
-import type { ConnectionConfig } from "@/shared/database/schema"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -895,35 +893,6 @@ const make = Effect.gen(function* () {
 })
 
 /**
- * Helper function to convert connection config to provider config
- * Converts database connection configuration to provider-specific configuration
- */
-const connectionToProviderConfig = (connection: ConnectionConfig): OllamaConfig | OpenAICompatibleConfig => {
-  // Cast the type to the specific union - database returns "string" but we know it's one of these
-  const type = connection.type as "ollama" | "openai-compatible"
-
-  switch (type) {
-    case "ollama":
-      return {
-        type: "ollama",
-        baseUrl: connection.baseUrl,
-        defaultModel: connection.defaultModel,
-      }
-    case "openai-compatible": {
-      // Construct the config with all properties at once
-      const config: OpenAICompatibleConfig = {
-        type: "openai-compatible",
-        baseUrl: connection.baseUrl,
-        defaultModel: connection.defaultModel,
-        // Only include apiKey if it exists and is not null
-        ...(connection.apiKey && connection.apiKey !== null && { apiKey: connection.apiKey }),
-      }
-      return config
-    }
-  }
-}
-
-/**
  * Layer that provides EmbeddingProviderService based on the active connection configuration
  * This layer depends on ConnectionService and provides EmbeddingProviderService
  */
@@ -933,18 +902,29 @@ export const EmbeddingProviderServiceFromConnection = Layer.unwrapEffect(
     const connectionService = yield* ConnectionService
     const activeConnection = yield* connectionService.getActiveConnectionConfig()
 
-    // If no active connection exists, fail with an error
+    // If no active connection exists, return a stub service that fails on use
     if (!activeConnection) {
-      return yield* Effect.fail(
-        new Error("No active connection configured. Please activate a connection to use embedding services.")
+      const noConnectionError = new Error(
+        "No active connection configured. Please activate a connection to use embedding services."
       )
+
+      // Return a layer that provides a stub EmbeddingProviderService
+      // All methods will fail with a clear error message
+      return Layer.succeed(EmbeddingProviderService, {
+        generateEmbedding: () => Effect.fail(noConnectionError),
+        listModels: () => Effect.fail(noConnectionError),
+        isModelAvailable: () => Effect.fail(noConnectionError),
+        getModelInfo: () => Effect.fail(noConnectionError),
+        switchProvider: () => Effect.fail(noConnectionError),
+        getCurrentProvider: () => Effect.fail(noConnectionError),
+        listAllProviders: () => Effect.fail(noConnectionError),
+      } as unknown as typeof EmbeddingProviderService.Service)
     }
 
-    // Convert connection config to provider config
-    const providerConfig = connectionToProviderConfig(activeConnection)
+    // Use provider config directly from connection service
     const factoryConfig = {
-      defaultProvider: providerConfig,
-      availableProviders: [providerConfig],
+      defaultProvider: activeConnection,
+      availableProviders: [activeConnection],
     }
 
     // Create and return provider service layer

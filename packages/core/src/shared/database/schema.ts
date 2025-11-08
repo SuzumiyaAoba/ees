@@ -101,29 +101,54 @@ export type SyncJob = typeof syncJobs.$inferSelect
 export type NewSyncJob = typeof syncJobs.$inferInsert
 
 /**
- * Connection configurations table
- * Stores provider connection settings for OpenAPI-compatible endpoints
+ * Providers table
+ * Stores embedding provider configurations (Ollama, OpenAI-compatible, etc.)
  */
-export const connectionConfigs = sqliteTable(
-  "connection_configs",
+export const providers = sqliteTable(
+  "providers",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    name: text("name").notNull(), // User-friendly name (e.g., "Local LM Studio", "Production Ollama")
+    name: text("name").notNull(), // Provider name (e.g., "Local Ollama", "OpenAI")
     type: text("type").notNull(), // Provider type: "ollama" | "openai-compatible"
-    baseUrl: text("base_url").notNull(), // API endpoint URL (e.g., "http://localhost:11434")
+    baseUrl: text("base_url").notNull(), // API endpoint URL
     apiKey: text("api_key"), // API key for authentication (null for local services)
-    defaultModel: text("default_model").notNull(), // Model to use for this connection (required)
     metadata: text("metadata"), // JSON string for additional provider-specific settings
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Is this the currently active connection?
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
-    nameIdx: index("idx_connection_configs_name").on(table.name),
-    typeIdx: index("idx_connection_configs_type").on(table.type),
-    isActiveIdx: index("idx_connection_configs_is_active").on(table.isActive),
+    nameIdx: index("idx_providers_name").on(table.name),
+    typeIdx: index("idx_providers_type").on(table.type),
   })
 )
 
-export type ConnectionConfig = typeof connectionConfigs.$inferSelect
-export type NewConnectionConfig = typeof connectionConfigs.$inferInsert
+export type Provider = typeof providers.$inferSelect
+export type NewProvider = typeof providers.$inferInsert
+
+/**
+ * Models table
+ * Stores model configurations associated with providers
+ */
+export const models = sqliteTable(
+  "models",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    providerId: integer("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text")
+    displayName: text("display_name"), // Optional display name for UI
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Only one model can be active
+    metadata: text("metadata"), // JSON string for model-specific settings
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    providerIdIdx: index("idx_models_provider_id").on(table.providerId),
+    nameIdx: index("idx_models_name").on(table.name),
+    isActiveIdx: index("idx_models_is_active").on(table.isActive),
+    // Unique constraint: same model name cannot exist for the same provider
+    uniqueProviderModel: index("idx_models_provider_name").on(table.providerId, table.name),
+  })
+)
+
+export type Model = typeof models.$inferSelect
+export type NewModel = typeof models.$inferInsert
