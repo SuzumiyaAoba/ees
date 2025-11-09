@@ -257,6 +257,7 @@ class ComprehensiveHealthService implements HealthService {
 
   private setupDefaultHealthChecks() {
     // Ollama service connectivity check
+    // Note: With connection management, Ollama is optional (configured via database)
     this.addHealthCheck({
       name: "ollama",
       check: standardHealthChecks.httpService(
@@ -265,7 +266,7 @@ class ComprehensiveHealthService implements HealthService {
         3000
       ),
       timeout: 3000,
-      critical: true,
+      critical: false, // Non-critical - providers are now managed via database
     })
 
     // Database connectivity check
@@ -304,18 +305,18 @@ class ComprehensiveHealthService implements HealthService {
     })
 
     // Embedding provider availability check
+    // With connection management, provider config is stored in database
     this.addHealthCheck({
       name: "embedding_provider",
       check: () =>
         Effect.succeed({
           status: "healthy" as const,
           responseTime: 1,
-          message: "Embedding provider configuration available",
+          message: "Embedding provider managed via database",
           lastChecked: new Date().toISOString(),
           details: {
-            provider: process.env["EES_DEFAULT_PROVIDER"] || "ollama",
-            defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
-            baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
+            mode: "connection-management",
+            note: "Provider connections are configured via /connections API",
           },
         }),
       timeout: 1000,
