@@ -18,6 +18,29 @@ export type {
   Embedding
 } from './entities/embedding/model/embedding'
 
+export { ConnectionService } from './entities/connection/index'
+export type {
+  CreateConnectionRequest,
+  UpdateConnectionRequest,
+  ConnectionTestRequest,
+  ConnectionTestResponse,
+  ConnectionResponse,
+  ConnectionsListResponse,
+} from './entities/connection/api/connection'
+
+// Export provider and model repositories
+export {
+  ProviderRepository,
+  ProviderRepositoryLive,
+} from './entities/provider/repository/provider-repository'
+
+export {
+  ModelRepository,
+  ModelRepositoryLive,
+} from './entities/model/repository/model-repository'
+
+export type { Provider, NewProvider, Model, NewModel } from './shared/database/schema'
+
 // Export OpenAPI schemas for API package consumption
 export {
   TaskTypeSchema,

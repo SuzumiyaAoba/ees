@@ -5,15 +5,20 @@
 
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Effect } from "effect"
-import { createPinoLogger, createLoggerConfig } from "@ees/core"
+import {
+  createPinoLogger,
+  createLoggerConfig,
+  ConnectionService,
+  createProviderLayer,
+  OllamaProviderService,
+  OpenAICompatibleProviderService,
+} from "@ees/core"
 import {
   listProvidersRoute,
   getCurrentProviderRoute,
   listProviderModelsRoute,
-  getOllamaStatusRoute,
   type ProviderInfo,
   type ProviderModel,
-  type OllamaStatus,
   type CurrentProvider,
 } from "./api/route"
 
@@ -68,6 +73,7 @@ providerApp.openapi(listProvidersRoute, async (c) => {
 
 /**
  * Handler for getting current active provider
+ * Uses the active connection from the database instead of environment variables
  */
 providerApp.openapi(getCurrentProviderRoute, async (c) => {
   try {
@@ -75,16 +81,21 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
     const { AppLayer } = await import("@/app/providers/main")
 
     const getCurrentProviderProgram = Effect.gen(function* () {
-      // Get provider configuration from environment variables
-      const providerType = process.env["EES_DEFAULT_PROVIDER"] || "ollama"
-      const baseUrl = process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434"
-      const defaultModel = process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text"
+      const connectionService = yield* ConnectionService
+
+      // Get the active connection from the database
+      const activeConnection = yield* connectionService.getActiveConnection()
+
+      // If no active connection exists, return an error
+      if (!activeConnection) {
+        return yield* Effect.fail(new Error("No active connection configured"))
+      }
 
       const currentProvider: CurrentProvider = {
-        provider: providerType,
+        provider: activeConnection.type,
         configuration: {
-          baseUrl,
-          model: defaultModel,
+          baseUrl: activeConnection.baseUrl,
+          model: activeConnection.defaultModel,
         },
       }
 
@@ -98,6 +109,12 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
     return c.json(result, 200)
   } catch (error) {
     logger.error({ error: String(error) }, "Error getting current provider")
+    if (error instanceof Error && error.message === "No active connection configured") {
+      return c.json(
+        { error: "No active connection configured. Please activate a connection first." },
+        404
+      )
+    }
     return c.json(
       { error: "Failed to get current provider" },
       500
@@ -107,6 +124,7 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
 
 /**
  * Handler for listing provider models
+ * Gets models from the active connection via ConnectionService
  */
 providerApp.openapi(listProviderModelsRoute, async (c) => {
   try {
@@ -116,39 +134,55 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
     const { provider } = c.req.valid("query")
 
     const listModelsProgram = Effect.gen(function* () {
-      // For now, return static model information
-      // This will be enhanced with actual provider model discovery
-      const allModels: ProviderModel[] = [
-        {
-          name: "nomic-embed-text",
-          displayName: "Nomic Embed Text",
-          provider: "ollama",
-          dimensions: 768,
-          maxTokens: 8192,
-          size: 274301440,
-          modified_at: "2024-01-01T00:00:00Z",
-          digest: "sha256:abc123",
-        },
-        {
-          name: "embeddinggemma",
-          displayName: "Embedding Gemma",
-          provider: "ollama",
-          dimensions: 768,
-          maxTokens: 8192,
-        },
-      ]
+      const connectionService = yield* ConnectionService
 
-      // Filter by provider if specified
-      const filteredModels = provider
-        ? allModels.filter((model) => model.provider === provider)
-        : allModels
+      // Get the active connection from the database (with API key for provider initialization)
+      const activeConnection = yield* connectionService.getActiveConnectionConfig()
 
-      // Return 404 if provider specified but no models found
-      if (provider && filteredModels.length === 0) {
-        return yield* Effect.fail(new Error("Provider not found"))
+      // If no active connection exists, return an error
+      if (!activeConnection) {
+        return yield* Effect.fail(new Error("No active connection configured"))
       }
 
-      return filteredModels
+      // If provider filter is specified and doesn't match active connection, return empty array
+      if (provider && activeConnection.type !== provider) {
+        return []
+      }
+
+      // Create provider config from active connection
+      const providerConfig = {
+        type: activeConnection.type,
+        baseUrl: activeConnection.baseUrl,
+        ...(activeConnection.apiKey && { apiKey: activeConnection.apiKey }),
+        ...(activeConnection.defaultModel && { defaultModel: activeConnection.defaultModel }),
+      }
+
+      // Create a temporary provider layer to list models
+      const providerLayer = createProviderLayer(providerConfig)
+
+      // Get the provider service tag based on the connection type
+      const ProviderServiceTag = activeConnection.type === "ollama"
+        ? OllamaProviderService
+        : OpenAICompatibleProviderService
+
+      // Create an Effect program that uses the provider layer
+      // This program is independent of AppLayer
+      const listModelsEffect = Effect.gen(function* () {
+        const providerService = yield* ProviderServiceTag
+        return yield* providerService.listModels()
+      }).pipe(Effect.provide(providerLayer))
+
+      // Run the Effect to get the models
+      const models = yield* listModelsEffect
+
+      // Map to ProviderModel format
+      const formattedModels: ProviderModel[] = models.map((model: { name: string; provider: string; dimensions?: number }) => ({
+        name: model.name,
+        provider: model.provider,
+        dimensions: model.dimensions,
+      }))
+
+      return formattedModels
     })
 
     const result = await Effect.runPromise(
@@ -158,9 +192,15 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
     return c.json(result, 200)
   } catch (error) {
     logger.error({ error: String(error) }, "Error listing provider models")
-    if (error instanceof Error && error.message === "Provider not found") {
+    if (error instanceof Error && error.message.includes("Provider not found")) {
       return c.json(
-        { error: "Provider not found" },
+        { error: "Provider not found or no models available" },
+        404
+      )
+    }
+    if (error instanceof Error && error.message.includes("No active connection")) {
+      return c.json(
+        { error: "No active connection configured. Please activate a connection first." },
         404
       )
     }
@@ -171,86 +211,3 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
   }
 })
 
-/**
- * Handler for getting Ollama status
- */
-providerApp.openapi(getOllamaStatusRoute, async (c) => {
-  const startTime = Date.now()
-  const baseUrl = "http://localhost:11434"
-
-  try {
-    // Import AppLayer dynamically
-    const { AppLayer } = await import("@/app/providers/main")
-
-    const getOllamaStatusProgram = Effect.gen(function* () {
-      // Try to connect to Ollama service
-      try {
-        const response = yield* Effect.tryPromise({
-          try: () => fetch(`${baseUrl}/api/version`, {
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          }),
-          catch: () => new Error("Ollama service unavailable"),
-        })
-
-        if (!response.ok) {
-          return yield* Effect.fail(new Error(`Ollama service returned ${response.status}`))
-        }
-
-        const versionData = yield* Effect.tryPromise({
-          try: () => response.json() as Promise<{ version?: string }>,
-          catch: () => new Error("Failed to parse Ollama version"),
-        })
-
-        // Get list of available models
-        const modelsResponse = yield* Effect.tryPromise({
-          try: () => fetch(`${baseUrl}/api/tags`, {
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          }),
-          catch: () => new Error("Failed to get Ollama models"),
-        })
-
-        let models: string[] = []
-        if (modelsResponse.ok) {
-          const modelsData = yield* Effect.tryPromise({
-            try: () => modelsResponse.json() as Promise<{ models?: Array<{ name: string }> }>,
-            catch: () => new Error("Failed to parse Ollama models"),
-          })
-          // Keep full model names with version tags for display (e.g., "gemma3:27b", "qwen3:8b")
-          models = modelsData.models?.map((m) => m.name) || []
-        }
-
-        const responseTime = Date.now() - startTime
-
-        const ollamaStatus: OllamaStatus = {
-          status: "online",
-          version: versionData.version || "unknown",
-          models,
-          responseTime,
-          baseUrl,
-        }
-
-        return ollamaStatus
-      } catch {
-        return yield* Effect.fail(new Error("Ollama service unavailable"))
-      }
-    })
-
-    const result = await Effect.runPromise(
-      getOllamaStatusProgram.pipe(Effect.provide(AppLayer)) as Effect.Effect<OllamaStatus, Error, never>
-    )
-
-    return c.json(result, 200)
-  } catch (error) {
-    const responseTime = Date.now() - startTime
-    logger.error({ error: String(error) }, "Error getting Ollama status")
-    return c.json(
-      {
-        status: "offline" as const,
-        error: error instanceof Error ? error.message : "Ollama service unavailable",
-        responseTime,
-        baseUrl,
-      },
-      503
-    )
-  }
-})

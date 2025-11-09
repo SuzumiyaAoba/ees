@@ -19,6 +19,7 @@ import {
   collectFilesFromDirectory,
   filterByExtension,
   filterBySize,
+  ConnectionService,
 } from "@ees/core"
 
 /**
@@ -109,6 +110,20 @@ export interface CLICommands {
     action: "list" | "current" | "models" | "ollama-status"
     provider?: string
   }): Effect.Effect<void, Error, never>
+
+  /**
+   * Connection management commands
+   */
+  connections(options: {
+    action: "list" | "get" | "active" | "create" | "update" | "delete" | "activate" | "test"
+    id?: number
+    name?: string
+    type?: "ollama" | "openai-compatible"
+    baseUrl?: string
+    apiKey?: string
+    defaultModel?: string
+    metadata?: string
+  }): Effect.Effect<void, Error, never>
 }
 
 /**
@@ -117,6 +132,7 @@ export interface CLICommands {
 const makeCLICommands = Effect.gen(function* () {
   const appService = yield* EmbeddingApplicationService
   const modelManager = yield* ModelManagerTag
+  const connectionService = yield* ConnectionService
 
   const create = ((options: {
     uri: string
@@ -466,6 +482,170 @@ const makeCLICommands = Effect.gen(function* () {
       }
     })) as unknown as (options: { action: "list" | "current" | "models" | "ollama-status"; provider?: string }) => Effect.Effect<void, Error, never>
 
+  const connections = ((options: {
+    action: "list" | "get" | "active" | "create" | "update" | "delete" | "activate" | "test"
+    id?: number
+    name?: string
+    type?: "ollama" | "openai-compatible"
+    baseUrl?: string
+    apiKey?: string
+    defaultModel?: string
+    metadata?: string
+  }) =>
+    Effect.gen(function* () {
+      switch (options.action) {
+        case "list": {
+          const result = yield* connectionService.listConnections()
+          log(`Connections (${result.total} total):`)
+          for (const conn of result.connections) {
+            const activeIndicator = conn.isActive ? " [ACTIVE]" : ""
+            log(`- ID: ${conn.id}${activeIndicator}`)
+            log(`  Name: ${conn.name}`)
+            log(`  Type: ${conn.type}`)
+            log(`  Base URL: ${conn.baseUrl}`)
+            if (conn.defaultModel) log(`  Default Model: ${conn.defaultModel}`)
+          }
+          break
+        }
+
+        case "get": {
+          if (!options.id) {
+            return yield* Effect.fail(new Error("Connection ID is required"))
+          }
+          const connection = yield* connectionService.getConnection(options.id)
+          if (!connection) {
+            log(`No connection found with ID: ${options.id}`)
+            return
+          }
+          log(`Connection ${connection.id}:`)
+          log(`  Name: ${connection.name}`)
+          log(`  Type: ${connection.type}`)
+          log(`  Base URL: ${connection.baseUrl}`)
+          log(`  Active: ${connection.isActive}`)
+          if (connection.defaultModel) log(`  Default Model: ${connection.defaultModel}`)
+          if (connection.metadata) log(`  Metadata: ${JSON.stringify(connection.metadata)}`)
+          break
+        }
+
+        case "active": {
+          const connection = yield* connectionService.getActiveConnection()
+          if (!connection) {
+            log("No active connection configured")
+            return
+          }
+          log("Active connection:")
+          log(`  ID: ${connection.id}`)
+          log(`  Name: ${connection.name}`)
+          log(`  Type: ${connection.type}`)
+          log(`  Base URL: ${connection.baseUrl}`)
+          if (connection.defaultModel) log(`  Default Model: ${connection.defaultModel}`)
+          break
+        }
+
+        case "create": {
+          if (!options.name || !options.type || !options.baseUrl) {
+            return yield* Effect.fail(
+              new Error("Name, type, and baseUrl are required for creating a connection")
+            )
+          }
+          const metadata = options.metadata
+            ? (JSON.parse(options.metadata) as Record<string, unknown>)
+            : undefined
+          const connection = yield* connectionService.createConnection({
+            name: options.name,
+            type: options.type,
+            baseUrl: options.baseUrl,
+            apiKey: options.apiKey,
+            defaultModel: options.defaultModel,
+            metadata,
+          })
+          log(`Created connection ${connection.id}:`)
+          log(`  Name: ${connection.name}`)
+          log(`  Type: ${connection.type}`)
+          log(`  Base URL: ${connection.baseUrl}`)
+          break
+        }
+
+        case "update": {
+          if (!options.id) {
+            return yield* Effect.fail(new Error("Connection ID is required"))
+          }
+          const metadata = options.metadata
+            ? (JSON.parse(options.metadata) as Record<string, unknown>)
+            : undefined
+          const connection = yield* connectionService.updateConnection(options.id, {
+            name: options.name,
+            baseUrl: options.baseUrl,
+            apiKey: options.apiKey,
+            defaultModel: options.defaultModel,
+            metadata,
+          })
+          log(`Updated connection ${connection.id}:`)
+          log(`  Name: ${connection.name}`)
+          log(`  Type: ${connection.type}`)
+          log(`  Base URL: ${connection.baseUrl}`)
+          break
+        }
+
+        case "delete": {
+          if (!options.id) {
+            return yield* Effect.fail(new Error("Connection ID is required"))
+          }
+          yield* connectionService.deleteConnection(options.id)
+          log(`Deleted connection ${options.id}`)
+          break
+        }
+
+        case "activate": {
+          if (!options.id) {
+            return yield* Effect.fail(new Error("Connection ID is required"))
+          }
+          yield* connectionService.setActiveConnection(options.id)
+          log(`Set connection ${options.id} as active`)
+          break
+        }
+
+        case "test": {
+          if (!options.id && (!options.baseUrl || !options.type)) {
+            return yield* Effect.fail(
+              new Error("Either connection ID or (baseUrl and type) are required for testing")
+            )
+          }
+          const testRequest = options.id
+            ? { id: options.id }
+            : {
+                baseUrl: options.baseUrl!,
+                type: options.type!,
+                apiKey: options.apiKey,
+              }
+          const result = yield* connectionService.testConnection(testRequest)
+          if (result.success) {
+            log("Connection test: SUCCESS")
+            log(`Message: ${result.message}`)
+            if (result.models && result.models.length > 0) {
+              log(`Available models (${result.models.length}):`)
+              for (const model of result.models) {
+                log(`  - ${model}`)
+              }
+            }
+          } else {
+            log("Connection test: FAILED")
+            log(`Message: ${result.message}`)
+          }
+          break
+        }
+      }
+    })) as unknown as (options: {
+    action: "list" | "get" | "active" | "create" | "update" | "delete" | "activate" | "test"
+    id?: number
+    name?: string
+    type?: "ollama" | "openai-compatible"
+    baseUrl?: string
+    apiKey?: string
+    defaultModel?: string
+    metadata?: string
+  }) => Effect.Effect<void, Error, never>
+
   const commands = {
     create,
     batch,
@@ -478,6 +658,7 @@ const makeCLICommands = Effect.gen(function* () {
     uploadDir,
     migrate,
     providers,
+    connections,
   } satisfies CLICommands
   return commands
 })

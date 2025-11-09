@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FormSelect } from '@/components/ui/FormSelect'
+import { FormField } from '@/components/ui/FormField'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useEmbeddings, useDeleteEmbedding, useDeleteAllEmbeddings, useDistinctEmbeddingModels } from '@/hooks/useEmbeddings'
 import { usePagination } from '@/hooks/usePagination'
@@ -131,14 +132,13 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium">Filter by URI</label>
+            <FormField label="Filter by URI">
               <Input
                 placeholder="Enter URI to filter..."
                 value={filters.uri}
                 onChange={(e) => handleFilterChange('uri', e.target.value)}
               />
-            </div>
+            </FormField>
             <FormSelect
               label="Filter by Model"
               value={filters.modelName}

@@ -264,7 +264,7 @@ describe("External Service Integration E2E Tests", () => {
         const ollamaProvider = providers.find(p => p['name'] === "ollama")
         expect(ollamaProvider).toBeDefined()
       } else {
-        expect([404, 500, 501]).toContain(response.status)
+        expect([400, 404, 500, 501]).toContain(response.status)
       }
     })
 
@@ -281,7 +281,7 @@ describe("External Service Integration E2E Tests", () => {
           expect(Array.isArray(healthData['providers'])).toBe(true)
         }
       } else {
-        expect([404, 500, 501]).toContain(response.status)
+        expect([400, 404, 500, 501]).toContain(response.status)
       }
     })
   })

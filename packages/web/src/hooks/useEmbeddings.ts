@@ -161,30 +161,11 @@ export function useProviderModels(provider?: string) {
   })
 }
 
-// Ollama status hook
-export function useOllamaStatus() {
-  return useQuery({
-    queryKey: ['ollama', 'status'],
-    queryFn: () => apiClient.getOllamaStatus(),
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 60 * 1000, // Refetch every minute
-  })
-}
-
 // Current provider hook
 export function useCurrentProvider() {
   return useQuery({
     queryKey: QUERY_KEYS.currentProvider(),
     queryFn: () => apiClient.getCurrentProvider(),
-  })
-}
-
-// Models hook
-export function useModels() {
-  return useQuery({
-    queryKey: ['models'],
-    queryFn: () => apiClient.getModels(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 

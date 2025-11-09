@@ -14,7 +14,8 @@ import * as apiClientModule from '@/services/api'
 // Mock the useEmbeddings hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
   useSearchEmbeddings: vi.fn(),
-  useModels: vi.fn(),
+  useProviderModels: vi.fn(),
+  useEmbeddings: vi.fn(),
 }))
 
 // Mock the apiClient
@@ -28,14 +29,19 @@ describe('SearchInterface', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Default mock for useModels
-    vi.mocked(useEmbeddingsModule.useModels).mockReturnValue({
-      data: {
-        models: [
-          { name: 'nomic-embed-text', displayName: 'Nomic Embed Text', available: true },
-          { name: 'text-embedding-3-small', displayName: 'OpenAI Small', available: true },
-        ]
-      },
+    // Default mock for useProviderModels
+    vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
+      data: [
+        { name: 'nomic-embed-text', displayName: 'Nomic Embed Text', provider: 'ollama', dimensions: 768 },
+        { name: 'text-embedding-3-small', displayName: 'OpenAI Small', provider: 'openai', dimensions: 1536 },
+      ],
+      isLoading: false,
+      error: null,
+    } as any)
+
+    // Default mock for useEmbeddings (used for keyword search)
+    vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
+      data: { embeddings: [], count: 0, total_pages: 0, has_next: false, has_prev: false, page: 1, limit: 10, total: 0 },
       isLoading: false,
       error: null,
     } as any)

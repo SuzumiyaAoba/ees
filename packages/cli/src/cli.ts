@@ -355,6 +355,75 @@ const providersCommand = defineCommand({
   },
 })
 
+const connectionsCommand = defineCommand({
+  meta: {
+    name: "connections",
+    description: "Connection configuration management",
+  },
+  args: {
+    action: {
+      type: "positional",
+      description: "Action to perform (list, get, active, create, update, delete, activate, test)",
+      required: true,
+    },
+    id: {
+      type: "string",
+      description: "Connection ID (for get, update, delete, activate, test)",
+    },
+    name: {
+      type: "string",
+      alias: "n",
+      description: "Connection name (for create, update)",
+    },
+    type: {
+      type: "string",
+      alias: "t",
+      description: "Connection type: ollama or openai-compatible (for create, test)",
+    },
+    "base-url": {
+      type: "string",
+      alias: "b",
+      description: "Base URL of the provider (for create, update, test)",
+    },
+    "api-key": {
+      type: "string",
+      alias: "k",
+      description: "API key for authentication (for create, update, test)",
+    },
+    "default-model": {
+      type: "string",
+      alias: "m",
+      description: "Default model name (for create, update)",
+    },
+    metadata: {
+      type: "string",
+      description: "JSON metadata string (for create, update)",
+    },
+  },
+  async run({ args }) {
+    const validActions = ["list", "get", "active", "create", "update", "delete", "activate", "test"]
+    if (!validActions.includes(args.action)) {
+      const { error } = await import("@ees/core")
+      error(`Invalid action: ${args.action}. Valid actions: ${validActions.join(", ")}`)
+      process.exit(1)
+    }
+
+    const commands = await Effect.runPromise(createCLICommands())
+    await runCLICommand(
+      commands.connections({
+        action: args.action as "list" | "get" | "active" | "create" | "update" | "delete" | "activate" | "test",
+        id: args.id ? Number.parseInt(args.id, 10) : undefined,
+        name: args.name,
+        type: args.type as "ollama" | "openai-compatible" | undefined,
+        baseUrl: args["base-url"],
+        apiKey: args["api-key"],
+        defaultModel: args["default-model"],
+        metadata: args.metadata,
+      })
+    )
+  },
+})
+
 // Main command
 const main = defineCommand({
   meta: {
@@ -374,6 +443,7 @@ const main = defineCommand({
     "upload-dir": uploadDirCommand,
     migrate: migrateCommand,
     providers: providersCommand,
+    connections: connectionsCommand,
   },
 })
 

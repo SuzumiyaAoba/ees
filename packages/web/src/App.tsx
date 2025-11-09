@@ -6,6 +6,7 @@ import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
 import { ProviderManagement } from '@/components/ProviderManagement'
+import { ModelManagement } from '@/components/ModelManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
@@ -143,7 +144,15 @@ function AppContent() {
           // You could show a notification or refresh the embeddings list
         }} />
       case 'config':
-        return <ProviderManagement />
+        return (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h1 className="headline-large">Configuration</h1>
+            </div>
+            <ProviderManagement />
+            <ModelManagement />
+          </div>
+        )
       default:
         return <SearchInterface onResultSelect={handleSearchResultSelect} />
     }
@@ -154,65 +163,66 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4">
+      {/* Header - M3 Top App Bar (Small) */}
+      <header className="bg-surface sticky top-0 z-20 shadow-elevation0">
+        <div className="w-full px-6 sm:px-8 lg:px-12">
+          {/* Top section with logo and actions */}
+          <div className="h-16 flex items-center justify-between gap-6">
             {/* Logo */}
             <Logo size="md" variant={isDark ? 'white' : 'gradient'} />
-
-            {/* Navigation Tabs */}
-            <Tabs className="flex-1">
-              <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <TabsTrigger
-                      key={tab.id}
-                      value={tab.id}
-                      active={activeTab === tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className="gap-2"
-                    >
-                      <Icon className="h-4 w-4" />
-                      {tab.label}
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
-            </Tabs>
 
             {/* Theme Toggle */}
             <Button
               size="icon"
-              variant="ghost"
+              variant="text"
               onClick={toggleTheme}
-              className="rounded-full shrink-0"
+              className="shrink-0"
               aria-label="Toggle theme"
             >
               {isDark ? (
-                <Sun className="h-5 w-5" />
+                <Sun className="h-6 w-6" />
               ) : (
-                <Moon className="h-5 w-5" />
+                <Moon className="h-6 w-6" />
               )}
             </Button>
           </div>
+
+          {/* Primary Navigation Tabs */}
+          <Tabs className="w-full">
+            <TabsList className="w-full">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    active={activeTab === tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className="gap-2"
+                  >
+                    <Icon className="h-5 w-5" />
+                    {tab.label}
+                  </TabsTrigger>
+                )
+              })}
+            </TabsList>
+          </Tabs>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
+      <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8'}`}>
         {renderActiveTab()}
       </main>
 
       {/* Footer */}
       {!isFullWidthTab && (
-        <footer className="border-t mt-auto bg-card/50 backdrop-blur-sm">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  <span className="inline-block w-2 h-2 bg-success rounded-full mr-1.5"></span>
+        <footer className="mt-auto bg-surface">
+          <div className="w-full px-6 sm:px-8 lg:px-12 py-6">
+            <div className="flex justify-between items-center body-small text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="body-small">
+                  <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
                   Online
                 </Badge>
               </div>

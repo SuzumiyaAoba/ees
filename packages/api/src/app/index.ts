@@ -2,7 +2,12 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { streamSSE } from "hono/streaming"
 import { Effect } from "effect"
-import { createPinoLogger, createLoggerConfig } from "@ees/core"
+import {
+  createPinoLogger,
+  createLoggerConfig,
+  EmbeddingService,
+  UploadDirectoryRepository,
+} from "@ees/core"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -13,10 +18,12 @@ import {
   listEmbeddingsRoute,
   listEmbeddingModelsRoute,
 } from "@/features/list-embeddings"
-import { listModelsRoute } from "@/features/list-models"
 import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
+import { connectionApp } from "@/features/connection-management"
+import { providerCrudApp } from "@/features/provider-crud"
+import { modelCrudApp } from "@/features/model-crud"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
@@ -132,9 +139,34 @@ app.route("/", migrationApp)
 app.route("/", uploadApp)
 
 /**
+ * Connection management routes - Provider connection CRUD operations
+ */
+app.route("/", connectionApp)
+
+/**
  * Provider management routes - Provider status and model discovery
+ * IMPORTANT: Must be registered before providerCrudApp to ensure
+ * specific routes like /providers/current match before /providers/{id}
  */
 app.route("/", providerApp)
+
+/**
+ * List task types endpoint
+ * Returns supported task types for a specific model
+ * IMPORTANT: Must be registered before modelCrudApp to ensure
+ * /models/task-types matches before /models/{id}
+ */
+registerListTaskTypesRoutes(app)
+
+/**
+ * Provider CRUD routes - Database CRUD operations for providers
+ */
+app.route("/", providerCrudApp)
+
+/**
+ * Model CRUD routes - Database CRUD operations for models
+ */
+app.route("/", modelCrudApp)
 
 /**
  * Create embedding endpoint
@@ -344,36 +376,6 @@ app.openapi(updateEmbeddingRoute, async (c) => {
 })
 
 /**
- * List available models endpoint
- * Returns all models available through configured providers including environment variables and Ollama response
- */
-app.use("/models", security.rateLimits.read)
-app.openapi(listModelsRoute, async (c) => {
-  return executeEffectHandler(c, "listModels",
-    withModelManager(modelManager =>
-      Effect.gen(function* () {
-        const models = yield* modelManager.listAvailableModels()
-
-        // Extract unique providers from models
-        const providers = Array.from(new Set(models.map((model: { provider: string }) => model.provider)))
-
-        return {
-          models,
-          count: models.length,
-          providers
-        }
-      })
-    )
-  ) as never
-})
-
-/**
- * List task types endpoint
- * Returns supported task types for a specific model
- */
-registerListTaskTypesRoutes(app)
-
-/**
  * Upload Directory Management Endpoints
  */
 
@@ -386,28 +388,44 @@ app.openapi(createUploadDirectoryRoute, async (c) => {
   const { name, path, model_name, task_types, description } = c.req.valid("json")
 
   return executeEffectHandler(c, "createUploadDirectory",
-    withUploadDirectoryRepository(repository =>
-      Effect.gen(function* () {
-        // Check if path already exists
-        const existing = yield* repository.findByPath(path)
-        if (existing) {
-          return yield* Effect.fail(new Error("Directory path already registered"))
-        }
+    Effect.gen(function* () {
+      const repository = yield* UploadDirectoryRepository
+      const embeddingService = yield* EmbeddingService
 
-        const result = yield* repository.create({
-          name,
-          path,
-          modelName: model_name,
-          taskTypes: task_types,
-          description,
-        })
+      // Validate model availability from active connection
+      if (model_name) {
+        const availableModels = yield* embeddingService.getProviderModels()
+        const isModelAvailable = availableModels.some((m) => m.name === model_name)
 
-        return {
-          id: result.id,
-          message: "Upload directory created successfully",
+        if (!isModelAvailable) {
+          const modelNames = availableModels.map((m) => m.name).join(", ")
+          return yield* Effect.fail(
+            new Error(
+              `Model "${model_name}" is not available in the active connection. Available models: ${modelNames}`
+            )
+          )
         }
+      }
+
+      // Check if path already exists
+      const existing = yield* repository.findByPath(path)
+      if (existing) {
+        return yield* Effect.fail(new Error("Directory path already registered"))
+      }
+
+      const result = yield* repository.create({
+        name,
+        path,
+        modelName: model_name,
+        taskTypes: task_types,
+        description,
       })
-    )
+
+      return {
+        id: result.id,
+        message: "Upload directory created successfully",
+      }
+    })
   ) as never
 })
 
@@ -506,37 +524,53 @@ app.openapi(updateUploadDirectoryRoute, async (c) => {
   const id = validationResult
 
   return executeEffectHandlerWithConditional(c, "updateUploadDirectory",
-    withUploadDirectoryRepository(repository =>
-      Effect.gen(function* () {
-        const updated = yield* repository.update(id, {
-          ...(updates.name && { name: updates.name }),
-          ...(updates.model_name && { modelName: updates.model_name }),
-          ...(updates.task_types !== undefined && { taskTypes: updates.task_types }),
-          ...(updates.description !== undefined && { description: updates.description }),
-        })
+    Effect.gen(function* () {
+      const repository = yield* UploadDirectoryRepository
+      const embeddingService = yield* EmbeddingService
 
-        if (!updated) {
-          return null
-        }
+      // Validate model availability from active connection if model_name is being updated
+      if (updates.model_name) {
+        const availableModels = yield* embeddingService.getProviderModels()
+        const isModelAvailable = availableModels.some((m) => m.name === updates.model_name)
 
-        const directory = yield* repository.findById(id)
-        if (!directory) {
-          return null
+        if (!isModelAvailable) {
+          const modelNames = availableModels.map((m) => m.name).join(", ")
+          return yield* Effect.fail(
+            new Error(
+              `Model "${updates.model_name}" is not available in the active connection. Available models: ${modelNames}`
+            )
+          )
         }
+      }
 
-        return {
-          id: directory.id,
-          name: directory.name,
-          path: directory.path,
-          model_name: directory.modelName,
-          task_types: directory.taskTypes,
-          description: directory.description,
-          last_synced_at: directory.lastSyncedAt,
-          created_at: directory.createdAt,
-          updated_at: directory.updatedAt,
-        }
+      const updated = yield* repository.update(id, {
+        ...(updates.name && { name: updates.name }),
+        ...(updates.model_name && { modelName: updates.model_name }),
+        ...(updates.task_types !== undefined && { taskTypes: updates.task_types }),
+        ...(updates.description !== undefined && { description: updates.description }),
       })
-    ),
+
+      if (!updated) {
+        return null
+      }
+
+      const directory = yield* repository.findById(id)
+      if (!directory) {
+        return null
+      }
+
+      return {
+        id: directory.id,
+        name: directory.name,
+        path: directory.path,
+        model_name: directory.modelName,
+        task_types: directory.taskTypes,
+        description: directory.description,
+        last_synced_at: directory.lastSyncedAt,
+        created_at: directory.createdAt,
+        updated_at: directory.updatedAt,
+      }
+    }),
     "Upload directory not found"
   ) as never
 })

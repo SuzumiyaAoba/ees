@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { apiClient } from '@/services/api'
-import type { ModelInfo, MigrationResponse, CompatibilityResponse } from '@/types/api'
+import { useProviderModels } from '@/hooks/useEmbeddings'
+import type { MigrationResponse, CompatibilityResponse } from '@/types/api'
 
 interface ModelMigrationProps {
   onMigrationComplete?: (result: MigrationResponse) => void
 }
 
 export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
-  const [models, setModels] = useState<ModelInfo[]>([])
+  const { data: models, isLoading: loadingModels, error: modelsError } = useProviderModels()
   const [loading, setLoading] = useState(false)
   const [migrating, setMigrating] = useState(false)
   const [fromModel, setFromModel] = useState('')
@@ -24,22 +25,6 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
   const [preserveOriginal, setPreserveOriginal] = useState(false)
   const [batchSize, setBatchSize] = useState(100)
   const [continueOnError, setContinueOnError] = useState(true)
-
-  useEffect(() => {
-    loadModels()
-  }, [])
-
-  const loadModels = async () => {
-    setLoading(true)
-    try {
-      const response = await apiClient.getModels()
-      setModels(response.models)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load models')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const checkCompatibility = async () => {
     if (!fromModel || !toModel) return
@@ -96,7 +81,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-6">Model Migration</h2>
+        <h2 className="headline-medium mb-6">Model Migration</h2>
 
         {/* Model Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -110,13 +95,13 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             }}
             options={[
               { value: '', label: 'Select source model' },
-              ...models.map((model) => ({
+              ...(models || []).map((model) => ({
                 value: model.name,
                 label: `${model.displayName || model.name} (${model.provider})`,
               })),
             ]}
             placeholder="Select source model"
-            disabled={loading || migrating}
+            disabled={loading || migrating || loadingModels}
           />
 
           <FormSelect
@@ -129,13 +114,13 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             }}
             options={[
               { value: '', label: 'Select target model' },
-              ...models.map((model) => ({
+              ...(models || []).map((model) => ({
                 value: model.name,
                 label: `${model.displayName || model.name} (${model.provider})`,
               })),
             ]}
             placeholder="Select target model"
-            disabled={loading || migrating}
+            disabled={loading || migrating || loadingModels}
           />
         </div>
 
@@ -225,10 +210,10 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
         )}
 
         {/* Error Display */}
-        {error && (
+        {(error || modelsError) && (
           <div className="mb-6 p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md">
             <div className="text-red-800 font-medium">Error</div>
-            <div className="text-red-600 text-sm mt-1">{error}</div>
+            <div className="text-red-600 text-sm mt-1">{error || (modelsError instanceof Error ? modelsError.message : 'Failed to load models')}</div>
           </div>
         )}
 

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FormSelect } from '@/components/ui/FormSelect'
 import { FormField } from '@/components/ui/FormField'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { useSearchEmbeddings, useModels, useEmbeddings } from '@/hooks/useEmbeddings'
+import { useSearchEmbeddings, useProviderModels, useEmbeddings } from '@/hooks/useEmbeddings'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { QuickLookPopup } from '@/components/QuickLookPopup'
@@ -97,14 +97,14 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const isSearching = searchMode === 'semantic' ? isSemanticSearching : isLoadingEmbeddings
   const error = searchMode === 'semantic' ? semanticError : keywordError
 
-  const { data: modelsData } = useModels()
+  const { data: modelsData } = useProviderModels()
 
   // When models are loaded, set default model to the first available one if not selected yet
   useEffect(() => {
-    if (!modelsData?.models) return
+    if (!modelsData) return
     if (searchParams.model_name) return
 
-    const firstAvailable = modelsData.models.find((m) => m.available)
+    const firstAvailable = modelsData[0]
     if (firstAvailable?.name) {
       updateFilter('model_name', firstAvailable.name)
     }
@@ -229,8 +229,10 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
 
           {/* Title input for retrieval_document task type - Semantic search only */}
           {searchMode === 'semantic' && searchParams.task_type === 'retrieval_document' && (
-            <div>
-              <label className="text-sm font-medium">Title (optional)</label>
+            <FormField
+              label="Title (optional)"
+              helpText="Providing a title improves search accuracy for document retrieval"
+            >
               <Input
                 placeholder="Enter document title for better accuracy..."
                 value={title}
@@ -238,10 +240,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Providing a title improves search accuracy for document retrieval
-              </p>
-            </div>
+            </FormField>
           )}
 
           {/* Search Options */}
@@ -250,12 +249,10 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               label="Model"
               value={searchParams.model_name || ''}
               onChange={(value) => updateFilter('model_name', value)}
-              options={modelsData?.models
-                .filter((model) => model.available)
-                .map((model) => ({
-                  value: model.name,
-                  label: model.displayName || model.name,
-                })) || []}
+              options={modelsData?.map((model) => ({
+                value: model.name,
+                label: model.displayName || model.name,
+              })) || []}
             />
             {searchMode === 'semantic' && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
               <FormSelect

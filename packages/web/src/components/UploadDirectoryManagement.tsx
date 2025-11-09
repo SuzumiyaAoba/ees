@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { FormField } from '@/components/ui/FormField'
+import { FormSelect } from '@/components/ui/FormSelect'
 import { DirectoryPickerModal } from '@/components/DirectoryPickerModal'
 import {
   useUploadDirectories,
@@ -402,8 +404,10 @@ export function UploadDirectoryManagement() {
         {showCreateForm && (
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4 border-t pt-4">
-              <div>
-                <label className="text-sm font-medium">Directory Name</label>
+              <FormField
+                label="Directory Name"
+                helpText="A user-friendly name for this directory"
+              >
                 <Input
                   type="text"
                   value={formData.name}
@@ -411,13 +415,12 @@ export function UploadDirectoryManagement() {
                   placeholder="My Documents"
                   required
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  A user-friendly name for this directory
-                </p>
-              </div>
+              </FormField>
 
-              <div>
-                <label className="text-sm font-medium">Directory Path</label>
+              <FormField
+                label="Directory Path"
+                helpText="Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore)."
+              >
                 <div className="flex gap-2">
                   <Input
                     type="text"
@@ -435,38 +438,32 @@ export function UploadDirectoryManagement() {
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore).
-                </p>
-              </div>
+              </FormField>
 
-              <div>
-                <label className="text-sm font-medium">Embedding Model</label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formData.model_name}
-                  onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
-                >
-                  <option value="">Use default model (nomic-embed-text)</option>
-                  {(models as any)?.map((model: any) => (
-                    <option key={model.name} value={model.name}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FormSelect
+                label="Embedding Model"
+                value={formData.model_name}
+                onChange={(value) => setFormData({ ...formData, model_name: value })}
+                options={[
+                  { value: '', label: 'Use default model (nomic-embed-text)' },
+                  ...(models?.map((model) => ({
+                    value: model.name,
+                    label: model.displayName || model.name,
+                  })) || [])
+                ]}
+              />
 
               {/* Task Types Selection */}
               {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium block mb-2">
+                  <label className="block label-large mb-3">
                     Task Types (Optional - for models that support it)
                   </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
                     {taskTypeOptions.map((taskType) => (
                       <label
                         key={taskType.value}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
+                        className="flex items-start gap-2 cursor-pointer hover:bg-primary/[0.08] p-2 rounded-lg transition-colors"
                       >
                         <input
                           type="checkbox"
@@ -475,13 +472,13 @@ export function UploadDirectoryManagement() {
                           className="mt-1 h-4 w-4 rounded border-gray-300"
                         />
                         <div className="flex-1">
-                          <div className="text-sm font-medium">{taskType.label}</div>
-                          <div className="text-xs text-muted-foreground">{taskType.description}</div>
+                          <div className="label-large">{taskType.label}</div>
+                          <div className="body-small text-on-surface-variant">{taskType.description}</div>
                         </div>
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="body-small text-on-surface-variant mt-2">
                     {selectedTaskTypes.length > 0
                       ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s) per file`
                       : 'Select one or more task types to create specialized embeddings for each file'}
@@ -489,15 +486,14 @@ export function UploadDirectoryManagement() {
                 </div>
               )}
 
-              <div>
-                <label className="text-sm font-medium">Description (Optional)</label>
+              <FormField label="Description (Optional)">
                 <Input
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Project documentation and guides"
                 />
-              </div>
+              </FormField>
 
               <div className="flex justify-end gap-2">
                 <Button

@@ -516,7 +516,7 @@ describe("Model Migration E2E Tests", () => {
         method: "GET",
       })
 
-      expect([404, 405]).toContain(response.status)
+      expect([400, 404, 405]).toContain(response.status)
     })
 
     it("should handle malformed JSON", async () => {

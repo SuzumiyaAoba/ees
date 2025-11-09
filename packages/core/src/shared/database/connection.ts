@@ -21,18 +21,41 @@ export interface DatabaseService {
 export const DatabaseService =
   Context.GenericTag<DatabaseService>("DatabaseService")
 
+/**
+ * Global cached database client and instance for test environment
+ * This ensures all requests in E2E tests share the same in-memory database
+ */
+let globalTestClient: ReturnType<typeof createClient> | null = null
+let globalTestDb: ReturnType<typeof drizzle> | null = null
+
 const make = Effect.gen(function* () {
   const isTest = isTestEnv()
 
-  // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
-  const dataDir = getEnvWithDefault(
-    "EES_DATA_DIR",
-    resolve(process.cwd(), "data")
-  )
-  const DB_PATH = isTest ? ":memory:" : resolve(dataDir, "embeddings.db")
+  let client: ReturnType<typeof createClient>
+  let db: ReturnType<typeof drizzle>
 
-  // Ensure data directory exists for non-test environments
-  if (!isTest) {
+  // In test environment, reuse the same client and db instance
+  if (isTest) {
+    if (!globalTestClient) {
+      logger.debug("Creating global test database client (first time)")
+      globalTestClient = createClient({ url: ":memory:" })
+      globalTestDb = drizzle(globalTestClient, { schema })
+    } else {
+      logger.debug("Reusing existing global test database client")
+    }
+
+    client = globalTestClient
+    db = globalTestDb!
+  } else {
+    // Production/development environment: create new client each time
+    // Use EES_DATA_DIR environment variable if set, otherwise fall back to cwd/data
+    const dataDir = getEnvWithDefault(
+      "EES_DATA_DIR",
+      resolve(process.cwd(), "data")
+    )
+    const DB_PATH = resolve(dataDir, "embeddings.db")
+
+    // Ensure data directory exists for non-test environments
     yield* Effect.try({
       try: () => {
         if (!existsSync(dataDir)) {
@@ -45,21 +68,21 @@ const make = Effect.gen(function* () {
           cause: error,
         }),
     })
+
+    client = yield* Effect.try({
+      try: () =>
+        createClient({
+          url: `file:${DB_PATH}`,
+        }),
+      catch: (error) =>
+        new DatabaseConnectionError({
+          message: "Failed to create database client",
+          cause: error,
+        }),
+    })
+
+    db = drizzle(client, { schema })
   }
-
-  const client = yield* Effect.try({
-    try: () =>
-      createClient({
-        url: isTest ? ":memory:" : `file:${DB_PATH}`,
-      }),
-    catch: (error) =>
-      new DatabaseConnectionError({
-        message: "Failed to create database client",
-        cause: error,
-      }),
-  })
-
-  const db = drizzle(client, { schema })
 
   /**
    * Initialize database schema with automatic migration support
@@ -249,6 +272,174 @@ const make = Effect.gen(function* () {
       await client.execute(`
         CREATE INDEX IF NOT EXISTS idx_sync_jobs_created_at ON sync_jobs(created_at)
       `)
+
+      // Check if connection_configs exists (old schema)
+      const connectionConfigsExists = await client.execute(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='connection_configs'
+      `)
+
+      // Migrate from connection_configs to providers + models if old schema exists
+      if (connectionConfigsExists.rows.length > 0) {
+        logger.info("🔄 Migrating connection_configs to providers and models...")
+
+        // Get all existing connections
+        const existingConnections = await client.execute(`
+          SELECT * FROM connection_configs
+        `)
+
+        // Create providers table first
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            api_key TEXT,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_name ON providers(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_type ON providers(type)
+        `)
+
+        // Create models table
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            display_name TEXT,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_is_active ON models(is_active)
+        `)
+
+        await client.execute(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_models_provider_name ON models(provider_id, name)
+        `)
+
+        // Migrate data
+        for (const row of existingConnections.rows) {
+          // Extract values with proper type handling
+          const name = row["name"] as string
+          const type = row["type"] as string
+          const baseUrl = row["base_url"] as string
+          const apiKey = row["api_key"] as string | null
+          const metadata = row["metadata"] as string | null
+          const defaultModel = row["default_model"] as string
+          const createdAt = row["created_at"] as string | null
+          const updatedAt = row["updated_at"] as string | null
+          const isActiveValue = row["is_active"] as number | boolean | null
+
+          // Insert provider
+          const providerResult = await client.execute({
+            sql: `INSERT INTO providers (name, type, base_url, api_key, metadata, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            args: [name, type, baseUrl, apiKey, metadata, createdAt, updatedAt],
+          })
+
+          // Get the provider ID
+          const providerId = providerResult.lastInsertRowid
+          if (providerId === undefined) {
+            throw new Error("Failed to get provider ID after insert")
+          }
+
+          // Insert model for this provider
+          const isActive = isActiveValue === 1 || isActiveValue === true
+          await client.execute({
+            sql: `INSERT INTO models (provider_id, name, is_active, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?)`,
+            args: [
+              Number(providerId),
+              defaultModel,
+              isActive ? 1 : 0,
+              createdAt,
+              updatedAt,
+            ],
+          })
+        }
+
+        // Drop old table
+        await client.execute(`DROP TABLE connection_configs`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_name`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_type`)
+        await client.execute(`DROP INDEX IF EXISTS idx_connection_configs_is_active`)
+
+        logger.info(`✅ Migrated ${existingConnections.rows.length} connections to providers and models`)
+      } else {
+        // Fresh install - create new tables directly
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            api_key TEXT,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_name ON providers(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_providers_type ON providers(type)
+        `)
+
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            display_name TEXT,
+            is_active INTEGER NOT NULL DEFAULT 0,
+            metadata TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_is_active ON models(is_active)
+        `)
+
+        await client.execute(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_models_provider_name ON models(provider_id, name)
+        `)
+      }
 
       if (needsMigration) {
         logger.info("✅ Database migration completed successfully")

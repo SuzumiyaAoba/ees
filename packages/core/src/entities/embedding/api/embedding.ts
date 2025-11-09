@@ -4,7 +4,6 @@
  */
 
 import { Context, Effect, Layer, Option, pipe } from "effect"
-import { getDefaultProvider } from "@/shared/config/providers"
 import { DatabaseQueryError } from "@/shared/errors/database"
 import { createPinoLogger, createLoggerConfig } from "@/shared/observability"
 import {
@@ -32,6 +31,7 @@ import {
   formatTextWithTaskType,
   TaskType,
 } from "@/shared/models/task-type"
+import { ConnectionService } from "@/entities/connection/api/connection"
 import type {
   BatchCreateEmbeddingRequest,
   BatchCreateEmbeddingResponse,
@@ -364,7 +364,6 @@ const make = Effect.gen(function* () {
   > => {
     // Capture start time for duration metrics
     const startTime = Date.now()
-    const provider = getDefaultProvider()
 
     // Helper: Map error instances to metric category strings
     const determineErrorType = (error: unknown): string =>
@@ -407,21 +406,27 @@ const make = Effect.gen(function* () {
           // Step 5: Record success metrics after database save
           Effect.flatMap((saveResult) =>
             pipe(
-              metricsService.recordEmbeddingCreated(
-                provider.type,
-                embeddingResponse.model,
-                (Date.now() - startTime) / 1000
-              ),
-              // Step 6: Invalidate cache entry for this URI/model
-              // Cache errors don't affect the operation result
-              Effect.flatMap(() => invalidateCache(embeddingResponse.model, uri)),
-              // Return the final result with actual model name used
-              Effect.map(() => ({
-                id: saveResult.id,
-                uri,
-                model_name: embeddingResponse.model,
-                ...(taskType ? { task_type: taskType } : {}),
-              }))
+              // Get current provider type for metrics
+              providerService.getCurrentProvider(),
+              Effect.flatMap((currentProviderType) =>
+                pipe(
+                  metricsService.recordEmbeddingCreated(
+                    currentProviderType,
+                    embeddingResponse.model,
+                    (Date.now() - startTime) / 1000
+                  ),
+                  // Step 6: Invalidate cache entry for this URI/model
+                  // Cache errors don't affect the operation result
+                  Effect.flatMap(() => invalidateCache(embeddingResponse.model, uri)),
+                  // Return the final result with actual model name used
+                  Effect.map(() => ({
+                    id: saveResult.id,
+                    uri,
+                    model_name: embeddingResponse.model,
+                    ...(taskType ? { task_type: taskType } : {}),
+                  }))
+                )
+              )
             )
           )
         )
@@ -429,10 +434,17 @@ const make = Effect.gen(function* () {
       // Step 7: Record error metrics on any failure
       // tapError doesn't change the error, just adds side effect
       Effect.tapError((error) =>
-        metricsService.recordEmbeddingError(
-          provider.type,
-          modelName ?? "unknown",
-          determineErrorType(error)
+        pipe(
+          providerService.getCurrentProvider(),
+          Effect.flatMap((currentProviderType) =>
+            metricsService.recordEmbeddingError(
+              currentProviderType,
+              modelName ?? "unknown",
+              determineErrorType(error)
+            )
+          ),
+          // Ignore metrics errors - don't fail the operation
+          Effect.catchAll(() => Effect.void)
         )
       )
     )
@@ -675,7 +687,6 @@ const make = Effect.gen(function* () {
     | DatabaseQueryError
   > => {
     const startTime = Date.now()
-    const provider = getDefaultProvider()
 
     return pipe(
       // Step 1: Validate input text
@@ -691,12 +702,17 @@ const make = Effect.gen(function* () {
           // Step 4: Record success metrics
           Effect.flatMap((updated) =>
             pipe(
-              metricsService.recordEmbeddingCreated(
-                provider.type,
-                embeddingResponse.model,
-                (Date.now() - startTime) / 1000
-              ),
-              Effect.map(() => updated)
+              providerService.getCurrentProvider(),
+              Effect.flatMap((currentProviderType) =>
+                pipe(
+                  metricsService.recordEmbeddingCreated(
+                    currentProviderType,
+                    embeddingResponse.model,
+                    (Date.now() - startTime) / 1000
+                  ),
+                  Effect.map(() => updated)
+                )
+              )
             )
           )
         )
@@ -758,8 +774,7 @@ const make = Effect.gen(function* () {
     } = request
 
     // Get effective model name and format query with task type if supported
-    const provider = getDefaultProvider()
-    const effectiveModelName = model_name ?? provider.defaultModel ?? "nomic-embed-text"
+    const effectiveModelName = model_name ?? "nomic-embed-text"
     const taskType: TaskType = (query_task_type as TaskType | undefined) ?? TaskType.RETRIEVAL_QUERY
     const formattedQuery = formatTextWithTaskType(
       effectiveModelName,
@@ -877,16 +892,50 @@ const make = Effect.gen(function* () {
   return service satisfies typeof EmbeddingService.Service
 })
 
-export const EmbeddingServiceLive = Layer.suspend(() => {
-  // Ensure environment is properly read at layer creation time
-  const defaultProvider = getDefaultProvider()
-  const factoryConfig = {
-    defaultProvider,
-    availableProviders: [defaultProvider],
-  }
+/**
+ * Layer that provides EmbeddingProviderService based on the active connection configuration
+ * This layer depends on ConnectionService and provides EmbeddingProviderService
+ */
+export const EmbeddingProviderServiceFromConnection = Layer.unwrapEffect(
+  Effect.gen(function* () {
+    // Query the active connection from the database with API key
+    const connectionService = yield* ConnectionService
+    const activeConnection = yield* connectionService.getActiveConnectionConfig()
 
-  return Layer.effect(EmbeddingService, make).pipe(
-    Layer.provide(EmbeddingRepositoryLive),
-    Layer.provideMerge(createEmbeddingProviderService(factoryConfig))
-  )
-})
+    // If no active connection exists, return a stub service that fails on use
+    if (!activeConnection) {
+      const noConnectionError = new Error(
+        "No active connection configured. Please activate a connection to use embedding services."
+      )
+
+      // Return a layer that provides a stub EmbeddingProviderService
+      // All methods will fail with a clear error message
+      return Layer.succeed(EmbeddingProviderService, {
+        generateEmbedding: () => Effect.fail(noConnectionError),
+        listModels: () => Effect.fail(noConnectionError),
+        isModelAvailable: () => Effect.fail(noConnectionError),
+        getModelInfo: () => Effect.fail(noConnectionError),
+        switchProvider: () => Effect.fail(noConnectionError),
+        getCurrentProvider: () => Effect.fail(noConnectionError),
+        listAllProviders: () => Effect.fail(noConnectionError),
+      } as unknown as typeof EmbeddingProviderService.Service)
+    }
+
+    // Use provider config directly from connection service
+    const factoryConfig = {
+      defaultProvider: activeConnection,
+      availableProviders: [activeConnection],
+    }
+
+    // Create and return provider service layer
+    return createEmbeddingProviderService(factoryConfig)
+  })
+)
+
+/**
+ * Embedding service layer
+ * Depends on: EmbeddingProviderService, ConnectionService (via repository), and other services
+ */
+export const EmbeddingServiceLive = Layer.effect(EmbeddingService, make).pipe(
+  Layer.provide(EmbeddingRepositoryLive)
+)

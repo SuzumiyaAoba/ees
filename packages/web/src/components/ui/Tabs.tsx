@@ -20,7 +20,7 @@ const TabsList = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      "inline-flex h-12 items-end border-b border-outline-variant",
       className
     )}
     {...props}
@@ -38,14 +38,19 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "relative inline-flex items-center justify-center whitespace-nowrap px-4 h-12 label-large transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         active
-          ? "bg-background text-foreground shadow-sm"
-          : "hover:bg-background/50 hover:text-foreground",
+          ? "text-primary"
+          : "text-on-surface-variant hover:bg-primary/[0.08]",
         className
       )}
       {...props}
-    />
+    >
+      {props.children}
+      {active && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+      )}
+    </button>
   )
 )
 TabsTrigger.displayName = "TabsTrigger"

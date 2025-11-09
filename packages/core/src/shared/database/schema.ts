@@ -99,3 +99,56 @@ export const syncJobs = sqliteTable(
 
 export type SyncJob = typeof syncJobs.$inferSelect
 export type NewSyncJob = typeof syncJobs.$inferInsert
+
+/**
+ * Providers table
+ * Stores embedding provider configurations (Ollama, OpenAI-compatible, etc.)
+ */
+export const providers = sqliteTable(
+  "providers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(), // Provider name (e.g., "Local Ollama", "OpenAI")
+    type: text("type").notNull(), // Provider type: "ollama" | "openai-compatible"
+    baseUrl: text("base_url").notNull(), // API endpoint URL
+    apiKey: text("api_key"), // API key for authentication (null for local services)
+    metadata: text("metadata"), // JSON string for additional provider-specific settings
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    nameIdx: index("idx_providers_name").on(table.name),
+    typeIdx: index("idx_providers_type").on(table.type),
+  })
+)
+
+export type Provider = typeof providers.$inferSelect
+export type NewProvider = typeof providers.$inferInsert
+
+/**
+ * Models table
+ * Stores model configurations associated with providers
+ */
+export const models = sqliteTable(
+  "models",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    providerId: integer("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text")
+    displayName: text("display_name"), // Optional display name for UI
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Only one model can be active
+    metadata: text("metadata"), // JSON string for model-specific settings
+    createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    providerIdIdx: index("idx_models_provider_id").on(table.providerId),
+    nameIdx: index("idx_models_name").on(table.name),
+    isActiveIdx: index("idx_models_is_active").on(table.isActive),
+    // Unique constraint: same model name cannot exist for the same provider
+    uniqueProviderModel: index("idx_models_provider_name").on(table.providerId, table.name),
+  })
+)
+
+export type Model = typeof models.$inferSelect
+export type NewModel = typeof models.$inferInsert

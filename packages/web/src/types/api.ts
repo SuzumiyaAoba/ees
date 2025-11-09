@@ -373,3 +373,129 @@ export interface VisualizeEmbeddingResponse {
     include_uris_failed?: string[]
   }
 }
+
+// Provider Management Types
+export interface Provider {
+  id: number
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  apiKey?: string | null
+  metadata?: Record<string, unknown> | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreateProviderRequest {
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  apiKey?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface UpdateProviderRequest {
+  name?: string
+  baseUrl?: string
+  apiKey?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface ProvidersListResponse {
+  providers: Provider[]
+  total: number
+}
+
+export interface ProviderTestRequest {
+  id?: number
+  baseUrl?: string
+  apiKey?: string
+  type?: 'ollama' | 'openai-compatible'
+}
+
+export interface ProviderTestResponse {
+  success: boolean
+  message: string
+  models?: string[]
+}
+
+// Model Management Types
+export interface Model {
+  id: number
+  providerId: number
+  name: string
+  displayName?: string | null
+  isActive: boolean
+  metadata?: Record<string, unknown> | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreateModelRequest {
+  providerId: number
+  name: string
+  displayName?: string
+  isActive?: boolean
+  metadata?: Record<string, unknown>
+}
+
+export interface UpdateModelRequest {
+  name?: string
+  displayName?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface ModelsListResponse {
+  models: Model[]
+  total: number
+}
+
+// Connection Management Types (backward compatibility)
+export interface Connection {
+  id: number
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  defaultModel: string
+  metadata?: Record<string, unknown> | null
+  isActive: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreateConnectionRequest {
+  name: string
+  type: 'ollama' | 'openai-compatible'
+  baseUrl: string
+  apiKey?: string
+  defaultModel: string
+  metadata?: Record<string, unknown>
+  isActive?: boolean
+}
+
+export interface UpdateConnectionRequest {
+  name?: string
+  baseUrl?: string
+  apiKey?: string
+  defaultModel?: string
+  metadata?: Record<string, unknown>
+  isActive?: boolean
+}
+
+export interface ConnectionTestRequest {
+  id?: number
+  baseUrl?: string
+  apiKey?: string
+  type?: 'ollama' | 'openai-compatible'
+}
+
+export interface ConnectionTestResponse {
+  success: boolean
+  message: string
+  models?: string[]
+}
+
+export interface ConnectionsListResponse {
+  connections: Connection[]
+  total: number
+}

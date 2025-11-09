@@ -36,7 +36,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -46,7 +46,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative bg-background border rounded-lg shadow-lg max-h-[90vh] overflow-auto",
+          "relative bg-surface rounded-3xl shadow-elevation3 max-h-[90vh] overflow-auto",
           className
         )}
       >
@@ -88,7 +88,7 @@ interface DialogTitleProps {
 
 export function DialogTitle({ children, className }: DialogTitleProps) {
   return (
-    <h2 className={cn("text-lg font-semibold leading-none tracking-tight", className)}>
+    <h2 className={cn("headline-small", className)}>
       {children}
     </h2>
   )
@@ -101,7 +101,7 @@ interface DialogDescriptionProps {
 
 export function DialogDescription({ children, className }: DialogDescriptionProps) {
   return (
-    <p className={cn("text-sm text-muted-foreground", className)}>
+    <p className={cn("body-medium text-muted-foreground", className)}>
       {children}
     </p>
   )
