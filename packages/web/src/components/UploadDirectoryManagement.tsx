@@ -421,7 +421,7 @@ export function UploadDirectoryManagement() {
                 label="Directory Path"
                 helpText="Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore)."
               >
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Input
                     type="text"
                     value={formData.path}
@@ -432,6 +432,7 @@ export function UploadDirectoryManagement() {
                   />
                   <Button
                     type="button"
+                    size="lg"
                     variant="outline"
                     onClick={() => setShowDirectoryPicker(true)}
                   >

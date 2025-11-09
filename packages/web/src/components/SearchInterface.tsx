@@ -209,7 +209,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
             </Button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Input
               placeholder={searchMode === 'semantic' ? 'Enter your search query...' : 'Enter keywords to search...'}
               value={query}
@@ -217,7 +217,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="flex-1"
             />
-            <Button onClick={handleSearch} disabled={!query.trim() || isSearching}>
+            <Button size="lg" onClick={handleSearch} disabled={!query.trim() || isSearching}>
               {isSearching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
