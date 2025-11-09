@@ -63,6 +63,34 @@ connectionApp.openapi(listConnectionsRoute, async (c) => {
 })
 
 /**
+ * Handler for getting active connection
+ * IMPORTANT: Must be registered before getConnectionRoute to ensure
+ * /connections/active matches before /connections/{id}
+ */
+connectionApp.openapi(getActiveConnectionRoute, async (c) => {
+  try {
+    const { AppLayer } = await import("@/app/providers/main")
+
+    const getActiveConnectionProgram = Effect.gen(function* () {
+      const connectionService = yield* ConnectionService
+      return yield* connectionService.getActiveConnection()
+    })
+
+    const result = await Effect.runPromise(
+      getActiveConnectionProgram.pipe(Effect.provide(AppLayer))
+    )
+
+    return c.json(result, 200)
+  } catch (error) {
+    logger.error({ error: String(error) }, "Error getting active connection")
+    return c.json(
+      { error: "Failed to get active connection" },
+      500
+    )
+  }
+})
+
+/**
  * Handler for getting connection by ID
  */
 connectionApp.openapi(getConnectionRoute, async (c) => {
@@ -91,32 +119,6 @@ connectionApp.openapi(getConnectionRoute, async (c) => {
     logger.error({ error: String(error) }, "Error getting connection")
     return c.json(
       { error: "Failed to get connection" },
-      500
-    )
-  }
-})
-
-/**
- * Handler for getting active connection
- */
-connectionApp.openapi(getActiveConnectionRoute, async (c) => {
-  try {
-    const { AppLayer } = await import("@/app/providers/main")
-
-    const getActiveConnectionProgram = Effect.gen(function* () {
-      const connectionService = yield* ConnectionService
-      return yield* connectionService.getActiveConnection()
-    })
-
-    const result = await Effect.runPromise(
-      getActiveConnectionProgram.pipe(Effect.provide(AppLayer))
-    )
-
-    return c.json(result, 200)
-  } catch (error) {
-    logger.error({ error: String(error) }, "Error getting active connection")
-    return c.json(
-      { error: "Failed to get active connection" },
       500
     )
   }
