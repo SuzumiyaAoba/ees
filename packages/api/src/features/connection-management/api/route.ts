@@ -382,7 +382,7 @@ export const testConnectionRoute = createRoute({
     400: {
       content: {
         "application/json": {
-          schema: z.object({ error: z.string(), success: z.boolean() }),
+          schema: z.object({ message: z.string(), success: z.boolean() }),
         },
       },
       description: "Connection test failed",

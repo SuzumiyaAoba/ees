@@ -217,7 +217,7 @@ describe("Provider Management E2E Tests", () => {
       if (response.status === 200) {
         const models = await parseUnknownJsonResponse(response)
         expect(Array.isArray(models)).toBe(true)
-        expect((models as unknown[])["length"]).toBe(0)
+        expect((models as unknown as unknown[]).length).toBe(0)
       } else if (response.status === 404) {
         const error = await parseUnknownJsonResponse(response)
         expect(error).toHaveProperty("error")

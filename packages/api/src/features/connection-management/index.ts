@@ -272,8 +272,8 @@ connectionApp.openapi(testConnectionRoute, async (c) => {
 
     return c.json(
       {
-        error: String(error),
         success: false,
+        message: String(error),
       },
       400
     )

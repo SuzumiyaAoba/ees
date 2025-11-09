@@ -279,8 +279,13 @@ const make = Effect.gen(function* () {
       }
 
       // Handle active status
-      if (request.isActive !== undefined && request.isActive) {
-        yield* modelRepository.setActive(model.id)
+      if (request.isActive !== undefined) {
+        if (request.isActive) {
+          yield* modelRepository.setActive(model.id)
+        } else {
+          // Deactivate this connection
+          yield* modelRepository.update(model.id, { isActive: false })
+        }
       }
 
       // Fetch updated data
