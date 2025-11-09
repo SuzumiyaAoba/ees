@@ -209,22 +209,22 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
             </Button>
           </div>
 
-          <div className="flex gap-2">
-            <Input
+          <div className="relative w-full">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              {isSearching ? (
+                <Loader2 className="h-5 w-5 animate-spin text-on-surface-variant" />
+              ) : (
+                <Search className="h-5 w-5 text-on-surface-variant" />
+              )}
+            </div>
+            <input
+              type="text"
               placeholder={searchMode === 'semantic' ? 'Enter your search query...' : 'Enter keywords to search...'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1"
+              className="w-full h-14 pl-12 pr-4 rounded-full bg-gray-200 text-on-surface placeholder:text-on-surface-variant focus:outline-none transition-all body-large"
             />
-            <Button onClick={handleSearch} disabled={!query.trim() || isSearching}>
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-              Search
-            </Button>
           </div>
 
           {/* Title input for retrieval_document task type - Semantic search only */}
