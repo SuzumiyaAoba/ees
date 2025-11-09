@@ -223,7 +223,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full h-14 pl-12 pr-4 rounded-full bg-surface-container-high text-on-surface placeholder:text-on-surface-variant focus:outline-none transition-all body-large"
+              className="w-full h-14 pl-12 pr-4 rounded-full bg-gray-200 text-on-surface placeholder:text-on-surface-variant focus:outline-none transition-all body-large"
             />
           </div>
 
