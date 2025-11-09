@@ -9,6 +9,7 @@ import {
   createPinoLogger,
   createLoggerConfig,
   ModelRepository,
+  ProviderRepository,
 } from "@ees/core"
 import {
   listModelsRoute,
@@ -42,17 +43,29 @@ modelCrudApp.openapi(listModelsRoute, async (c) => {
 
     const listModelsProgram = Effect.gen(function* () {
       const modelRepository = yield* ModelRepository
+      const providerRepository = yield* ProviderRepository
 
       const models = providerId
         ? yield* modelRepository.findByProviderId(providerId)
         : yield* modelRepository.findAll()
 
+      // Fetch provider information for each model
+      const modelsWithProvider = yield* Effect.all(
+        models.map(m =>
+          Effect.gen(function* () {
+            const provider = yield* providerRepository.findById(m.providerId)
+            return {
+              ...m,
+              provider: provider?.type || "unknown",
+              metadata: m.metadata ? (JSON.parse(m.metadata) as Record<string, unknown>) : null,
+            }
+          })
+        )
+      )
+
       return {
-        models: models.map(m => ({
-          ...m,
-          metadata: m.metadata ? (JSON.parse(m.metadata) as Record<string, unknown>) : null,
-        })),
-        total: models.length,
+        models: modelsWithProvider,
+        total: modelsWithProvider.length,
       }
     })
 
