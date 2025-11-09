@@ -5,8 +5,7 @@ import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
 import { FileUpload } from '@/components/FileUpload'
 import { CreateEditEmbedding } from '@/components/CreateEditEmbedding'
-import { ProviderManagement } from '@/components/ProviderManagement'
-import { ModelManagement } from '@/components/ModelManagement'
+import { ConnectionManagement } from '@/components/ConnectionManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
@@ -149,8 +148,7 @@ function AppContent() {
             <div className="flex justify-between items-center">
               <h1 className="headline-large">Configuration</h1>
             </div>
-            <ProviderManagement />
-            <ModelManagement />
+            <ConnectionManagement />
           </div>
         )
       default:
