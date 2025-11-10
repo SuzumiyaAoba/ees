@@ -161,13 +161,33 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header - M3 Top App Bar (Small) */}
+      {/* Header - M3 Top App Bar with Integrated Tabs */}
       <header className="bg-surface sticky top-0 z-20 shadow-elevation0">
         <div className="w-full px-6 sm:px-8 lg:px-12">
-          {/* Top section with logo and actions */}
-          <div className="h-16 flex items-center justify-between gap-6">
+          <div className="flex items-center gap-6 h-16">
             {/* Logo */}
-            <Logo size="md" variant={isDark ? 'white' : 'gradient'} />
+            <Logo size="md" variant={isDark ? 'white' : 'gradient'} className="shrink-0" />
+
+            {/* Primary Navigation Tabs - Integrated in header */}
+            <Tabs className="flex-1">
+              <TabsList className="w-full">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  return (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      active={activeTab === tab.id}
+                      onClick={() => handleTabChange(tab.id)}
+                      className="gap-2"
+                    >
+                      <Icon className="h-5 w-5" />
+                      {tab.label}
+                    </TabsTrigger>
+                  )
+                })}
+              </TabsList>
+            </Tabs>
 
             {/* Theme Toggle */}
             <Button
@@ -184,27 +204,6 @@ function AppContent() {
               )}
             </Button>
           </div>
-
-          {/* Primary Navigation Tabs */}
-          <Tabs className="w-full">
-            <TabsList className="w-full">
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <TabsTrigger
-                    key={tab.id}
-                    value={tab.id}
-                    active={activeTab === tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className="gap-2"
-                  >
-                    <Icon className="h-5 w-5" />
-                    {tab.label}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-          </Tabs>
         </div>
       </header>
 
