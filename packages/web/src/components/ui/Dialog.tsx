@@ -46,7 +46,7 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative bg-surface rounded-3xl shadow-elevation3 max-h-[90vh] overflow-auto",
+          "relative bg-white dark:bg-gray-900 rounded-3xl shadow-elevation3 max-h-[90vh] overflow-auto",
           className
         )}
       >
