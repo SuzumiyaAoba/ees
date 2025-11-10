@@ -169,8 +169,8 @@ function AppContent() {
             <Logo size="md" variant={isDark ? 'white' : 'gradient'} className="shrink-0" />
 
             {/* Primary Navigation Tabs - Integrated in header */}
-            <Tabs className="flex-1">
-              <TabsList className="w-full">
+            <Tabs className="flex-1 min-w-0">
+              <TabsList className="w-full overflow-x-auto">
                 {tabs.map((tab) => {
                   const Icon = tab.icon
                   return (
