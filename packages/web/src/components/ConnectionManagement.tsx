@@ -30,7 +30,6 @@ interface ConnectionFormData {
   type: 'ollama' | 'openai-compatible'
   baseUrl: string
   apiKey: string
-  defaultModel: string
 }
 
 interface ConnectionModalProps {
@@ -47,7 +46,6 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
     type: 'ollama',
     baseUrl: '',
     apiKey: '',
-    defaultModel: '',
   })
 
   // Reset form when modal opens or initialData changes
@@ -58,7 +56,6 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
         type: initialData?.type || 'ollama',
         baseUrl: initialData?.baseUrl || '',
         apiKey: '',
-        defaultModel: initialData?.defaultModel || '',
       })
     }
   }, [isOpen, initialData])
@@ -72,7 +69,7 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-lg">
+      <Card variant="elevated" className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <CardDescription>Configure your embedding provider connection</CardDescription>
@@ -126,16 +123,6 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium">Model</label>
-              <Input
-                value={formData.defaultModel}
-                onChange={(e) => setFormData({ ...formData, defaultModel: e.target.value })}
-                placeholder="nomic-embed-text"
-                required
-              />
-            </div>
-
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
@@ -175,7 +162,7 @@ function ConnectionCard({
               <h4 className="font-medium truncate">
                 {connection.name}
                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({connection.type} - {connection.defaultModel})
+                  ({connection.type})
                 </span>
               </h4>
               {isActive && (
@@ -260,7 +247,6 @@ export function ConnectionManagement() {
         const updateData: UpdateConnectionRequest = {
           name: data.name,
           baseUrl: data.baseUrl,
-          defaultModel: data.defaultModel,
         }
         if (data.apiKey) {
           updateData.apiKey = data.apiKey
@@ -268,11 +254,13 @@ export function ConnectionManagement() {
         await updateMutation.mutateAsync({ id: editingConnection.id, data: updateData })
       } else {
         // Create new connection
+        // Note: defaultModel is required by the API but we provide a default value
+        // since model management is handled separately
         const createData: CreateConnectionRequest = {
           name: data.name,
           type: data.type,
           baseUrl: data.baseUrl,
-          defaultModel: data.defaultModel,
+          defaultModel: 'default', // Placeholder value - model will be set separately
         }
         if (data.apiKey) {
           createData.apiKey = data.apiKey
@@ -326,7 +314,7 @@ export function ConnectionManagement() {
         <div>
           <h1 className="text-2xl font-bold">Connection Management</h1>
           <p className="text-muted-foreground">
-            Manage embedding provider connections and configurations
+            Manage embedding provider connections
           </p>
         </div>
         <div className="flex gap-2">
@@ -349,7 +337,7 @@ export function ConnectionManagement() {
             <div className="font-medium">
               Active: {activeConnection.name}
               <span className="font-normal text-muted-foreground ml-2">
-                ({activeConnection.type} - {activeConnection.defaultModel})
+                ({activeConnection.type})
               </span>
             </div>
             <div className="space-y-1 text-sm mt-2">
