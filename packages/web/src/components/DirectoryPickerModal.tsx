@@ -79,7 +79,7 @@ export function DirectoryPickerModal({ open, onClose, onSelect, initialPath = '/
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <Card className="w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <Card variant="elevated" className="w-full max-w-3xl max-h-[80vh] flex flex-col">
         <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <CardTitle>Select Directory</CardTitle>

@@ -72,7 +72,7 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-lg">
+      <Card variant="elevated" className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <CardDescription>Configure your embedding provider connection</CardDescription>
