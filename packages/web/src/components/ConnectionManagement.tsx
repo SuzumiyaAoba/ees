@@ -8,12 +8,14 @@ import {
   RefreshCw,
   Zap,
   AlertCircle,
+  FileSearch,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
 import {
   useConnections,
   useActiveConnection,
@@ -23,7 +25,9 @@ import {
   useActivateConnection,
   useTestConnection,
 } from '@/hooks/useConnections'
-import type { Connection, CreateConnectionRequest, UpdateConnectionRequest } from '@/types/api'
+import { useModels } from '@/hooks/useModels'
+import type { Connection, CreateConnectionRequest, UpdateConnectionRequest, CreateModelRequest } from '@/types/api'
+import { apiClient } from '@/services/api'
 
 interface ConnectionFormData {
   name: string
@@ -136,6 +140,98 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
   )
 }
 
+interface DiscoverModelsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  connection: Connection
+  availableModels: string[]
+  onRegisterModels: (selectedModels: string[]) => void
+  loading?: boolean
+}
+
+function DiscoverModelsModal({
+  isOpen,
+  onClose,
+  connection,
+  availableModels,
+  onRegisterModels,
+  loading = false,
+}: DiscoverModelsModalProps) {
+  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+
+  const toggleModel = (modelName: string) => {
+    const newSelection = new Set(selectedModels)
+    if (newSelection.has(modelName)) {
+      newSelection.delete(modelName)
+    } else {
+      newSelection.add(modelName)
+    }
+    setSelectedModels(newSelection)
+  }
+
+  const handleRegister = () => {
+    onRegisterModels(Array.from(selectedModels))
+    setSelectedModels(new Set())
+  }
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} className="w-full max-w-2xl">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>Discover Models from {connection.name}</DialogTitle>
+      </DialogHeader>
+
+      <DialogContent>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Select models to register from this connection. Registered models can be used throughout the application.
+          </p>
+
+          {availableModels.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No models available from this connection
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableModels.map((modelName) => (
+                <div
+                  key={modelName}
+                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  onClick={() => toggleModel(modelName)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedModels.has(modelName)}
+                    onChange={() => toggleModel(modelName)}
+                    className="w-4 h-4"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{modelName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {connection.type} model
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleRegister}
+          disabled={selectedModels.size === 0 || loading}
+        >
+          Register {selectedModels.size > 0 ? `${selectedModels.size} Model${selectedModels.size > 1 ? 's' : ''}` : 'Models'}
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  )
+}
+
 interface ConnectionCardProps {
   connection: Connection
   isActive: boolean
@@ -143,6 +239,7 @@ interface ConnectionCardProps {
   onDelete: (id: number) => void
   onActivate: (id: number) => void
   onTest: (id: number) => void
+  onDiscoverModels: (connection: Connection) => void
 }
 
 function ConnectionCard({
@@ -152,6 +249,7 @@ function ConnectionCard({
   onDelete,
   onActivate,
   onTest,
+  onDiscoverModels,
 }: ConnectionCardProps) {
   return (
     <Card className={`transition-all hover:shadow-md ${isActive ? 'ring-2 ring-primary' : ''}`}>
@@ -187,6 +285,14 @@ function ConnectionCard({
           </div>
 
           <div className="flex items-center gap-2 ml-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDiscoverModels(connection)}
+              title="Discover and register models"
+            >
+              <FileSearch className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => onTest(connection.id)}>
               <Zap className="h-4 w-4" />
             </Button>
@@ -216,6 +322,16 @@ export function ConnectionManagement() {
     message: string
     models?: string[]
   } | null>(null)
+  const [discoverModelsModal, setDiscoverModelsModal] = useState<{
+    isOpen: boolean
+    connection: Connection | null
+    models: string[]
+  }>({
+    isOpen: false,
+    connection: null,
+    models: [],
+  })
+  const [registeringModels, setRegisteringModels] = useState(false)
 
   const { data: connectionsData, isLoading, refetch } = useConnections()
   const { data: activeConnection } = useActiveConnection()
@@ -224,6 +340,7 @@ export function ConnectionManagement() {
   const deleteMutation = useDeleteConnection()
   const activateMutation = useActivateConnection()
   const testMutation = useTestConnection()
+  const { fetchModels: refetchModels } = useModels()
 
   const handleOpenAddModal = () => {
     setEditingConnection(null)
@@ -303,6 +420,70 @@ export function ConnectionManagement() {
         message: error instanceof Error ? error.message : 'Connection test failed',
       })
     }
+  }
+
+  const handleDiscoverModels = async (connection: Connection) => {
+    try {
+      const result = await testMutation.mutateAsync({ id: connection.id })
+
+      if (result.success && result.models && result.models.length > 0) {
+        setDiscoverModelsModal({
+          isOpen: true,
+          connection,
+          models: result.models,
+        })
+      } else {
+        alert('No models found for this connection')
+      }
+    } catch (error) {
+      console.error('Error discovering models:', error)
+      alert(error instanceof Error ? error.message : 'Failed to discover models')
+    }
+  }
+
+  const handleRegisterModels = async (selectedModels: string[]) => {
+    if (!discoverModelsModal.connection) return
+
+    try {
+      setRegisteringModels(true)
+      const connection = discoverModelsModal.connection
+
+      // Register each selected model
+      for (const modelName of selectedModels) {
+        const createModelData: CreateModelRequest = {
+          providerId: connection.id,
+          name: modelName,
+          displayName: modelName, // Can be customized later
+          isActive: false,
+        }
+        await apiClient.createModel(createModelData)
+      }
+
+      // Refresh models list
+      void refetchModels()
+
+      // Close modal
+      setDiscoverModelsModal({
+        isOpen: false,
+        connection: null,
+        models: [],
+      })
+
+      alert(`Successfully registered ${selectedModels.length} model(s)`)
+    } catch (error) {
+      console.error('Error registering models:', error)
+      alert(error instanceof Error ? error.message : 'Failed to register models')
+    } finally {
+      setRegisteringModels(false)
+    }
+  }
+
+  const handleCloseDiscoverModal = () => {
+    setDiscoverModelsModal({
+      isOpen: false,
+      connection: null,
+      models: [],
+    })
   }
 
   const connections = connectionsData?.connections || []
@@ -411,6 +592,7 @@ export function ConnectionManagement() {
                   onDelete={handleDelete}
                   onActivate={handleActivate}
                   onTest={handleTest}
+                  onDiscoverModels={handleDiscoverModels}
                 />
               ))}
             </div>
@@ -435,6 +617,18 @@ export function ConnectionManagement() {
         initialData={editingConnection || undefined}
         title={editingConnection ? 'Edit Connection' : 'Add New Connection'}
       />
+
+      {/* Discover Models Modal */}
+      {discoverModelsModal.connection && (
+        <DiscoverModelsModal
+          isOpen={discoverModelsModal.isOpen}
+          onClose={handleCloseDiscoverModal}
+          connection={discoverModelsModal.connection}
+          availableModels={discoverModelsModal.models}
+          onRegisterModels={handleRegisterModels}
+          loading={registeringModels}
+        />
+      )}
     </div>
   )
 }
