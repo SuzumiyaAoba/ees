@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FormSelect } from '@/components/ui/FormSelect'
 import { FormField } from '@/components/ui/FormField'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { useSearchEmbeddings, useProviderModels, useEmbeddings } from '@/hooks/useEmbeddings'
+import { useSearchEmbeddings, useEmbeddings } from '@/hooks/useEmbeddings'
+import { useModels } from '@/hooks/useModels'
 import { useFilters } from '@/hooks/useFilters'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { QuickLookPopup } from '@/components/QuickLookPopup'
@@ -97,18 +98,26 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   const isSearching = searchMode === 'semantic' ? isSemanticSearching : isLoadingEmbeddings
   const error = searchMode === 'semantic' ? semanticError : keywordError
 
-  const { data: modelsData } = useProviderModels()
+  const { models } = useModels()
+
+  // Filter out 'default' models and transform to match expected format
+  const availableModels = models
+    .filter(m => m.name !== 'default')
+    .map(m => ({
+      name: m.name,
+      displayName: m.displayName || m.name
+    }))
 
   // When models are loaded, set default model to the first available one if not selected yet
   useEffect(() => {
-    if (!modelsData) return
+    if (availableModels.length === 0) return
     if (searchParams.model_name) return
 
-    const firstAvailable = modelsData[0]
+    const firstAvailable = availableModels[0]
     if (firstAvailable?.name) {
       updateFilter('model_name', firstAvailable.name)
     }
-  }, [modelsData, searchParams.model_name, updateFilter])
+  }, [availableModels, searchParams.model_name, updateFilter])
 
   // Load task types when model changes
   useEffect(() => {
@@ -249,10 +258,10 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               label="Model"
               value={searchParams.model_name || ''}
               onChange={(value) => updateFilter('model_name', value)}
-              options={modelsData?.map((model) => ({
+              options={availableModels.map((model) => ({
                 value: model.name,
-                label: model.displayName || model.name,
-              })) || []}
+                label: model.displayName,
+              }))}
             />
             {searchMode === 'semantic' && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
               <FormSelect

@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
 import { FormSelect } from '@/components/ui/FormSelect'
-import { useCreateEmbedding, useUpdateEmbedding, useProviderModels } from '@/hooks/useEmbeddings'
+import { useCreateEmbedding, useUpdateEmbedding } from '@/hooks/useEmbeddings'
+import { useModels } from '@/hooks/useModels'
 import { ErrorCard } from '@/components/shared/ErrorCard'
 import { apiClient } from '@/services/api'
 import type { Embedding, TaskType, TaskTypeMetadata } from '@/types/api'
@@ -37,7 +38,15 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
 
   const { mutate: createEmbedding, isPending: isCreating, error: createError } = useCreateEmbedding()
   const { mutate: updateEmbedding, isPending: isUpdating, error: updateError } = useUpdateEmbedding()
-  const { data: modelsData } = useProviderModels()
+  const { models } = useModels()
+
+  // Filter out 'default' models and transform to match expected format
+  const availableModels = models
+    .filter(m => m.name !== 'default')
+    .map(m => ({
+      name: m.name,
+      displayName: m.displayName || m.name
+    }))
 
   const isSubmitting = isCreating || isUpdating
   const error = createError || updateError
@@ -62,11 +71,11 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
   // Load task types when model changes
   useEffect(() => {
     const loadTaskTypes = async () => {
-      // If no model selected, use default model to check task type support
+      // If no model selected, use first available model to check task type support
       let modelToCheck = modelName
 
-      if (!modelToCheck && modelsData) {
-        const firstAvailable = modelsData[0]
+      if (!modelToCheck && availableModels.length > 0) {
+        const firstAvailable = availableModels[0]
         modelToCheck = firstAvailable?.name || ''
       }
 
@@ -97,7 +106,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
     }
 
     loadTaskTypes()
-  }, [modelName, modelsData])
+  }, [modelName, availableModels])
 
   const handleTaskTypeToggle = (taskType: TaskType) => {
     setSelectedTaskTypes(prev =>
@@ -113,7 +122,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
     if (isEditMode && editingEmbedding) {
       // Update existing embedding
       updateEmbedding(
-        { id: editingEmbedding.id, data: { text, model_name: modelName || undefined } },
+        { id: editingEmbedding.id, data: { text, model_name: modelName } },
         {
           onSuccess: () => {
             handleReset()
@@ -123,13 +132,13 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
       )
     } else {
       // Create new embedding
-      if (!uri.trim()) return
+      if (!uri.trim() || !modelName) return
 
       createEmbedding(
         {
           uri,
           text,
-          model_name: modelName || undefined,
+          model_name: modelName,
           task_types: selectedTaskTypes.length > 0 ? selectedTaskTypes : undefined
         },
         {
@@ -192,17 +201,14 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
             </FormField>
 
             <FormSelect
-              label="Model (Optional)"
+              label="Model"
               value={modelName}
               onChange={setModelName}
               disabled={isSubmitting}
-              options={[
-                { value: '', label: 'Default Model' },
-                ...(modelsData?.map((model) => ({
-                  value: model.name,
-                  label: model.displayName || model.name,
-                })) || [])
-              ]}
+              options={availableModels.map((model) => ({
+                value: model.name,
+                label: model.displayName,
+              }))}
             />
 
             {!isEditMode && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
@@ -244,7 +250,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
             )}
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={isSubmitting || !text.trim() || (!isEditMode && !uri.trim())}>
+              <Button type="submit" disabled={isSubmitting || !text.trim() || !modelName || (!isEditMode && !uri.trim())}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -293,8 +299,8 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
           <div>
             <h4 className="font-medium mb-1">Model Selection</h4>
             <p className="text-muted-foreground">
-              Leave empty to use the default model, or select a specific model for specialized use cases.
-              Different models may produce embeddings with different dimensions.
+              Select a model from those registered in Config. Different models may produce embeddings
+              with different dimensions. Models must be registered in the Config section before use.
             </p>
           </div>
         </CardContent>

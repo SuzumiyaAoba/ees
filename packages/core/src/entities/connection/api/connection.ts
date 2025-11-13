@@ -14,7 +14,7 @@ import { ModelRepository } from "@/entities/model/repository/model-repository"
 import { EmbeddingProviderService } from "@/shared/providers"
 import { createEmbeddingProviderService } from "@/shared/providers/factory"
 import type { ProviderConfig } from "@/shared/providers/types"
-import type { Provider, Model } from "@/shared/database/schema"
+import type { Provider } from "@/shared/database/schema"
 
 /**
  * Connection request/response types
@@ -24,7 +24,6 @@ export interface CreateConnectionRequest {
   type: "ollama" | "openai-compatible"
   baseUrl: string
   apiKey?: string
-  defaultModel: string
   metadata?: Record<string, unknown>
   isActive?: boolean
 }
@@ -33,7 +32,6 @@ export interface UpdateConnectionRequest {
   name?: string
   baseUrl?: string
   apiKey?: string
-  defaultModel?: string
   metadata?: Record<string, unknown>
   isActive?: boolean
 }
@@ -56,7 +54,6 @@ export interface ConnectionResponse {
   name: string
   type: "ollama" | "openai-compatible"
   baseUrl: string
-  defaultModel: string
   metadata: Record<string, unknown> | null
   isActive: boolean
   createdAt: string | null
@@ -110,22 +107,23 @@ const make = Effect.gen(function* () {
   const modelRepository = yield* ModelRepository
 
   /**
-   * Helper to convert provider + model to connection response
+   * Helper to convert provider to connection response
+   * Note: isActive now reflects if any model for this provider is active
    */
-  const toConnectionResponse = (provider: Provider, model: Model): ConnectionResponse => ({
-    id: model.id, // Use model ID as connection ID for backward compatibility
+  const toConnectionResponse = (provider: Provider, hasActiveModel: boolean): ConnectionResponse => ({
+    id: provider.id, // Use provider ID as connection ID
     name: provider.name,
     type: provider.type as "ollama" | "openai-compatible",
     baseUrl: provider.baseUrl,
-    defaultModel: model.name,
     metadata: provider.metadata ? (JSON.parse(provider.metadata) as Record<string, unknown>) : null,
-    isActive: model.isActive,
-    createdAt: model.createdAt || null,
-    updatedAt: model.updatedAt || null,
+    isActive: hasActiveModel,
+    createdAt: provider.createdAt || null,
+    updatedAt: provider.updatedAt || null,
   })
 
   /**
-   * Create a new connection (provider + model)
+   * Create a new connection (provider only)
+   * Models must be registered separately via ModelManagement
    */
   const createConnection = (request: CreateConnectionRequest) =>
     Effect.gen(function* () {
@@ -142,63 +140,47 @@ const make = Effect.gen(function* () {
 
       console.error("Provider data to create:", JSON.stringify(providerData, null, 2))
 
-      // Create provider
+      // Create provider only (no automatic model creation)
       const provider = yield* providerRepository.create(providerData)
 
-      // If this should be active, deactivate all other models first
-      if (request.isActive) {
-        // Deactivate all existing models before creating the new one
-        const allModels = yield* modelRepository.findAll()
-        for (const existingModel of allModels) {
-          if (existingModel.isActive) {
-            yield* modelRepository.update(existingModel.id, { isActive: false })
-          }
-        }
-      }
-
-      // Create model for this provider with the correct isActive state
-      const model = yield* modelRepository.create({
-        providerId: provider.id,
-        name: request.defaultModel,
-        isActive: request.isActive || false,
-      })
-
-      return toConnectionResponse(provider, model)
+      return toConnectionResponse(provider, false)
     })
 
   /**
-   * Get connection by ID (model ID)
+   * Get connection by ID (provider ID)
    */
   const getConnection = (id: number) =>
     Effect.gen(function* () {
-      const model = yield* modelRepository.findById(id)
-      if (!model) return null
-
-      const provider = yield* providerRepository.findById(model.providerId)
+      const provider = yield* providerRepository.findById(id)
       if (!provider) return null
 
-      return toConnectionResponse(provider, model)
+      // Check if any model for this provider is active
+      const models = yield* modelRepository.findByProviderId(provider.id)
+      const hasActiveModel = models.some(m => m.isActive)
+
+      return toConnectionResponse(provider, hasActiveModel)
     })
 
   /**
-   * List all connections
+   * List all connections (providers)
    */
   const listConnections = () =>
     Effect.gen(function* () {
-      const allModels = yield* modelRepository.findAll()
       const allProviders = yield* providerRepository.findAll()
+      const allModels = yield* modelRepository.findAll()
 
-      // Create map of providers for quick lookup
-      const providerMap = new Map(allProviders.map((p) => [p.id, p]))
-
-      // Build connection list
-      const connections: ConnectionResponse[] = []
+      // Create map of active models by provider ID
+      const activeModelsByProvider = new Map<number, boolean>()
       for (const model of allModels) {
-        const provider = providerMap.get(model.providerId)
-        if (provider) {
-          connections.push(toConnectionResponse(provider, model))
+        if (model.isActive) {
+          activeModelsByProvider.set(model.providerId, true)
         }
       }
+
+      // Build connection list from providers
+      const connections: ConnectionResponse[] = allProviders.map(provider =>
+        toConnectionResponse(provider, activeModelsByProvider.get(provider.id) || false)
+      )
 
       return {
         connections,
@@ -207,7 +189,7 @@ const make = Effect.gen(function* () {
     })
 
   /**
-   * Get active connection
+   * Get active connection (provider with active model)
    */
   const getActiveConnection = () =>
     Effect.gen(function* () {
@@ -217,11 +199,12 @@ const make = Effect.gen(function* () {
       const provider = yield* providerRepository.findById(activeModel.providerId)
       if (!provider) return null
 
-      return toConnectionResponse(provider, activeModel)
+      return toConnectionResponse(provider, true)
     })
 
   /**
    * Get active connection config (for provider initialization)
+   * Returns config for the provider with an active model
    */
   const getActiveConnectionConfig = () =>
     Effect.gen(function* () {
@@ -231,10 +214,10 @@ const make = Effect.gen(function* () {
       const provider = yield* providerRepository.findById(activeModel.providerId)
       if (!provider) return null
 
+      // ProviderConfig no longer includes defaultModel - caller must specify model explicitly
       const config: ProviderConfig = {
         type: provider.type as "ollama" | "openai-compatible",
         baseUrl: provider.baseUrl,
-        defaultModel: activeModel.name,
         ...(provider.apiKey && { apiKey: provider.apiKey }),
       }
 
@@ -246,18 +229,11 @@ const make = Effect.gen(function* () {
    */
   const updateConnection = (id: number, request: UpdateConnectionRequest) =>
     Effect.gen(function* () {
-      // Find model and provider
-      const model = yield* modelRepository.findById(id)
-      if (!model) {
-        return yield* Effect.fail(
-          new DatabaseQueryError({ message: `Connection with id ${id} not found` })
-        )
-      }
-
-      const provider = yield* providerRepository.findById(model.providerId)
+      // Find provider (connection ID = provider ID)
+      const provider = yield* providerRepository.findById(id)
       if (!provider) {
         return yield* Effect.fail(
-          new DatabaseQueryError({ message: `Provider for model ${id} not found` })
+          new DatabaseQueryError({ message: `Connection with id ${id} not found` })
         )
       }
 
@@ -271,75 +247,60 @@ const make = Effect.gen(function* () {
         })
       }
 
-      // Update model if needed
-      if (request.defaultModel) {
-        yield* modelRepository.update(model.id, {
-          name: request.defaultModel,
-        })
-      }
-
-      // Handle active status
-      if (request.isActive !== undefined) {
-        if (request.isActive) {
-          yield* modelRepository.setActive(model.id)
-        } else {
-          // Deactivate this connection
-          yield* modelRepository.update(model.id, { isActive: false })
-        }
-      }
+      // Note: Models are managed separately via ModelManagement API
+      // isActive is also managed at model level, not connection level
 
       // Fetch updated data
-      const updatedModel = yield* modelRepository.findById(id)
-      const updatedProvider = yield* providerRepository.findById(model.providerId)
+      const updatedProvider = yield* providerRepository.findById(provider.id)
 
-      if (!updatedModel || !updatedProvider) {
+      if (!updatedProvider) {
         return yield* Effect.fail(
           new DatabaseQueryError({ message: "Failed to fetch updated connection" })
         )
       }
 
-      return toConnectionResponse(updatedProvider, updatedModel)
+      // Check if any model for this provider is active
+      const models = yield* modelRepository.findByProviderId(updatedProvider.id)
+      const hasActiveModel = models.some(m => m.isActive)
+
+      return toConnectionResponse(updatedProvider, hasActiveModel)
     })
 
   /**
-   * Delete connection (deletes model, provider auto-deletes if no other models)
+   * Delete connection (deletes provider and all its models)
    */
   const deleteConnection = (id: number) =>
     Effect.gen(function* () {
-      const model = yield* modelRepository.findById(id)
-      if (!model) {
+      const provider = yield* providerRepository.findById(id)
+      if (!provider) {
         return yield* Effect.fail(
           new DatabaseQueryError({ message: `Connection with id ${id} not found` })
         )
       }
 
-      const providerId = model.providerId
-
-      // Delete model
-      yield* modelRepository.delete(id)
-
-      // Check if provider has other models
-      const remainingModels = yield* modelRepository.findByProviderId(providerId)
-
-      // If no models left, delete provider
-      if (remainingModels.length === 0) {
-        yield* providerRepository.delete(providerId)
-      }
+      // Delete provider (models will cascade delete due to foreign key constraint)
+      yield* providerRepository.delete(id)
     })
 
   /**
    * Set active connection
+   * Note: This operation is deprecated. Use ModelManagement API to activate models instead.
    */
   const setActiveConnection = (id: number) =>
     Effect.gen(function* () {
-      const model = yield* modelRepository.findById(id)
-      if (!model) {
+      const provider = yield* providerRepository.findById(id)
+      if (!provider) {
         return yield* Effect.fail(
           new DatabaseQueryError({ message: `Connection with id ${id} not found` })
         )
       }
 
-      yield* modelRepository.setActive(id)
+      // Cannot activate a connection (provider) directly - must activate a specific model
+      return yield* Effect.fail(
+        new DatabaseQueryError({
+          message: "Cannot activate connection directly. Use ModelManagement API to activate a specific model for this provider.",
+        })
+      )
     })
 
   /**
@@ -350,9 +311,9 @@ const make = Effect.gen(function* () {
       let config: ProviderConfig
 
       if (request.id) {
-        // Test existing connection
-        const model = yield* modelRepository.findById(request.id)
-        if (!model) {
+        // Test existing connection (provider)
+        const provider = yield* providerRepository.findById(request.id)
+        if (!provider) {
           return yield* Effect.fail(
             new DatabaseQueryError({
               message: `Connection with id ${request.id} not found`,
@@ -360,19 +321,9 @@ const make = Effect.gen(function* () {
           )
         }
 
-        const provider = yield* providerRepository.findById(model.providerId)
-        if (!provider) {
-          return yield* Effect.fail(
-            new DatabaseQueryError({
-              message: `Provider for connection ${request.id} not found`,
-            })
-          )
-        }
-
         config = {
           type: provider.type as "ollama" | "openai-compatible",
           baseUrl: provider.baseUrl,
-          defaultModel: model.name,
           ...(provider.apiKey && { apiKey: provider.apiKey }),
         }
       } else {

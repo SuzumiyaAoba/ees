@@ -12,7 +12,6 @@ export const ConnectionSchema = z.object({
   name: z.string().openapi({ example: "Local LM Studio" }),
   type: z.enum(["ollama", "openai-compatible"]).openapi({ example: "openai-compatible" }),
   baseUrl: z.string().url().openapi({ example: "http://localhost:1234" }),
-  defaultModel: z.string().openapi({ example: "nomic-embed-text" }),
   metadata: z.record(z.string(), z.unknown()).nullish().openapi({ example: null }),
   isActive: z.boolean().openapi({ example: true }),
   createdAt: z.string().nullish().openapi({ example: "2024-01-01T00:00:00Z" }),
@@ -29,7 +28,6 @@ export const CreateConnectionSchema = z.object({
   type: z.enum(["ollama", "openai-compatible"]).openapi({ example: "openai-compatible" }),
   baseUrl: z.string().url().openapi({ example: "http://localhost:1234" }),
   apiKey: z.string().optional().openapi({ example: "sk-..." }),
-  defaultModel: z.string().min(1).openapi({ example: "nomic-embed-text" }),
   metadata: z.record(z.string(), z.unknown()).optional().openapi({ example: {} }),
   isActive: z.boolean().optional().default(false).openapi({ example: false }),
 })
@@ -43,7 +41,6 @@ export const UpdateConnectionSchema = z.object({
   name: z.string().min(1).optional().openapi({ example: "Updated LM Studio" }),
   baseUrl: z.string().url().optional().openapi({ example: "http://localhost:1234" }),
   apiKey: z.string().optional().openapi({ example: "sk-..." }),
-  defaultModel: z.string().optional().openapi({ example: "nomic-embed-text" }),
   metadata: z.record(z.string(), z.unknown()).optional().openapi({ example: {} }),
   isActive: z.boolean().optional().openapi({ example: true }),
 })

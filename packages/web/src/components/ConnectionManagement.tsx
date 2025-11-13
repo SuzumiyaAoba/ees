@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/Badge'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
+import { FormSelect } from '@/components/ui/FormSelect'
 import {
   useConnections,
   useActiveConnection,
@@ -90,22 +91,20 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium">Provider Type</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as 'ollama' | 'openai-compatible',
-                  })
-                }
-              >
-                <option value="ollama">Ollama</option>
-                <option value="openai-compatible">OpenAI-Compatible</option>
-              </select>
-            </div>
+            <FormSelect
+              label="Provider Type"
+              value={formData.type}
+              onChange={(value) =>
+                setFormData({
+                  ...formData,
+                  type: value as 'ollama' | 'openai-compatible',
+                })
+              }
+              options={[
+                { value: 'ollama', label: 'Ollama' },
+                { value: 'openai-compatible', label: 'OpenAI-Compatible' },
+              ]}
+            />
 
             <div>
               <label className="text-sm font-medium">Base URL</label>

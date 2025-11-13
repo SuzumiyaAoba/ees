@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FormSelect } from '@/components/ui/FormSelect'
-import { useUploadFile, useProviderModels } from '@/hooks/useEmbeddings'
+import { useUploadFile } from '@/hooks/useEmbeddings'
+import { useModels } from '@/hooks/useModels'
 
 interface FileWithStatus {
   file: File
@@ -17,8 +18,16 @@ export function FileUpload() {
   const [files, setFiles] = useState<FileWithStatus[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [selectedModel, setSelectedModel] = useState('')
-  const { data: models } = useProviderModels()
+  const { models } = useModels()
   const uploadMutation = useUploadFile()
+
+  // Filter out 'default' models and transform to match expected format
+  const availableModels = models
+    .filter(m => m.name !== 'default')
+    .map(m => ({
+      name: m.name,
+      displayName: m.displayName || m.name
+    }))
 
   const generateFileId = () => Math.random().toString(36).substring(2, 15)
 
@@ -78,7 +87,7 @@ export function FileUpload() {
       console.log('[FileUpload] Uploading file:', fileWithStatus.file.name, 'Model:', selectedModel)
       const result = await uploadMutation.mutateAsync({
         file: fileWithStatus.file,
-        modelName: selectedModel || undefined,
+        modelName: selectedModel,
       })
       console.log('[FileUpload] Upload result:', result)
 
@@ -171,13 +180,10 @@ export function FileUpload() {
             label="Embedding Model"
             value={selectedModel}
             onChange={setSelectedModel}
-            options={[
-              { value: '', label: 'Use default model' },
-              ...(models?.map((model) => ({
-                value: model.name,
-                label: model.displayName || model.name,
-              })) || [])
-            ]}
+            options={availableModels.map((model) => ({
+              value: model.name,
+              label: model.displayName,
+            }))}
           />
         </CardContent>
       </Card>
@@ -243,7 +249,7 @@ export function FileUpload() {
                 </Button>
                 <Button
                   onClick={uploadAllFiles}
-                  disabled={pendingCount === 0 || uploadingCount > 0}
+                  disabled={pendingCount === 0 || uploadingCount > 0 || !selectedModel}
                 >
                   Upload All ({pendingCount})
                 </Button>
@@ -290,7 +296,7 @@ export function FileUpload() {
                       <Button
                         size="sm"
                         onClick={() => uploadFile(fileWithStatus)}
-                        disabled={uploadingCount > 0}
+                        disabled={uploadingCount > 0 || !selectedModel}
                       >
                         Upload
                       </Button>
@@ -300,6 +306,7 @@ export function FileUpload() {
                         size="sm"
                         variant="outline"
                         onClick={() => uploadFile(fileWithStatus)}
+                        disabled={!selectedModel}
                       >
                         Retry
                       </Button>

@@ -3,6 +3,7 @@ import { useConnections } from '@/hooks/useConnections'
 import { useModels } from '@/hooks/useModels'
 import { ModelFormModal } from './ModelFormModal'
 import { Button } from '@/components/ui/Button'
+import { FormSelect } from '@/components/ui/FormSelect'
 import type { Model, CreateModelRequest } from '@/types/api'
 
 export function ModelManagement() {
@@ -70,6 +71,9 @@ export function ModelManagement() {
 
   const selectedConnection = connections.find(c => c.id === selectedProviderId)
 
+  // Filter out 'default' model from display
+  const filteredModels = models.filter(m => m.name !== 'default')
+
   if (error) {
     return (
       <div className="bg-error-container text-on-error-container rounded-xl p-6">
@@ -95,30 +99,27 @@ export function ModelManagement() {
       </div>
 
       <div className="bg-surface-variant rounded-xl p-6">
-        <label className="block label-large mb-3">
-          Filter by Connection
-        </label>
-        <select
-          value={selectedProviderId || ''}
-          onChange={(e) => {
-            const id = e.target.value ? Number(e.target.value) : undefined
+        <FormSelect
+          label="Filter by Connection"
+          value={selectedProviderId?.toString() || ''}
+          onChange={(value) => {
+            const id = value ? Number(value) : undefined
             setSelectedProviderId(id)
           }}
-          className="w-full h-14 px-4 py-3 border border-outline rounded-lg bg-surface body-large focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-        >
-          <option value="">All Connections</option>
-          {connections.map((connection) => (
-            <option key={connection.id} value={connection.id}>
-              {connection.name} ({connection.type})
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: 'All Connections' },
+            ...connections.map((connection) => ({
+              value: connection.id.toString(),
+              label: `${connection.name} (${connection.type})`,
+            }))
+          ]}
+        />
       </div>
 
       <div className="space-y-4">
-        {loading && models.length === 0 ? (
+        {loading && filteredModels.length === 0 ? (
           <div className="text-center py-12 body-large text-muted-foreground">Loading models...</div>
-        ) : models.length === 0 ? (
+        ) : filteredModels.length === 0 ? (
           <div className="text-center py-12 body-large text-muted-foreground">
             {selectedConnection
               ? `No models found for ${selectedConnection.name}. Add a model to get started.`
@@ -126,7 +127,7 @@ export function ModelManagement() {
             }
           </div>
         ) : (
-          models.map((model) => {
+          filteredModels.map((model) => {
             const connection = connections.find(c => c.id === model.providerId)
             return (
               <div

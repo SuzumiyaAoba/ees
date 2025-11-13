@@ -22,6 +22,7 @@ import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { connectionApp } from "@/features/connection-management"
+import { modelApp } from "@/features/model-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
@@ -140,6 +141,11 @@ app.route("/", uploadApp)
  * Connection management routes - Provider connection CRUD operations
  */
 app.route("/", connectionApp)
+
+/**
+ * Model management routes - Model CRUD operations
+ */
+app.route("/", modelApp)
 
 /**
  * Provider management routes - Provider status and model discovery

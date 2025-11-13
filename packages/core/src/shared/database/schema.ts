@@ -15,7 +15,7 @@ export const embeddings = sqliteTable(
     text: text("text").notNull(),
     originalContent: text("original_content"), // Store original content before conversion (e.g., org-mode text)
     convertedFormat: text("converted_format"), // Format of converted content (e.g., "markdown" for org->md conversion)
-    modelName: text("model_name").notNull().default("nomic-embed-text"),
+    modelName: text("model_name").notNull(),
     taskType: text("task_type"), // Task type for embedding (e.g., "retrieval_document", "clustering")
     embedding: blob("embedding").notNull(),
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
@@ -51,7 +51,7 @@ export const uploadDirectories = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     name: text("name").notNull(), // User-friendly name for the directory
     path: text("path").notNull().unique(), // Absolute path to the directory
-    modelName: text("model_name").notNull().default("nomic-embed-text"), // Default model for this directory
+    modelName: text("model_name").notNull(), // Model to use for this directory
     taskTypes: text("task_types"), // JSON array of task types to generate for each file
     description: text("description"), // Optional description
     lastSyncedAt: text("last_synced_at"), // Last time files were synced from this directory

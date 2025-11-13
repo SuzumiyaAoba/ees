@@ -13,16 +13,24 @@ import {
   useDeleteUploadDirectory,
   useSyncUploadDirectory,
 } from '@/hooks/useUploadDirectories'
-import { useProviderModels } from '@/hooks/useEmbeddings'
+import { useModels } from '@/hooks/useModels'
 import { apiClient } from '@/services/api'
 import type { UploadDirectory, TaskType, TaskTypeMetadata, FailedFile } from '@/types/api'
 
 export function UploadDirectoryManagement() {
   const { data: directories, isLoading, error } = useUploadDirectories()
-  const { data: models } = useProviderModels()
+  const { models } = useModels()
   const createMutation = useCreateUploadDirectory()
   const deleteMutation = useDeleteUploadDirectory()
   const syncMutation = useSyncUploadDirectory()
+
+  // Filter out 'default' models and transform to match expected format
+  const availableModels = models
+    .filter(m => m.name !== 'default')
+    .map(m => ({
+      name: m.name,
+      displayName: m.displayName || m.name
+    }))
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -104,7 +112,7 @@ export function UploadDirectoryManagement() {
       await createMutation.mutateAsync({
         name: formData.name,
         path: formData.path,
-        model_name: formData.model_name || undefined,
+        model_name: formData.model_name,
         task_types: selectedTaskTypes.length > 0 ? selectedTaskTypes : undefined,
         description: formData.description || undefined,
       })
@@ -445,13 +453,10 @@ export function UploadDirectoryManagement() {
                 label="Embedding Model"
                 value={formData.model_name}
                 onChange={(value) => setFormData({ ...formData, model_name: value })}
-                options={[
-                  { value: '', label: 'Use default model (nomic-embed-text)' },
-                  ...(models?.map((model) => ({
-                    value: model.name,
-                    label: model.displayName || model.name,
-                  })) || [])
-                ]}
+                options={availableModels.map((model) => ({
+                  value: model.name,
+                  label: model.displayName,
+                }))}
               />
 
               {/* Task Types Selection */}
@@ -507,7 +512,7 @@ export function UploadDirectoryManagement() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
+                <Button type="submit" disabled={createMutation.isPending || !formData.model_name}>
                   {createMutation.isPending ? 'Creating...' : 'Create Directory'}
                 </Button>
               </div>
