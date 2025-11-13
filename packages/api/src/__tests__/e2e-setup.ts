@@ -64,31 +64,61 @@ export async function setupE2ETests(options: E2ETestOptions = {}): Promise<void>
     // Create and activate default connection for tests (unless skipped)
     if (!options.skipDefaultConnection) {
       try {
-        const requestBody = {
+        // Step 1: Create connection (provider only)
+        const connectionRequestBody = {
           name: "E2E Test Connection",
           type: "ollama",
           baseUrl: process.env["EES_OLLAMA_BASE_URL"] || "http://localhost:11434",
-          defaultModel: process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text",
-          isActive: true, // Set active during creation
         }
 
-        originalConsoleError("🔧 Creating default connection with:", JSON.stringify(requestBody, null, 2))
+        originalConsoleError("🔧 Creating default connection with:", JSON.stringify(connectionRequestBody, null, 2))
 
         const connectionResponse = await app.request("/connections", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(connectionRequestBody),
         })
 
-        originalConsoleError(`   Response status: ${connectionResponse.status}`)
+        originalConsoleError(`   Connection response status: ${connectionResponse.status}`)
 
         if (connectionResponse.status === 201) {
           const connection = await connectionResponse.json() as { id?: number }
           if (connection.id) {
             testState.defaultConnectionId = connection.id
-            originalConsoleError(`✅ Default connection created and activated (ID: ${connection.id})`)
+            originalConsoleError(`✅ Default connection created (ID: ${connection.id})`)
+
+            // Step 2: Register model for this connection
+            const modelName = process.env["EES_OLLAMA_DEFAULT_MODEL"] || "nomic-embed-text"
+            const modelRequestBody = {
+              providerId: connection.id,
+              name: modelName,
+              displayName: modelName,
+              isActive: true, // Make it active immediately
+            }
+
+            originalConsoleError("🔧 Registering model:", JSON.stringify(modelRequestBody, null, 2))
+
+            const modelResponse = await app.request("/models", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(modelRequestBody),
+            })
+
+            originalConsoleError(`   Model response status: ${modelResponse.status}`)
+
+            if (modelResponse.status === 201) {
+              const model = await modelResponse.json() as { id?: number, name?: string }
+              originalConsoleError(`✅ Model registered and activated (ID: ${model.id}, Name: ${model.name})`)
+            } else {
+              const errorBody = await modelResponse.text()
+              originalConsoleError("❌ Failed to register model for E2E tests")
+              originalConsoleError(`   Status: ${modelResponse.status}`)
+              originalConsoleError(`   Body: ${errorBody}`)
+            }
           } else {
             originalConsoleError("⚠️  Connection created but no ID returned")
           }
