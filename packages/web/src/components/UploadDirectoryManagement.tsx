@@ -612,16 +612,16 @@ export function UploadDirectoryManagement() {
                   {syncingDirectories.has(directory.id) && syncProgress[directory.id] && (
                     <div className="border-t pt-3 space-y-2 bg-info/10 dark:bg-info/20 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
                       <div className="flex items-center justify-between text-sm pt-1">
-                        <span className="text-info-foreground font-medium flex items-center gap-2">
-                          <div className="h-4 w-4 border-2 border-info border-t-transparent rounded-full animate-spin" />
+                        <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                          <div className="h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
                           Processing files...
                         </span>
-                        <span className="text-info-foreground font-semibold">
+                        <span className="text-blue-700 dark:text-blue-300 font-semibold">
                           {syncProgress[directory.id].current} / {syncProgress[directory.id].total}
                         </span>
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-blue-600">
+                        <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300">
                           <span className="font-medium truncate" title={syncProgress[directory.id].file}>
                             {syncProgress[directory.id].file || 'Collecting files...'}
                           </span>
@@ -631,9 +631,9 @@ export function UploadDirectoryManagement() {
                               : '0%'}
                           </span>
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-info/30 dark:bg-info/40">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
                           <div
-                            className="h-full bg-info transition-all duration-300 ease-out"
+                            className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300 ease-out"
                             style={{
                               width: syncProgress[directory.id].total > 0
                                 ? `${(syncProgress[directory.id].current / syncProgress[directory.id].total) * 100}%`
@@ -642,23 +642,23 @@ export function UploadDirectoryManagement() {
                           />
                         </div>
                       </div>
-                      <div className="flex gap-4 text-xs text-blue-600">
+                      <div className="flex gap-4 text-xs text-blue-700 dark:text-blue-300">
                         <span>Created: <span className="font-semibold">{syncProgress[directory.id].created}</span></span>
                         <span>Updated: <span className="font-semibold">{syncProgress[directory.id].updated}</span></span>
-                        <span>Failed: <span className="font-semibold text-red-600">{syncProgress[directory.id].failed}</span></span>
+                        <span>Failed: <span className="font-semibold text-red-600 dark:text-red-400">{syncProgress[directory.id].failed}</span></span>
                       </div>
 
                       {/* Failed files list */}
                       {syncProgress[directory.id].failedFiles.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-blue-200">
-                          <div className="text-xs font-semibold text-red-700 mb-2">Failed Files:</div>
+                        <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                          <div className="text-xs font-semibold text-red-700 dark:text-red-400 mb-2">Failed Files:</div>
                           <div className="max-h-32 overflow-y-auto space-y-1">
                             {syncProgress[directory.id].failedFiles.map((failedFile, index) => (
                               <div key={index} className="text-xs bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded px-2 py-1">
                                 <div className="font-medium text-destructive-foreground truncate" title={failedFile.path}>
                                   {failedFile.path}
                                 </div>
-                                <div className="text-red-600 text-[10px] mt-0.5" title={failedFile.error}>
+                                <div className="text-red-600 dark:text-red-400 text-[10px] mt-0.5" title={failedFile.error}>
                                   {failedFile.error}
                                 </div>
                               </div>
