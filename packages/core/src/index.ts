@@ -28,6 +28,14 @@ export type {
   ConnectionsListResponse,
 } from './entities/connection/api/connection'
 
+export { ModelService, ModelServiceLive } from './entities/model/api/model'
+export type {
+  CreateModelRequest,
+  UpdateModelRequest,
+  ModelResponse,
+  ModelsListResponse,
+} from './entities/model/api/model'
+
 // Export provider and model repositories
 export {
   ProviderRepository,

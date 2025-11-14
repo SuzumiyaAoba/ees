@@ -503,7 +503,6 @@ const makeCLICommands = Effect.gen(function* () {
             log(`  Name: ${conn.name}`)
             log(`  Type: ${conn.type}`)
             log(`  Base URL: ${conn.baseUrl}`)
-            if (conn.defaultModel) log(`  Default Model: ${conn.defaultModel}`)
           }
           break
         }
@@ -522,7 +521,6 @@ const makeCLICommands = Effect.gen(function* () {
           log(`  Type: ${connection.type}`)
           log(`  Base URL: ${connection.baseUrl}`)
           log(`  Active: ${connection.isActive}`)
-          if (connection.defaultModel) log(`  Default Model: ${connection.defaultModel}`)
           if (connection.metadata) log(`  Metadata: ${JSON.stringify(connection.metadata)}`)
           break
         }
@@ -538,7 +536,6 @@ const makeCLICommands = Effect.gen(function* () {
           log(`  Name: ${connection.name}`)
           log(`  Type: ${connection.type}`)
           log(`  Base URL: ${connection.baseUrl}`)
-          if (connection.defaultModel) log(`  Default Model: ${connection.defaultModel}`)
           break
         }
 
@@ -556,7 +553,6 @@ const makeCLICommands = Effect.gen(function* () {
             type: options.type,
             baseUrl: options.baseUrl,
             apiKey: options.apiKey,
-            defaultModel: options.defaultModel,
             metadata,
           })
           log(`Created connection ${connection.id}:`)
@@ -577,7 +573,6 @@ const makeCLICommands = Effect.gen(function* () {
             name: options.name,
             baseUrl: options.baseUrl,
             apiKey: options.apiKey,
-            defaultModel: options.defaultModel,
             metadata,
           })
           log(`Updated connection ${connection.id}:`)

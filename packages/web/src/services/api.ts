@@ -386,7 +386,7 @@ class ApiClient {
 
   // Model Management operations
   async getModelsList(providerId?: number): Promise<ModelsListResponse> {
-    const url = providerId ? `/providers/${providerId}/models` : '/models'
+    const url = providerId ? `/models?providerId=${providerId}` : '/models'
     return this.request<ModelsListResponse>(url)
   }
 

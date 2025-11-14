@@ -95,7 +95,6 @@ providerApp.openapi(getCurrentProviderRoute, async (c) => {
         provider: activeConnection.type,
         configuration: {
           baseUrl: activeConnection.baseUrl,
-          model: activeConnection.defaultModel,
         },
       }
 
@@ -154,7 +153,6 @@ providerApp.openapi(listProviderModelsRoute, async (c) => {
         type: activeConnection.type,
         baseUrl: activeConnection.baseUrl,
         ...(activeConnection.apiKey && { apiKey: activeConnection.apiKey }),
-        ...(activeConnection.defaultModel && { defaultModel: activeConnection.defaultModel }),
       }
 
       // Create a temporary provider layer to list models

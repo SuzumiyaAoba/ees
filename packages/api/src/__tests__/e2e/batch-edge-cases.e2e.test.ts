@@ -28,23 +28,28 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
         texts: [
           {
             uri: "", // Empty URI (invalid)
-            text: "Valid text content 1"
+            text: "Valid text content 1",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "valid-uri-2",
-            text: "" // Empty text (invalid)
+            text: "", // Empty text (invalid)
+            model_name: "nomic-embed-text"
           },
           {
             uri: "", // Empty URI (invalid)
-            text: "" // Empty text (invalid)
+            text: "", // Empty text (invalid)
+            model_name: "nomic-embed-text"
           },
           {
             uri: "   ", // Whitespace-only URI (invalid)
-            text: "Valid text content 4"
+            text: "Valid text content 4",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "valid-uri-5",
-            text: "   " // Whitespace-only text (might be invalid)
+            text: "   ", // Whitespace-only text (might be invalid)
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -143,19 +148,23 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
         texts: [
           {
             uri: duplicateUri,
-            text: "First document with duplicate URI."
+            text: "First document with duplicate URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: duplicateUri,
-            text: "Second document with duplicate URI."
+            text: "Second document with duplicate URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: duplicateUri,
-            text: "Third document with duplicate URI."
+            text: "Third document with duplicate URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: duplicateUri,
-            text: "Fourth document with duplicate URI."
+            text: "Fourth document with duplicate URI.",
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -238,7 +247,8 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
       for (let i = 0; i < batchSize; i++) {
         items.push({
           uri: `large-batch-1000-doc-${i}-${Date.now()}`,
-          text: `Document ${i} in extremely large batch test. This text contains sample content for embedding.`
+          text: `Document ${i} in extremely large batch test. This text contains sample content for embedding.`,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -285,7 +295,8 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
       for (let i = 0; i < batchSize; i++) {
         items.push({
           uri: `huge-batch-5000-doc-${i}-${Date.now()}`,
-          text: `Document ${i} in huge batch. Sample text for embedding generation.`
+          text: `Document ${i} in huge batch. Sample text for embedding generation.`,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -344,7 +355,8 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
 
         items.push({
           uri: `varying-size-doc-${i}-${Date.now()}`,
-          text
+          text,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -389,7 +401,8 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
       for (let i = 0; i < extremeSize; i++) {
         items.push({
           uri: `extreme-${i}`,
-          text: `Document ${i}`
+          text: `Document ${i}`,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -425,7 +438,8 @@ describe("Batch Operation Edge Cases E2E Tests", () => {
         for (let i = 0; i < 100; i++) {
           items.push({
             uri: `memory-test-${batchNum}-${i}-${Date.now()}`,
-            text: `Memory leak test document ${i} in batch ${batchNum}. `.repeat(10)
+            text: `Memory leak test document ${i} in batch ${batchNum}. `.repeat(10),
+            model_name: "nomic-embed-text"
           })
         }
 

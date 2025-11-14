@@ -22,6 +22,7 @@ import { registerListTaskTypesRoutes } from "@/features/list-task-types"
 import { migrationApp } from "@/features/migrate-embeddings"
 import { providerApp } from "@/features/provider-management"
 import { connectionApp } from "@/features/connection-management"
+import { modelApp } from "@/features/model-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
 import { uploadApp } from "@/features/upload-embeddings"
@@ -142,15 +143,21 @@ app.route("/", uploadApp)
 app.route("/", connectionApp)
 
 /**
+ * List task types endpoint
+ * Returns supported task types for a specific model
+ * IMPORTANT: Must be registered BEFORE modelApp to avoid /models/{id} catching /models/task-types
+ */
+registerListTaskTypesRoutes(app)
+
+/**
+ * Model management routes - Model CRUD operations
+ */
+app.route("/", modelApp)
+
+/**
  * Provider management routes - Provider status and model discovery
  */
 app.route("/", providerApp)
-
-/**
- * List task types endpoint
- * Returns supported task types for a specific model
- */
-registerListTaskTypesRoutes(app)
 
 /**
  * Create embedding endpoint

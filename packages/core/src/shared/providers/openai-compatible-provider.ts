@@ -44,16 +44,17 @@ const make = (config: OpenAICompatibleConfig) =>
 
     const generateEmbedding = (request: EmbeddingRequest) =>
       Effect.gen(function* () {
-        const modelName = request.modelName ?? config.defaultModel
-        if (!modelName) {
+        // Model name must be explicitly provided in request
+        if (!request.modelName) {
           return yield* Effect.fail(
             new ProviderModelError({
               provider: "openai-compatible",
               modelName: "unknown",
-              message: "No model specified and no default model configured",
+              message: "Model name is required for embedding generation",
             })
           )
         }
+        const modelName = request.modelName
 
         try {
           const result = yield* Effect.tryPromise({

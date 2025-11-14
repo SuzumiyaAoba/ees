@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { apiClient } from '@/services/api'
-import { useProviderModels } from '@/hooks/useEmbeddings'
+import { useModels } from '@/hooks/useModels'
 import type { MigrationResponse, CompatibilityResponse } from '@/types/api'
 
 interface ModelMigrationProps {
@@ -12,9 +12,12 @@ interface ModelMigrationProps {
 }
 
 export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
-  const { data: models, isLoading: loadingModels, error: modelsError } = useProviderModels()
+  const { models, loading: loadingModels, error: modelsError } = useModels()
   const [loading, setLoading] = useState(false)
   const [migrating, setMigrating] = useState(false)
+
+  // Filter out 'default' models
+  const availableModels = models.filter(m => m.name !== 'default')
   const [fromModel, setFromModel] = useState('')
   const [toModel, setToModel] = useState('')
   const [compatibility, setCompatibility] = useState<CompatibilityResponse | null>(null)
@@ -95,9 +98,9 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             }}
             options={[
               { value: '', label: 'Select source model' },
-              ...(models || []).map((model) => ({
+              ...availableModels.map((model) => ({
                 value: model.name,
-                label: `${model.displayName || model.name} (${model.provider})`,
+                label: model.displayName || model.name,
               })),
             ]}
             placeholder="Select source model"
@@ -114,9 +117,9 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             }}
             options={[
               { value: '', label: 'Select target model' },
-              ...(models || []).map((model) => ({
+              ...availableModels.map((model) => ({
                 value: model.name,
-                label: `${model.displayName || model.name} (${model.provider})`,
+                label: model.displayName || model.name,
               })),
             ]}
             placeholder="Select target model"
@@ -213,7 +216,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
         {(error || modelsError) && (
           <div className="mb-6 p-4 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md">
             <div className="text-red-800 font-medium">Error</div>
-            <div className="text-red-600 text-sm mt-1">{error || (modelsError instanceof Error ? modelsError.message : 'Failed to load models')}</div>
+            <div className="text-red-600 text-sm mt-1">{error || modelsError}</div>
           </div>
         )}
 

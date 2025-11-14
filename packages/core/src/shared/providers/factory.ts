@@ -163,7 +163,6 @@ export const createOllamaConfig = (
 ): OllamaConfig => ({
   type: "ollama",
   baseUrl: options.baseUrl ?? "http://localhost:11434",
-  defaultModel: options.defaultModel ?? "embeddinggemma",
   ...options,
 })
 
@@ -174,7 +173,6 @@ export const createOpenAICompatibleConfig = (
   type: "openai-compatible",
   baseUrl,
   ...(options.apiKey !== undefined && { apiKey: options.apiKey }),
-  ...(options.defaultModel !== undefined && { defaultModel: options.defaultModel }),
   ...(options.customHeaders !== undefined && { customHeaders: options.customHeaders }),
 })
 

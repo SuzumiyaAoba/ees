@@ -21,7 +21,6 @@ import {
   createIsModelAvailable,
   createGetModelInfo,
   normalizeModelName,
-  resolveModelName,
 } from "./provider-utils"
 
 /**
@@ -55,11 +54,11 @@ const make = (config: OllamaConfig) =>
     const generateEmbedding = (request: EmbeddingRequest): Effect.Effect<EmbeddingResponse, ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError> =>
       Effect.tryPromise({
         try: async () => {
-          const modelName = resolveModelName(
-            request.modelName,
-            config.defaultModel,
-            "embeddinggemma"
-          )
+          // Model name must be explicitly provided in request
+          if (!request.modelName) {
+            throw new Error("Model name is required for embedding generation")
+          }
+          const modelName = request.modelName
 
           // Use the standard Ollama embedding API endpoint
           const response = await fetch(`${baseUrl}/api/embed`, {
@@ -98,7 +97,7 @@ const make = (config: OllamaConfig) =>
         },
         catch: (error) => {
           const handleError = createOllamaErrorHandler()
-          return handleError(error, "generate embedding", request.modelName, request, config)
+          return handleError(error, "generate embedding", request.modelName, request)
         },
       })
 
@@ -143,7 +142,7 @@ const make = (config: OllamaConfig) =>
         },
         catch: (error) => {
           const handleError = createOllamaErrorHandler()
-          const handledError = handleError(error, "list models", undefined, undefined, config)
+          const handledError = handleError(error, "list models", undefined, undefined)
           // Map any error to ProviderConnectionError for listModels interface compliance
           if (handledError._tag === "ProviderModelError" || handledError._tag === "ProviderRateLimitError") {
             return new ProviderConnectionError({

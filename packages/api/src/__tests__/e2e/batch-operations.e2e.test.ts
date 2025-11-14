@@ -24,17 +24,18 @@ describe("Batch Operations E2E Tests", () => {
         texts: [
           {
             uri: "batch-doc-1",
-            text: "First document in batch operation testing."
+            text: "First document in batch operation testing.",
           },
           {
             uri: "batch-doc-2",
-            text: "Second document for batch creation verification."
+            text: "Second document for batch creation verification.",
           },
           {
             uri: "batch-doc-3",
-            text: "Third document to complete the batch test."
+            text: "Third document to complete the batch test.",
           }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -100,9 +101,9 @@ describe("Batch Operations E2E Tests", () => {
           {
             uri: "batch-model-2",
             text: "Document with explicit model specification.",
-            model_name: "nomic-embed-text"
           }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -129,10 +130,7 @@ describe("Batch Operations E2E Tests", () => {
       results.forEach((result, index) => {
         expect(result.status).toBe("success")
         expect(result.uri).toBe(batchData.texts[index]?.uri)
-
-        if (batchData.texts[index]?.model_name) {
-          expect(result.model_name).toBe(batchData.texts[index]?.model_name)
-        }
+        expect(result.model_name).toBe(batchData.model_name)
 
         registerEmbeddingForCleanup(result.id)
       })
@@ -140,16 +138,19 @@ describe("Batch Operations E2E Tests", () => {
 
     it.skipIf(process.env["CI"] === "true")("should handle large batch operations", async () => {
       const batchSize = 50
-      const items = []
+      const texts = []
 
       for (let i = 0; i < batchSize; i++) {
-        items.push({
+        texts.push({
           uri: `large-batch-doc-${i}`,
-          text: `Document number ${i} in large batch test. This document contains some sample text for embedding generation.`
+          text: `Document number ${i} in large batch test. This document contains some sample text for embedding generation.`,
         })
       }
 
-      const batchData = { items }
+      const batchData = {
+        texts,
+        model_name: "nomic-embed-text"
+      }
 
       const response = await app.request("/embeddings/batch", {
         method: "POST",
@@ -187,15 +188,15 @@ describe("Batch Operations E2E Tests", () => {
         texts: [
           {
             uri: "mixed-short",
-            text: "Short text."
+            text: "Short text.",
           },
           {
             uri: "mixed-long",
-            text: "Very long text content. ".repeat(500) // ~11,000 characters
+            text: "Very long text content. ".repeat(500), // ~11,000 characters
           },
           {
             uri: "mixed-special",
-            text: "Special characters: !@#$%^&*()[]{}|;':\",./<>? 日本語 emoji 🚀"
+            text: "Special characters: !@#$%^&*()[]{}|;':\",./<>? 日本語 emoji 🚀",
           },
           {
             uri: "mixed-multiline",
@@ -205,9 +206,10 @@ with various formatting:
 - Line 2
 - Line 3
 
-And a final paragraph.`
+And a final paragraph.`,
           }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -242,21 +244,22 @@ And a final paragraph.`
         texts: [
           {
             uri: "valid-doc-1",
-            text: "Valid document that should succeed."
+            text: "Valid document that should succeed.",
           },
           {
             uri: "", // Invalid empty URI
-            text: "Document with invalid URI."
+            text: "Document with invalid URI.",
           },
           {
             uri: "valid-doc-2",
-            text: "Another valid document that should succeed."
+            text: "Another valid document that should succeed.",
           },
           {
             uri: "valid-doc-3",
-            text: "" // Invalid empty text
+            text: "", // Invalid empty text
           }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -308,7 +311,8 @@ And a final paragraph.`
           { uri: "order-test-3", text: "Third document" },
           { uri: "order-test-4", text: "Fourth document" },
           { uri: "order-test-5", text: "Fifth document" }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -343,17 +347,18 @@ And a final paragraph.`
         texts: [
           {
             uri: "duplicate-uri-test",
-            text: "First document with duplicate URI."
+            text: "First document with duplicate URI.",
           },
           {
             uri: "unique-uri-test",
-            text: "Document with unique URI."
+            text: "Document with unique URI.",
           },
           {
             uri: "duplicate-uri-test", // Same URI as first
-            text: "Second document with duplicate URI."
+            text: "Second document with duplicate URI.",
           }
-        ]
+        ],
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings/batch", {
@@ -395,16 +400,19 @@ And a final paragraph.`
     it.skipIf(process.env["CI"] === "true")("should handle batch timeout gracefully", async () => {
       // Create a very large batch that might timeout
       const largeBatchSize = 100
-      const items = []
+      const texts = []
 
       for (let i = 0; i < largeBatchSize; i++) {
-        items.push({
+        texts.push({
           uri: `timeout-test-doc-${i}`,
-          text: `Very long text content for timeout testing. `.repeat(100) + ` Document ${i}`
+          text: `Very long text content for timeout testing. `.repeat(100) + ` Document ${i}`,
         })
       }
 
-      const batchData = { items }
+      const batchData = {
+        texts,
+        model_name: "nomic-embed-text"
+      }
 
       const response = await app.request("/embeddings/batch", {
         method: "POST",
@@ -492,16 +500,19 @@ And a final paragraph.`
   describe("Batch Performance", () => {
     it("should process moderate batch within reasonable time", async () => {
       const batchSize = 10
-      const items = []
+      const texts = []
 
       for (let i = 0; i < batchSize; i++) {
-        items.push({
+        texts.push({
           uri: `perf-test-doc-${i}`,
-          text: `Performance test document ${i}. This document is used to measure batch processing performance.`
+          text: `Performance test document ${i}. This document is used to measure batch processing performance.`,
         })
       }
 
-      const batchData = { items }
+      const batchData = {
+        texts,
+        model_name: "nomic-embed-text"
+      }
 
       const startTime = Date.now()
 

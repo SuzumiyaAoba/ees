@@ -19,7 +19,6 @@ export interface ProviderConfig {
   readonly type: string
   readonly apiKey?: string
   readonly baseUrl?: string
-  readonly defaultModel?: string
 }
 
 /**
@@ -30,8 +29,6 @@ export interface OllamaConfig extends ProviderConfig {
   readonly type: "ollama"
   /** Base URL for Ollama API endpoint @default "http://localhost:11434" */
   readonly baseUrl?: string
-  /** Default model name to use @default "nomic-embed-text" */
-  readonly defaultModel?: string
 }
 
 /**
@@ -44,8 +41,6 @@ export interface OpenAICompatibleConfig extends ProviderConfig {
   readonly baseUrl: string
   /** API key for authentication (optional for local services) */
   readonly apiKey?: string
-  /** Default model name to use */
-  readonly defaultModel?: string
   /** Custom headers to include in requests */
   readonly customHeaders?: Record<string, string>
 }

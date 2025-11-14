@@ -86,7 +86,8 @@ describe("Performance and Load Testing E2E Tests", () => {
             },
             body: JSON.stringify({
               uri: "perf-test-single",
-              text: "Performance test document for single embedding creation."
+              text: "Performance test document for single embedding creation.",
+              model_name: "nomic-embed-text"
             }),
           })
 
@@ -118,7 +119,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `search-perf-test-${i}`,
-            text: `Search performance test document ${i}. This document contains various keywords for testing search functionality.`
+            text: `Search performance test document ${i}. This document contains various keywords for testing search functionality.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -193,7 +195,8 @@ describe("Performance and Load Testing E2E Tests", () => {
         },
         body: JSON.stringify({
           uri: "perf-test-delete",
-          text: "Document to be deleted for performance testing."
+          text: "Document to be deleted for performance testing.",
+          model_name: "nomic-embed-text"
         }),
       })
 
@@ -263,27 +266,29 @@ describe("Performance and Load Testing E2E Tests", () => {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ items }),
+            body: JSON.stringify({ texts: items, model_name: "nomic-embed-text" }),
           })
 
           expect([200, 400, 404, 500]).toContain(response.status)
 
           if (response.status !== 200) {
             console.log("Skipping batch performance test - service unavailable")
-            return { results: [], summary: { total: 0, successful: 0, failed: 0 } }
+            return { results: [], total: 0, successful: 0, failed: 0 }
           }
 
           const batchResult = await parseUnknownJsonResponse(response)
 
           // Register successful embeddings for cleanup
-          const results = batchResult['results'] as Array<{success: boolean, embedding?: Record<string, unknown>}>
+          const results = batchResult['results'] as Array<{status: string, id?: number}>
           results.forEach(result => {
-            if (result.success && result.embedding) {
-              registerEmbeddingForCleanup(result.embedding['id'] as number)
+            if (result.status === "success" && result.id) {
+              registerEmbeddingForCleanup(result.id)
             }
           })
 
-          expect(batchResult).toHaveProperty("summary")
+          expect(batchResult).toHaveProperty("total")
+          expect(batchResult).toHaveProperty("successful")
+          expect(batchResult).toHaveProperty("failed")
           return batchResult
         }
       )
@@ -310,7 +315,7 @@ describe("Performance and Load Testing E2E Tests", () => {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ items }),
+              body: JSON.stringify({ texts: items, model_name: "nomic-embed-text" }),
             })
 
             expect([200, 400, 404, 500]).toContain(response.status)
@@ -355,7 +360,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `concurrent-perf-${i}-${Date.now()}`,
-                text: `Concurrent performance test document ${i}.`
+                text: `Concurrent performance test document ${i}.`,
+                model_name: "nomic-embed-text"
               }),
             })
             promises.push(promise)
@@ -397,7 +403,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `concurrent-search-data-${i}`,
-            text: `Search test data ${i}. Technology, science, nature, cooking, travel.`
+            text: `Search test data ${i}. Technology, science, nature, cooking, travel.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -486,7 +493,8 @@ describe("Performance and Load Testing E2E Tests", () => {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     uri: `mixed-op-create-${i}`,
-                    text: `Mixed operation test document ${i}.`
+                    text: `Mixed operation test document ${i}.`,
+                    model_name: "nomic-embed-text"
                   }),
                 })
               )
@@ -567,7 +575,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `rapid-seq-${i}-${Date.now()}`,
-                text: `Rapid sequential test document ${i}.`
+                text: `Rapid sequential test document ${i}.`,
+                model_name: "nomic-embed-text"
               }),
             }) as Promise<Response>
             requests.push(request)
@@ -617,7 +626,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `size-test-${docSize.name.toLowerCase().replace(' ', '-')}`,
-                text: docSize.text
+                text: docSize.text,
+                model_name: "nomic-embed-text"
               }),
             })
 
@@ -652,7 +662,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `cleanup-test-${i}`,
-            text: `Cleanup test document ${i}.`
+            text: `Cleanup test document ${i}.`,
+            model_name: "nomic-embed-text"
           }),
         })
 

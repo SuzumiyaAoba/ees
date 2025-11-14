@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { useProviders } from '@/hooks/useProviders'
+import { useConnections } from '@/hooks/useConnections'
 import { useModels } from '@/hooks/useModels'
 import { ModelFormModal } from './ModelFormModal'
 import { Button } from '@/components/ui/Button'
+import { FormSelect } from '@/components/ui/FormSelect'
 import type { Model, CreateModelRequest } from '@/types/api'
 
 export function ModelManagement() {
-  const { providers } = useProviders()
+  const { data: connectionsData } = useConnections()
+  const connections = connectionsData?.connections || []
   const [selectedProviderId, setSelectedProviderId] = useState<number | undefined>()
   const {
     models,
@@ -67,7 +69,10 @@ export function ModelManagement() {
     }
   }
 
-  const selectedProvider = providers.find(p => p.id === selectedProviderId)
+  const selectedConnection = connections.find(c => c.id === selectedProviderId)
+
+  // Filter out 'default' model from display
+  const filteredModels = models.filter(m => m.name !== 'default')
 
   if (error) {
     return (
@@ -83,10 +88,10 @@ export function ModelManagement() {
         <div>
           <h2 className="headline-medium">Models</h2>
           <p className="mt-2 body-medium text-muted-foreground">
-            Manage models for each provider
+            Manage models for each connection
           </p>
         </div>
-        {selectedProvider && (
+        {selectedConnection && (
           <Button onClick={handleAdd}>
             Add Model
           </Button>
@@ -94,39 +99,36 @@ export function ModelManagement() {
       </div>
 
       <div className="bg-surface-variant rounded-xl p-6">
-        <label className="block label-large mb-3">
-          Filter by Provider
-        </label>
-        <select
-          value={selectedProviderId || ''}
-          onChange={(e) => {
-            const id = e.target.value ? Number(e.target.value) : undefined
+        <FormSelect
+          label="Filter by Connection"
+          value={selectedProviderId?.toString() || ''}
+          onChange={(value) => {
+            const id = value ? Number(value) : undefined
             setSelectedProviderId(id)
           }}
-          className="w-full h-14 px-4 py-3 border border-outline rounded-lg bg-surface body-large focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-        >
-          <option value="">All Providers</option>
-          {providers.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.name} ({provider.type})
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: 'All Connections' },
+            ...connections.map((connection) => ({
+              value: connection.id.toString(),
+              label: `${connection.name} (${connection.type})`,
+            }))
+          ]}
+        />
       </div>
 
       <div className="space-y-4">
-        {loading && models.length === 0 ? (
+        {loading && filteredModels.length === 0 ? (
           <div className="text-center py-12 body-large text-muted-foreground">Loading models...</div>
-        ) : models.length === 0 ? (
+        ) : filteredModels.length === 0 ? (
           <div className="text-center py-12 body-large text-muted-foreground">
-            {selectedProvider
-              ? `No models found for ${selectedProvider.name}. Add a model to get started.`
-              : 'Select a provider to view and manage its models.'
+            {selectedConnection
+              ? `No models found for ${selectedConnection.name}. Add a model to get started.`
+              : 'Select a connection to view and manage its models.'
             }
           </div>
         ) : (
-          models.map((model) => {
-            const provider = providers.find(p => p.id === model.providerId)
+          filteredModels.map((model) => {
+            const connection = connections.find(c => c.id === model.providerId)
             return (
               <div
                 key={model.id}
@@ -148,8 +150,8 @@ export function ModelManagement() {
                       {model.displayName && model.displayName !== model.name && (
                         <p><span className="label-medium">Model ID:</span> {model.name}</p>
                       )}
-                      {provider && (
-                        <p><span className="label-medium">Provider:</span> {provider.name}</p>
+                      {connection && (
+                        <p><span className="label-medium">Connection:</span> {connection.name}</p>
                       )}
                       <p className="body-small">
                         Created: {new Date(model.createdAt || '').toLocaleString()}
@@ -195,7 +197,7 @@ export function ModelManagement() {
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         model={editingModel}
-        providers={providers}
+        providers={connections}
         loading={loading}
       />
     </div>

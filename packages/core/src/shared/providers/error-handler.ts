@@ -4,7 +4,6 @@
  */
 
 import type {
-  ProviderConfig,
   EmbeddingRequest,
 } from "./types"
 import {
@@ -83,13 +82,11 @@ function extractStatusCode(error: unknown): number | undefined {
  */
 function getModelNameForError(
   context: ProviderErrorContext,
-  request?: EmbeddingRequest,
-  config?: ProviderConfig
+  request?: EmbeddingRequest
 ): string {
   return (
     context.modelName ??
     request?.modelName ??
-    config?.defaultModel ??
     context.fallbackModel ??
     "unknown-model"
   )
@@ -102,12 +99,11 @@ function getModelNameForError(
 export function handleProviderError(
   error: unknown,
   context: ProviderErrorContext,
-  request?: EmbeddingRequest,
-  config?: ProviderConfig
+  request?: EmbeddingRequest
 ): ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError {
   const statusCode = extractStatusCode(error)
   const baseMessage = extractErrorMessage(error, `Unknown ${context.provider} error`)
-  const modelName = getModelNameForError(context, request, config)
+  const modelName = getModelNameForError(context, request)
 
   // Handle HTTP status code based errors
   if (statusCode) {
@@ -220,8 +216,7 @@ export function createProviderErrorHandler(
     error: unknown,
     operation: string = "generate embedding",
     modelName?: string,
-    request?: EmbeddingRequest,
-    config?: ProviderConfig
+    request?: EmbeddingRequest
   ): ProviderConnectionError | ProviderModelError | ProviderAuthenticationError | ProviderRateLimitError => {
     return handleProviderError(
       error,
@@ -231,8 +226,7 @@ export function createProviderErrorHandler(
         operation,
         fallbackModel,
       },
-      request,
-      config
+      request
     )
   }
 }

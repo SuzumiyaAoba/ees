@@ -38,7 +38,7 @@ export const CreateEmbeddingRequestSchema = z
       description: "Text content to generate embedding for",
       example: "This is a sample text for embedding generation.",
     }),
-    model_name: z.string().optional().default("nomic-embed-text").openapi({
+    model_name: z.string().min(1, "Model name is required").openapi({
       description: "Name of the embedding model to use",
       example: "nomic-embed-text",
     }),
@@ -77,7 +77,7 @@ export const BatchCreateEmbeddingRequestSchema = z
       .openapi({
         description: "Array of texts to process (max 100 items)",
       }),
-    model_name: z.string().optional().default("nomic-embed-text").openapi({
+    model_name: z.string().min(1, "Model name is required").openapi({
       description: "Name of the embedding model to use for all texts",
       example: "nomic-embed-text",
     }),

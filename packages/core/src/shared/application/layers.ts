@@ -16,6 +16,7 @@ import { UploadDirectoryRepositoryLive } from "@/entities/upload-directory/repos
 import { FileSystemServiceLive } from "@/entities/file-system/api/file-system"
 import { VisualizationServiceLive } from "@/entities/visualization/api/visualization-service"
 import { ConnectionServiceLive } from "@/entities/connection/api/connection"
+import { ModelServiceLive } from "@/entities/model/api/model"
 import { ProviderRepositoryLive } from "@/entities/provider/repository/provider-repository"
 import { ModelRepositoryLive } from "@/entities/model/repository/model-repository"
 
@@ -49,15 +50,16 @@ const BaseLayer = Layer.mergeAll(
   UploadDirectoryRepositoryLive
 )
 
-// ConnectionService needs repositories
+// ConnectionService and ModelService need repositories
 const ConnectionLayer = Layer.provide(ConnectionServiceLive, BaseLayer)
+const ModelServiceLayer = Layer.provide(ModelServiceLive, BaseLayer)
 
 // EmbeddingProvider needs ConnectionService
-const BaseWithConnectionLayer = Layer.merge(BaseLayer, ConnectionLayer)
-const EmbeddingProviderLayer = Layer.provide(EmbeddingProviderServiceFromConnection, BaseWithConnectionLayer)
+const BaseWithConnectionAndModelLayer = Layer.mergeAll(BaseLayer, ConnectionLayer, ModelServiceLayer)
+const EmbeddingProviderLayer = Layer.provide(EmbeddingProviderServiceFromConnection, BaseWithConnectionAndModelLayer)
 
 // EmbeddingService needs EmbeddingProviderService
-const BaseWithConnectionAndProviderLayer = Layer.merge(BaseWithConnectionLayer, EmbeddingProviderLayer)
+const BaseWithConnectionAndProviderLayer = Layer.merge(BaseWithConnectionAndModelLayer, EmbeddingProviderLayer)
 const EmbeddingServiceLayer = Layer.provide(EmbeddingServiceLive, BaseWithConnectionAndProviderLayer)
 
 // ModelManager needs EmbeddingProviderService and DatabaseService (provided by repositories)
