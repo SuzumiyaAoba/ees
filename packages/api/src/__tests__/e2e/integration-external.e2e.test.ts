@@ -46,15 +46,15 @@ describe("External Service Integration E2E Tests", () => {
         // Check model structure
         models.forEach(model => {
           expect(model).toHaveProperty("name")
-          expect(model).toHaveProperty("provider")
+          expect(model).toHaveProperty("providerId")
           expect(typeof model['name']).toBe("string")
-          expect(typeof model['provider']).toBe("string")
+          expect(typeof model['providerId']).toBe("number")
         })
 
         // Should include default Ollama model if service is available
         const defaultModel = models.find(m => m['name'] === "nomic-embed-text")
         if (defaultModel) {
-          expect(defaultModel?.['provider']).toBe("ollama")
+          expect(typeof defaultModel?.['providerId']).toBe("number")
         } else {
           console.log("Default model 'nomic-embed-text' not found - Ollama service may be unavailable")
           // In CI environment, we may not have Ollama available, so this is acceptable

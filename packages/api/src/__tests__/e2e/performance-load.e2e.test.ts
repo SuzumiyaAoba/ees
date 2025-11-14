@@ -273,20 +273,22 @@ describe("Performance and Load Testing E2E Tests", () => {
 
           if (response.status !== 200) {
             console.log("Skipping batch performance test - service unavailable")
-            return { results: [], summary: { total: 0, successful: 0, failed: 0 } }
+            return { results: [], total: 0, successful: 0, failed: 0 }
           }
 
           const batchResult = await parseUnknownJsonResponse(response)
 
           // Register successful embeddings for cleanup
-          const results = batchResult['results'] as Array<{success: boolean, embedding?: Record<string, unknown>}>
+          const results = batchResult['results'] as Array<{status: string, id?: number}>
           results.forEach(result => {
-            if (result.success && result.embedding) {
-              registerEmbeddingForCleanup(result.embedding['id'] as number)
+            if (result.status === "success" && result.id) {
+              registerEmbeddingForCleanup(result.id)
             }
           })
 
-          expect(batchResult).toHaveProperty("summary")
+          expect(batchResult).toHaveProperty("total")
+          expect(batchResult).toHaveProperty("successful")
+          expect(batchResult).toHaveProperty("failed")
           return batchResult
         }
       )

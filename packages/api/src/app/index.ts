@@ -143,6 +143,13 @@ app.route("/", uploadApp)
 app.route("/", connectionApp)
 
 /**
+ * List task types endpoint
+ * Returns supported task types for a specific model
+ * IMPORTANT: Must be registered BEFORE modelApp to avoid /models/{id} catching /models/task-types
+ */
+registerListTaskTypesRoutes(app)
+
+/**
  * Model management routes - Model CRUD operations
  */
 app.route("/", modelApp)
@@ -151,12 +158,6 @@ app.route("/", modelApp)
  * Provider management routes - Provider status and model discovery
  */
 app.route("/", providerApp)
-
-/**
- * List task types endpoint
- * Returns supported task types for a specific model
- */
-registerListTaskTypesRoutes(app)
 
 /**
  * Create embedding endpoint

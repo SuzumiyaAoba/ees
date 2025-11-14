@@ -34,7 +34,6 @@ describe("Connection Management E2E Tests", () => {
           name: "Test Ollama Connection",
           type: "ollama",
           baseUrl: "http://localhost:11434",
-          defaultModel: "nomic-embed-text",
         }),
       })
 
@@ -48,7 +47,6 @@ describe("Connection Management E2E Tests", () => {
       expect(connection["name"]).toBe("Test Ollama Connection")
       expect(connection["type"]).toBe("ollama")
       expect(connection["baseUrl"]).toBe("http://localhost:11434")
-      expect(connection["defaultModel"]).toBe("nomic-embed-text")
       expect(connection["isActive"]).toBe(false)
 
       // Store for later tests
@@ -66,7 +64,6 @@ describe("Connection Management E2E Tests", () => {
           type: "openai-compatible",
           baseUrl: "http://localhost:1234",
           apiKey: "test-api-key",
-          defaultModel: "local-model",
           isActive: false,
         }),
       })
@@ -94,7 +91,6 @@ describe("Connection Management E2E Tests", () => {
           name: "Cloud Provider",
           type: "openai-compatible",
           baseUrl: "https://api.example.com",
-          defaultModel: "text-embedding-3-small",
           metadata: {
             region: "us-west",
             tier: "premium",
@@ -301,7 +297,6 @@ describe("Connection Management E2E Tests", () => {
         },
         body: JSON.stringify({
           name: "Updated Ollama Connection",
-          defaultModel: "updated-model",
         }),
       })
 
@@ -312,7 +307,6 @@ describe("Connection Management E2E Tests", () => {
 
       expect(connection["id"]).toBe(testConnectionId)
       expect(connection["name"]).toBe("Updated Ollama Connection")
-      expect(connection["defaultModel"]).toBe("updated-model")
       // Type should not change
       expect(connection["type"]).toBe("ollama")
     })
@@ -490,7 +484,6 @@ describe("Connection Management E2E Tests", () => {
           name: "To Be Deleted",
           type: "ollama",
           baseUrl: "http://localhost:11434",
-          defaultModel: "nomic-embed-text",
         }),
       })
 
@@ -547,7 +540,6 @@ describe("Connection Management E2E Tests", () => {
           name: "Test",
           type: "ollama",
           baseUrl: "http://localhost:11434",
-          defaultModel: "nomic-embed-text",
         }),
       })
 
@@ -568,7 +560,6 @@ describe("Connection Management E2E Tests", () => {
           name: "Integration Test Connection",
           type: "openai-compatible",
           baseUrl: "http://localhost:1234",
-          defaultModel: "test-model",
         }),
       })
 
@@ -630,7 +621,6 @@ describe("Connection Management E2E Tests", () => {
             name: `Multi Connection ${i}`,
             type: "ollama",
             baseUrl: `http://localhost:1143${i}`,
-            defaultModel: "nomic-embed-text",
           }),
         })
 
