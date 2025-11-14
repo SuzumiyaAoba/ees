@@ -86,7 +86,8 @@ describe("Performance and Load Testing E2E Tests", () => {
             },
             body: JSON.stringify({
               uri: "perf-test-single",
-              text: "Performance test document for single embedding creation."
+              text: "Performance test document for single embedding creation.",
+              model_name: "nomic-embed-text"
             }),
           })
 
@@ -118,7 +119,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `search-perf-test-${i}`,
-            text: `Search performance test document ${i}. This document contains various keywords for testing search functionality.`
+            text: `Search performance test document ${i}. This document contains various keywords for testing search functionality.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -193,7 +195,8 @@ describe("Performance and Load Testing E2E Tests", () => {
         },
         body: JSON.stringify({
           uri: "perf-test-delete",
-          text: "Document to be deleted for performance testing."
+          text: "Document to be deleted for performance testing.",
+          model_name: "nomic-embed-text"
         }),
       })
 
@@ -263,7 +266,7 @@ describe("Performance and Load Testing E2E Tests", () => {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ items }),
+            body: JSON.stringify({ texts: items, model_name: "nomic-embed-text" }),
           })
 
           expect([200, 400, 404, 500]).toContain(response.status)
@@ -310,7 +313,7 @@ describe("Performance and Load Testing E2E Tests", () => {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ items }),
+              body: JSON.stringify({ texts: items, model_name: "nomic-embed-text" }),
             })
 
             expect([200, 400, 404, 500]).toContain(response.status)
@@ -355,7 +358,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `concurrent-perf-${i}-${Date.now()}`,
-                text: `Concurrent performance test document ${i}.`
+                text: `Concurrent performance test document ${i}.`,
+                model_name: "nomic-embed-text"
               }),
             })
             promises.push(promise)
@@ -397,7 +401,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `concurrent-search-data-${i}`,
-            text: `Search test data ${i}. Technology, science, nature, cooking, travel.`
+            text: `Search test data ${i}. Technology, science, nature, cooking, travel.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -486,7 +491,8 @@ describe("Performance and Load Testing E2E Tests", () => {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     uri: `mixed-op-create-${i}`,
-                    text: `Mixed operation test document ${i}.`
+                    text: `Mixed operation test document ${i}.`,
+                    model_name: "nomic-embed-text"
                   }),
                 })
               )
@@ -567,7 +573,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `rapid-seq-${i}-${Date.now()}`,
-                text: `Rapid sequential test document ${i}.`
+                text: `Rapid sequential test document ${i}.`,
+                model_name: "nomic-embed-text"
               }),
             }) as Promise<Response>
             requests.push(request)
@@ -617,7 +624,8 @@ describe("Performance and Load Testing E2E Tests", () => {
               },
               body: JSON.stringify({
                 uri: `size-test-${docSize.name.toLowerCase().replace(' ', '-')}`,
-                text: docSize.text
+                text: docSize.text,
+                model_name: "nomic-embed-text"
               }),
             })
 
@@ -652,7 +660,8 @@ describe("Performance and Load Testing E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `cleanup-test-${i}`,
-            text: `Cleanup test document ${i}.`
+            text: `Cleanup test document ${i}.`,
+            model_name: "nomic-embed-text"
           }),
         })
 

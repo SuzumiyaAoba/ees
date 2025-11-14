@@ -357,7 +357,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       const veryLargeText = "A".repeat(1000000) // 1MB of text
       const requestData = {
         uri: "test-very-large-text",
-        text: veryLargeText
+        text: veryLargeText,
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings", {
@@ -434,7 +435,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
       for (const uri of specialUris) {
         const requestData = {
           uri,
-          text: `Document with special URI: ${uri}`
+          text: `Document with special URI: ${uri}`,
+          model_name: "nomic-embed-text"
         }
 
         const response = await app.request("/embeddings", {
@@ -469,7 +471,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `concurrent-test-${i}`,
-            text: `Concurrent test document number ${i}.`
+            text: `Concurrent test document number ${i}.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -516,7 +519,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `whitespace-test-${Math.random()}`,
-            text
+            text,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -547,7 +551,8 @@ describe("Error Handling and Edge Cases E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `special-chars-test-${Math.random()}`,
-            text
+            text,
+            model_name: "nomic-embed-text"
           }),
         })
 

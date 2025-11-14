@@ -24,15 +24,18 @@ describe("Batch Operations E2E Tests", () => {
         texts: [
           {
             uri: "batch-doc-1",
-            text: "First document in batch operation testing."
+            text: "First document in batch operation testing.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "batch-doc-2",
-            text: "Second document for batch creation verification."
+            text: "Second document for batch creation verification.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "batch-doc-3",
-            text: "Third document to complete the batch test."
+            text: "Third document to complete the batch test.",
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -96,6 +99,7 @@ describe("Batch Operations E2E Tests", () => {
           {
             uri: "batch-model-1",
             text: "Document with default model.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "batch-model-2",
@@ -145,7 +149,8 @@ describe("Batch Operations E2E Tests", () => {
       for (let i = 0; i < batchSize; i++) {
         items.push({
           uri: `large-batch-doc-${i}`,
-          text: `Document number ${i} in large batch test. This document contains some sample text for embedding generation.`
+          text: `Document number ${i} in large batch test. This document contains some sample text for embedding generation.`,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -187,15 +192,18 @@ describe("Batch Operations E2E Tests", () => {
         texts: [
           {
             uri: "mixed-short",
-            text: "Short text."
+            text: "Short text.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "mixed-long",
-            text: "Very long text content. ".repeat(500) // ~11,000 characters
+            text: "Very long text content. ".repeat(500), // ~11,000 characters
+            model_name: "nomic-embed-text"
           },
           {
             uri: "mixed-special",
-            text: "Special characters: !@#$%^&*()[]{}|;':\",./<>? 日本語 emoji 🚀"
+            text: "Special characters: !@#$%^&*()[]{}|;':\",./<>? 日本語 emoji 🚀",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "mixed-multiline",
@@ -205,7 +213,8 @@ with various formatting:
 - Line 2
 - Line 3
 
-And a final paragraph.`
+And a final paragraph.`,
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -242,19 +251,23 @@ And a final paragraph.`
         texts: [
           {
             uri: "valid-doc-1",
-            text: "Valid document that should succeed."
+            text: "Valid document that should succeed.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "", // Invalid empty URI
-            text: "Document with invalid URI."
+            text: "Document with invalid URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "valid-doc-2",
-            text: "Another valid document that should succeed."
+            text: "Another valid document that should succeed.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "valid-doc-3",
-            text: "" // Invalid empty text
+            text: "", // Invalid empty text
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -303,11 +316,11 @@ And a final paragraph.`
     it("should maintain batch processing order", async () => {
       const batchData = {
         texts: [
-          { uri: "order-test-1", text: "First document" },
-          { uri: "order-test-2", text: "Second document" },
-          { uri: "order-test-3", text: "Third document" },
-          { uri: "order-test-4", text: "Fourth document" },
-          { uri: "order-test-5", text: "Fifth document" }
+          { uri: "order-test-1", text: "First document", model_name: "nomic-embed-text" },
+          { uri: "order-test-2", text: "Second document", model_name: "nomic-embed-text" },
+          { uri: "order-test-3", text: "Third document", model_name: "nomic-embed-text" },
+          { uri: "order-test-4", text: "Fourth document", model_name: "nomic-embed-text" },
+          { uri: "order-test-5", text: "Fifth document", model_name: "nomic-embed-text" }
         ]
       }
 
@@ -343,15 +356,18 @@ And a final paragraph.`
         texts: [
           {
             uri: "duplicate-uri-test",
-            text: "First document with duplicate URI."
+            text: "First document with duplicate URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "unique-uri-test",
-            text: "Document with unique URI."
+            text: "Document with unique URI.",
+            model_name: "nomic-embed-text"
           },
           {
             uri: "duplicate-uri-test", // Same URI as first
-            text: "Second document with duplicate URI."
+            text: "Second document with duplicate URI.",
+            model_name: "nomic-embed-text"
           }
         ]
       }
@@ -400,7 +416,8 @@ And a final paragraph.`
       for (let i = 0; i < largeBatchSize; i++) {
         items.push({
           uri: `timeout-test-doc-${i}`,
-          text: `Very long text content for timeout testing. `.repeat(100) + ` Document ${i}`
+          text: `Very long text content for timeout testing. `.repeat(100) + ` Document ${i}`,
+          model_name: "nomic-embed-text"
         })
       }
 
@@ -497,7 +514,8 @@ And a final paragraph.`
       for (let i = 0; i < batchSize; i++) {
         items.push({
           uri: `perf-test-doc-${i}`,
-          text: `Performance test document ${i}. This document is used to measure batch processing performance.`
+          text: `Performance test document ${i}. This document is used to measure batch processing performance.`,
+          model_name: "nomic-embed-text"
         })
       }
 

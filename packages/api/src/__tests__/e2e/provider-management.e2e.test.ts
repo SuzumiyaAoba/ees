@@ -123,10 +123,9 @@ describe("Provider Management E2E Tests", () => {
 
         const config = currentProvider["configuration"] as Record<string, unknown>
 
-        // Should have baseUrl and model for Ollama
+        // Should have baseUrl for Ollama
         if (currentProvider["provider"] === "ollama") {
           expect(config).toHaveProperty("baseUrl")
-          expect(config).toHaveProperty("model")
         }
       }
     })

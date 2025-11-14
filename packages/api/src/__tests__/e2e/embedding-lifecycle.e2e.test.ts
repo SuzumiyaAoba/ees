@@ -26,7 +26,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
     it("should create embedding with minimal required fields", async () => {
       const requestData = {
         uri: "test-doc-minimal",
-        text: "This is a test document for minimal embedding creation."
+        text: "This is a test document for minimal embedding creation.",
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings", {
@@ -99,7 +100,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
     it("should handle special characters in text", async () => {
       const requestData = {
         uri: "test-doc-special-chars",
-        text: "Special chars: !@#$%^&*()[]{}|;':\",./<>? 日本語テキスト émojis 🚀🎉 newlines\nand\ttabs"
+        text: "Special chars: !@#$%^&*()[]{}|;':\",./<>? 日本語テキスト émojis 🚀🎉 newlines\nand\ttabs",
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings", {
@@ -127,7 +129,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       const longText = "Lorem ipsum ".repeat(1000) // ~11,000 characters
       const requestData = {
         uri: "test-doc-long-text",
-        text: longText
+        text: longText,
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings", {
@@ -157,7 +160,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       // First create an embedding
       const createData = {
         uri: "test-retrieve-by-uri",
-        text: "This embedding will be retrieved by URI."
+        text: "This embedding will be retrieved by URI.",
+        model_name: "nomic-embed-text"
       }
 
       const createResponse = await app.request("/embeddings", {
@@ -223,7 +227,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `test-list-${i}`,
-            text: `Test embedding number ${i}`
+            text: `Test embedding number ${i}`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -311,7 +316,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       // Create an embedding to delete
       const createData = {
         uri: "test-delete-by-id",
-        text: "This embedding will be deleted."
+        text: "This embedding will be deleted.",
+        model_name: "nomic-embed-text"
       }
 
       const createResponse = await app.request("/embeddings", {
@@ -369,7 +375,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       const uri = "test-duplicate-uri"
       const createData = {
         uri,
-        text: "First embedding with this URI."
+        text: "First embedding with this URI.",
+        model_name: "nomic-embed-text"
       }
 
       // Create first embedding
@@ -394,7 +401,8 @@ describe("Embedding Lifecycle E2E Tests", () => {
       // Try to create second embedding with same URI
       const secondCreateData = {
         uri,
-        text: "Second embedding with same URI."
+        text: "Second embedding with same URI.",
+        model_name: "nomic-embed-text"
       }
 
       const secondResponse = await app.request("/embeddings", {
@@ -430,7 +438,8 @@ With various formatting:
 
       const requestData = {
         uri: "test-content-preservation",
-        text: testText
+        text: testText,
+        model_name: "nomic-embed-text"
       }
 
       const response = await app.request("/embeddings", {

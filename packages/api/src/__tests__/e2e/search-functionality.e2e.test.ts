@@ -50,7 +50,10 @@ describe("Search Functionality E2E Tests", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(doc),
+        body: JSON.stringify({
+          ...doc,
+          model_name: "nomic-embed-text"
+        }),
       })
 
       // In CI environment, service dependencies may not be fully available
@@ -369,7 +372,8 @@ describe("Search Functionality E2E Tests", () => {
       // First create an embedding with Japanese text
       const japaneseDoc = {
         uri: "doc-japanese",
-        text: "人工知能と機械学習は技術革新を推進している。深層学習アルゴリズムはデータを効率的に処理する。"
+        text: "人工知能と機械学習は技術革新を推進している。深層学習アルゴリズムはデータを効率的に処理する。",
+        model_name: "nomic-embed-text"
       }
 
       const createResponse = await app.request("/embeddings", {

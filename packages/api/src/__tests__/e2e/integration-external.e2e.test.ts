@@ -179,7 +179,8 @@ describe("External Service Integration E2E Tests", () => {
           },
           body: JSON.stringify({
             uri: `migration-test-${i}`,
-            text: `Migration test document ${i}.`
+            text: `Migration test document ${i}.`,
+            model_name: "nomic-embed-text"
           }),
         })
 
@@ -376,7 +377,8 @@ describe("External Service Integration E2E Tests", () => {
         },
         body: JSON.stringify({
           uri: "timeout-test",
-          text: "Very long text for timeout testing. ".repeat(10000) // Very long text
+          text: "Very long text for timeout testing. ".repeat(10000), // Very long text
+          model_name: "nomic-embed-text"
         }),
       })
 
@@ -408,7 +410,8 @@ describe("External Service Integration E2E Tests", () => {
             },
             body: JSON.stringify({
               uri: `rate-limit-test-${i}`,
-              text: `Rate limit test document ${i}.`
+              text: `Rate limit test document ${i}.`,
+              model_name: "nomic-embed-text"
             }),
           })
         )
@@ -453,7 +456,8 @@ describe("External Service Integration E2E Tests", () => {
         },
         body: JSON.stringify({
           uri: "config-test-default",
-          text: "Testing with default provider configuration."
+          text: "Testing with default provider configuration.",
+          model_name: "nomic-embed-text"
         }),
       })
 
