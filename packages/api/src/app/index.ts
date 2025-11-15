@@ -1076,9 +1076,12 @@ const __dirname = join(__filename, "..")
 
 // Determine if we're in development or production mode
 const mode = process.env["NODE_ENV"] === "production" ? "production" : "development"
+const isTest = process.env["NODE_ENV"] === "test"
 
-// In production, serve static assets and SSR
-if (mode === "production") {
+// Skip SSR/proxy setup in test environment to avoid route conflicts
+if (!isTest) {
+  // In production, serve static assets and SSR
+  if (mode === "production") {
   logger.info({ component: "app", phase: "ssr-setup" }, "Setting up SSR middleware for production")
 
   const clientDistPath = join(__dirname, "../../web/dist/client")
@@ -1135,6 +1138,9 @@ if (mode === "production") {
       return c.text("Failed to connect to Vite dev server", 502)
     }
   })
+  }
+} else {
+  logger.info({ component: "app", phase: "ssr-setup" }, "Test mode - SSR/proxy disabled")
 }
 
 export default app
