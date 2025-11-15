@@ -72,6 +72,36 @@
     --radius-xl: 1.75rem;
     --radius: var(--radius-lg);
 
+    /* Spacing Scale - Based on 4px grid system */
+    --spacing-0: 0;
+    --spacing-1: 0.25rem;  /* 4px */
+    --spacing-2: 0.5rem;   /* 8px */
+    --spacing-3: 0.75rem;  /* 12px */
+    --spacing-4: 1rem;     /* 16px */
+    --spacing-5: 1.25rem;  /* 20px */
+    --spacing-6: 1.5rem;   /* 24px */
+    --spacing-8: 2rem;     /* 32px */
+    --spacing-10: 2.5rem;  /* 40px */
+    --spacing-12: 3rem;    /* 48px */
+    --spacing-16: 4rem;    /* 64px */
+    --spacing-20: 5rem;    /* 80px */
+    --spacing-24: 6rem;    /* 96px */
+
+    /* Component Spacing Standards */
+    --spacing-card-padding: var(--spacing-6);
+    --spacing-card-gap: var(--spacing-4);
+    --spacing-section-gap: var(--spacing-8);
+    --spacing-page-padding-x: var(--spacing-6);
+    --spacing-page-padding-y: var(--spacing-8);
+
+    /* Container Widths */
+    --container-sm: 640px;
+    --container-md: 768px;
+    --container-lg: 1024px;
+    --container-xl: 1280px;
+    --container-2xl: 1536px;
+    --container-content: var(--container-xl);
+
     /* Material Design 3 Elevation Shadows */
     --elevation-0: none;
     --elevation-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
@@ -302,5 +332,71 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+}
+
+/* Layout utilities using CSS variables */
+@layer components {
+  /* Page Container */
+  .page-container {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--spacing-page-padding-x);
+    padding-right: var(--spacing-page-padding-x);
+  }
+
+  @media (min-width: 640px) {
+    .page-container {
+      --spacing-page-padding-x: var(--spacing-8);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .page-container {
+      --spacing-page-padding-x: var(--spacing-12);
+    }
+  }
+
+  /* Page Section */
+  .page-section {
+    padding-top: var(--spacing-page-padding-y);
+    padding-bottom: var(--spacing-page-padding-y);
+  }
+
+  /* Section Content with spacing */
+  .section-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-section-gap);
+  }
+
+  /* Card spacing utilities */
+  .card-spacing {
+    padding: var(--spacing-card-padding);
+  }
+
+  .card-header-spacing {
+    padding: var(--spacing-card-padding);
+    padding-bottom: var(--spacing-card-gap);
+  }
+
+  .card-content-spacing {
+    padding: var(--spacing-card-padding);
+    padding-top: 0;
+  }
+
+  /* Component gap utilities */
+  .gap-components {
+    gap: var(--spacing-section-gap);
+  }
+
+  .gap-cards {
+    gap: var(--spacing-card-gap);
+  }
+
+  .gap-elements {
+    gap: var(--spacing-3);
   }
 }

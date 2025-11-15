@@ -183,11 +183,11 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Search Input */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-elements">
             <Search className="h-5 w-5" />
             {searchMode === 'semantic' ? 'Semantic Search' : 'Keyword Search'}
           </CardTitle>
@@ -197,14 +197,14 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               : 'Search for exact keyword matches in text and URI'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-cards">
           {/* Search Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+          <div className="flex gap-elements p-1 bg-muted rounded-lg w-fit">
             <Button
               size="sm"
               variant={searchMode === 'semantic' ? 'default' : 'ghost'}
               onClick={() => setSearchMode('semantic')}
-              className="gap-2"
+              className="gap-elements"
             >
               Semantic
             </Button>
@@ -212,7 +212,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               size="sm"
               variant={searchMode === 'keyword' ? 'default' : 'ghost'}
               onClick={() => setSearchMode('keyword')}
-              className="gap-2"
+              className="gap-elements"
             >
               Keyword
             </Button>
@@ -338,7 +338,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => setRenderMarkdown(!renderMarkdown)}
-                className="gap-2"
+                className="gap-elements"
               >
                 {renderMarkdown ? (
                   <>
@@ -355,7 +355,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-cards">
               {searchResults.results.map((result) => (
                 <SearchResultCard
                   key={result.id}
