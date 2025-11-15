@@ -1,4 +1,10 @@
 import { useState, useCallback } from 'react'
+import {
+  saveDirectoryHandle,
+  getDirectoryHandle,
+  verifyHandlePermission,
+  deleteDirectoryHandle,
+} from '@/utils/directoryHandleStorage'
 
 interface FileWithPath {
   file: File
@@ -14,6 +20,7 @@ interface CollectionProgress {
 export interface FileSystemAccessResult {
   files: FileWithPath[]
   directoryName: string
+  directoryHandle?: FileSystemDirectoryHandle
 }
 
 /**
@@ -81,6 +88,7 @@ export function useFileSystemAccess() {
       return {
         files,
         directoryName: directoryHandle.name,
+        directoryHandle,
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -96,12 +104,112 @@ export function useFileSystemAccess() {
     }
   }, [isSupported])
 
+  /**
+   * Pick directory and save handle for later use
+   */
+  const pickDirectoryForRegistration = useCallback(async (): Promise<{
+    directoryName: string
+    directoryHandle: FileSystemDirectoryHandle
+  } | null> => {
+    if (!isSupported()) {
+      throw new Error('File System Access API is not supported in this browser')
+    }
+
+    try {
+      setError(null)
+
+      // Show browser's native directory picker
+      const directoryHandle = await window.showDirectoryPicker({
+        mode: 'read',
+      })
+
+      return {
+        directoryName: directoryHandle.name,
+        directoryHandle,
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // User cancelled - not an error
+        return null
+      }
+      const error = err instanceof Error ? err : new Error(String(err))
+      setError(error)
+      throw error
+    }
+  }, [isSupported])
+
+  /**
+   * Collect files from a stored directory handle
+   */
+  const collectFilesFromHandle = useCallback(async (
+    handle: FileSystemDirectoryHandle,
+    options?: {
+      onProgress?: (progress: CollectionProgress) => void
+      maxDepth?: number
+      ignorePatterns?: string[]
+    }
+  ): Promise<FileSystemAccessResult> => {
+    try {
+      setIsCollecting(true)
+      setError(null)
+      setProgress(null)
+
+      // Verify we still have permission
+      const hasPermission = await verifyHandlePermission(handle)
+      if (!hasPermission) {
+        throw new Error('Permission denied. Please re-select the directory.')
+      }
+
+      const files: FileWithPath[] = []
+      const ignorePatterns = options?.ignorePatterns || []
+
+      // Collect files recursively
+      await collectFilesRecursively(
+        handle,
+        files,
+        '',
+        0,
+        options?.maxDepth,
+        ignorePatterns,
+        (current, currentPath) => {
+          const progressData = {
+            current,
+            total: files.length,
+            currentPath,
+          }
+          setProgress(progressData)
+          options?.onProgress?.(progressData)
+        }
+      )
+
+      return {
+        files,
+        directoryName: handle.name,
+        directoryHandle: handle,
+      }
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      setError(err)
+      throw err
+    } finally {
+      setIsCollecting(false)
+      setProgress(null)
+    }
+  }, [])
+
   return {
     pickDirectory,
+    pickDirectoryForRegistration,
+    collectFilesFromHandle,
     isSupported,
     isCollecting,
     progress,
     error,
+    // Re-export storage utilities
+    saveDirectoryHandle,
+    getDirectoryHandle,
+    deleteDirectoryHandle,
+    verifyHandlePermission,
   }
 }
 
@@ -226,6 +334,12 @@ declare global {
   interface FileSystemHandle {
     readonly kind: 'file' | 'directory'
     readonly name: string
+    requestPermission(options?: {
+      mode?: 'read' | 'readwrite'
+    }): Promise<'granted' | 'denied' | 'prompt'>
+    queryPermission(options?: {
+      mode?: 'read' | 'readwrite'
+    }): Promise<'granted' | 'denied' | 'prompt'>
   }
 
   interface FileSystemFileHandle extends FileSystemHandle {
