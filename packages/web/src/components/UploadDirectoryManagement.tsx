@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search, XCircle } from 'lucide-react'
+import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search, XCircle, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -14,6 +14,7 @@ import {
   useSyncUploadDirectory,
 } from '@/hooks/useUploadDirectories'
 import { useModels } from '@/hooks/useModels'
+import { useFileSystemAccess } from '@/hooks/useFileSystemAccess'
 import { apiClient } from '@/services/api'
 import type { UploadDirectory, TaskType, TaskTypeMetadata, FailedFile } from '@/types/api'
 
@@ -23,6 +24,7 @@ export function UploadDirectoryManagement() {
   const createMutation = useCreateUploadDirectory()
   const deleteMutation = useDeleteUploadDirectory()
   const syncMutation = useSyncUploadDirectory()
+  const { pickDirectory, isSupported: isFileSystemAccessSupported, isCollecting } = useFileSystemAccess()
 
   // Filter out 'default' models and transform to match expected format
   const availableModels = models
@@ -63,6 +65,12 @@ export function UploadDirectoryManagement() {
     message: string
   } | null>(null)
   const [pollIntervals, setPollIntervals] = useState<Record<number, NodeJS.Timeout>>({})
+  const [browserUploadProgress, setBrowserUploadProgress] = useState<{
+    current: number
+    total: number
+    currentFile: string
+  } | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
@@ -360,6 +368,94 @@ export function UploadDirectoryManagement() {
     }
   }
 
+  const handleBrowserDirectoryUpload = async () => {
+    if (!isFileSystemAccessSupported()) {
+      alert('File System Access API is not supported in your browser. Please use Chrome, Edge, or Safari 15.2+.')
+      return
+    }
+
+    if (!formData.model_name) {
+      alert('Please select a model before uploading files.')
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      setBrowserUploadProgress({ current: 0, total: 0, currentFile: 'Opening directory picker...' })
+
+      // Pick directory using browser's native picker
+      const result = await pickDirectory({
+        onProgress: (progress) => {
+          setBrowserUploadProgress({
+            current: progress.current,
+            total: progress.total,
+            currentFile: progress.currentPath,
+          })
+        },
+      })
+
+      if (!result) {
+        // User cancelled
+        setBrowserUploadProgress(null)
+        setIsUploading(false)
+        return
+      }
+
+      const { files, directoryName } = result
+
+      if (files.length === 0) {
+        alert('No files found in the selected directory.')
+        setBrowserUploadProgress(null)
+        setIsUploading(false)
+        return
+      }
+
+      // Upload files to server
+      setBrowserUploadProgress({
+        current: 0,
+        total: files.length,
+        currentFile: 'Uploading files to server...',
+      })
+
+      let uploadedCount = 0
+      let failedCount = 0
+
+      for (const { file } of files) {
+        try {
+          await apiClient.uploadFile(file, formData.model_name)
+          uploadedCount++
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          failedCount++
+        }
+
+        setBrowserUploadProgress({
+          current: uploadedCount + failedCount,
+          total: files.length,
+          currentFile: file.name,
+        })
+      }
+
+      // Show success message
+      setLastSyncResult({
+        directory_id: 0, // Browser upload doesn't have a directory ID
+        files_processed: files.length,
+        files_created: uploadedCount,
+        files_updated: 0,
+        files_failed: failedCount,
+        message: `Browser upload completed: ${uploadedCount} files uploaded from "${directoryName}"`,
+      })
+
+      setBrowserUploadProgress(null)
+      setIsUploading(false)
+    } catch (error) {
+      console.error('Browser directory upload failed:', error)
+      alert(`Upload failed: ${error instanceof Error ? error.message : String(error)}`)
+      setBrowserUploadProgress(null)
+      setIsUploading(false)
+    }
+  }
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
     return new Date(dateString).toLocaleString()
@@ -399,14 +495,71 @@ export function UploadDirectoryManagement() {
               </CardTitle>
               <CardDescription>
                 Register directories for one-click document synchronization. Supports .eesignore for filtering files.
+                {isFileSystemAccessSupported() && (
+                  <span className="block mt-1 text-primary">
+                    💡 Use "Quick Upload" to upload files directly from your browser - no permission issues!
+                  </span>
+                )}
               </CardDescription>
             </div>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-              <FolderPlus className="h-4 w-4 mr-2" />
-              Register Directory
-            </Button>
+            <div className="flex gap-2">
+              {isFileSystemAccessSupported() && (
+                <Button
+                  variant="outline"
+                  onClick={handleBrowserDirectoryUpload}
+                  disabled={isUploading || isCollecting || !formData.model_name}
+                  title="Use browser's native directory picker (no permission issues)"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isUploading || isCollecting ? 'Processing...' : 'Quick Upload'}
+                </Button>
+              )}
+              <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Register Directory
+              </Button>
+            </div>
           </div>
         </CardHeader>
+
+        {/* Browser Upload Progress */}
+        {browserUploadProgress && (
+          <CardContent className="border-t">
+            <div className="bg-info/10 dark:bg-info/20 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  {isCollecting ? 'Collecting files from directory...' : 'Uploading to server...'}
+                </span>
+                <span className="text-blue-700 dark:text-blue-300 font-semibold">
+                  {browserUploadProgress.current} / {browserUploadProgress.total}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300">
+                  <span className="font-medium truncate" title={browserUploadProgress.currentFile}>
+                    {browserUploadProgress.currentFile}
+                  </span>
+                  <span className="font-medium ml-2">
+                    {browserUploadProgress.total > 0
+                      ? `${Math.round((browserUploadProgress.current / browserUploadProgress.total) * 100)}%`
+                      : '0%'}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
+                  <div
+                    className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300 ease-out"
+                    style={{
+                      width: browserUploadProgress.total > 0
+                        ? `${(browserUploadProgress.current / browserUploadProgress.total) * 100}%`
+                        : '0%'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        )}
 
         {/* Create Form */}
         {showCreateForm && (

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "vite build --config vite.config.ssr.ts",
+    "build:csr": "tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "tsc --noEmit",

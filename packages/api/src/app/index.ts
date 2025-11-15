@@ -2,12 +2,15 @@ import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { streamSSE } from "hono/streaming"
 import { Effect } from "effect"
+import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import {
   createPinoLogger,
   createLoggerConfig,
   EmbeddingService,
   UploadDirectoryRepository,
 } from "@ees/core"
+import { createSSRMiddleware, createStaticMiddleware } from "@/middleware/ssr"
 import { batchCreateEmbeddingRoute } from "@/features/batch-create-embedding"
 import { createEmbeddingRoute } from "@/features/create-embedding"
 import { deleteEmbeddingRoute } from "@/features/delete-embedding"
@@ -1066,5 +1069,72 @@ app.doc("/openapi.json", {
  */
 app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
+// SSR and static file serving
+// Configure paths based on environment
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = join(__filename, "..")
+
+// Determine if we're in development or production mode
+const mode = process.env["NODE_ENV"] === "production" ? "production" : "development"
+
+// In production, serve static assets and SSR
+if (mode === "production") {
+  logger.info({ component: "app", phase: "ssr-setup" }, "Setting up SSR middleware for production")
+
+  const clientDistPath = join(__dirname, "../../web/dist/client")
+  const serverDistPath = join(__dirname, "../../web/dist/server")
+
+  // Serve static assets (CSS, JS, images, etc.)
+  app.get("/assets/*", createStaticMiddleware(clientDistPath))
+
+  // SSR for all other routes (frontend application)
+  app.get("*", createSSRMiddleware({
+    mode,
+    clientDistPath,
+    serverDistPath
+  }))
+} else {
+  logger.info({ component: "app", phase: "ssr-setup" }, "Development mode - frontend served by Vite dev server")
+
+  // In development, proxy all non-API routes to Vite dev server
+  const viteUrl = process.env["VITE_DEV_SERVER_URL"] || "http://localhost:5173"
+
+  app.get("*", async (c) => {
+    const path = c.req.path
+
+    // Skip proxying if this is an API route
+    if (path.startsWith("/embeddings") ||
+        path.startsWith("/upload") ||
+        path.startsWith("/migrate") ||
+        path.startsWith("/providers") ||
+        path.startsWith("/connections") ||
+        path.startsWith("/models") ||
+        path.startsWith("/upload-directories") ||
+        path.startsWith("/filesystem") ||
+        path.startsWith("/openapi.json") ||
+        path.startsWith("/docs") ||
+        path.startsWith("/health") ||
+        path.startsWith("/metrics")) {
+      // Not found for API routes that don't exist
+      return c.json({ error: "Not found" }, 404)
+    }
+
+    // Proxy to Vite dev server for frontend routes
+    try {
+      const response = await fetch(new URL(c.req.url.replace(c.req.url.split("/").slice(0, 3).join("/"), viteUrl)))
+      return new Response(response.body, {
+        status: response.status,
+        headers: response.headers,
+      })
+    } catch (error) {
+      logger.error({
+        error: error instanceof Error ? error.message : String(error),
+        path,
+        viteUrl
+      }, "Failed to proxy to Vite dev server")
+      return c.text("Failed to connect to Vite dev server", 502)
+    }
+  })
+}
 
 export default app

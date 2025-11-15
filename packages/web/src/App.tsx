@@ -54,7 +54,9 @@ function AppContent() {
   const { isDark, toggleTheme } = useDarkMode()
 
   // Get initial tab from URL hash or default to 'search'
+  // SSR-safe: check if window is defined
   const getInitialTab = (): TabType => {
+    if (typeof window === 'undefined') return 'search'
     const hash = window.location.hash.slice(1) as TabType
     return VALID_TABS.includes(hash) ? hash : 'search'
   }
@@ -64,8 +66,11 @@ function AppContent() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [editingEmbedding, setEditingEmbedding] = useState<Embedding | null>(null)
 
-  // Sync tab with URL hash
+  // Sync tab with URL hash (client-side only)
   useEffect(() => {
+    // Skip on server-side
+    if (typeof window === 'undefined') return
+
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1) as TabType
       if (VALID_TABS.includes(hash)) {
@@ -77,10 +82,12 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  // Update URL hash when tab changes
+  // Update URL hash when tab changes (client-side only)
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
-    window.location.hash = tab
+    if (typeof window !== 'undefined') {
+      window.location.hash = tab
+    }
   }
 
   const handleSearchResultSelect = async (result: SearchResult) => {
