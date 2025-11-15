@@ -23,8 +23,12 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: 'dist/client',
     sourcemap: true,
+    manifest: true, // Generate manifest for SSR
+    rollupOptions: {
+      input: './src/entry-client.tsx',
+    },
   },
   test: {
     globals: true,

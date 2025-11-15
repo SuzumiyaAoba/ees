@@ -4,6 +4,9 @@ type Theme = 'light' | 'dark'
 
 export function useDarkMode() {
   const [theme, setTheme] = useState<Theme>(() => {
+    // SSR-safe: check if window is defined
+    if (typeof window === 'undefined') return 'light'
+
     // Check localStorage first
     const stored = localStorage.getItem('theme') as Theme | null
     if (stored) return stored
@@ -17,6 +20,9 @@ export function useDarkMode() {
   })
 
   useEffect(() => {
+    // SSR-safe: skip on server-side
+    if (typeof window === 'undefined') return
+
     const root = document.documentElement
 
     if (theme === 'dark') {

@@ -21,7 +21,6 @@ describe("Connection Management E2E Tests", () => {
 
   // Store connection IDs for testing
   let testConnectionId: number
-  let secondConnectionId: number
 
   describe("POST /connections", () => {
     it("should create a new connection", async () => {
@@ -78,7 +77,8 @@ describe("Connection Management E2E Tests", () => {
       // API key should NOT be returned in response
       expect(connection["apiKey"]).toBeUndefined()
 
-      secondConnectionId = connection["id"] as number
+      // Store ID for potential future use (not currently used in tests)
+      // secondConnectionId = connection["id"] as number
     })
 
     it("should create connection with metadata", async () => {
@@ -301,10 +301,12 @@ describe("Connection Management E2E Tests", () => {
       const connection = await response.json()
 
       // Connection should either be null (no active models) or a valid connection object
-      if (connection !== null) {
+      if (connection !== null && typeof connection === 'object') {
         expect(connection).toHaveProperty("id")
         expect(connection).toHaveProperty("isActive")
-        expect(typeof connection["isActive"]).toBe("boolean")
+        if ('isActive' in connection) {
+          expect(typeof connection["isActive"]).toBe("boolean")
+        }
       }
     })
   })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search, XCircle } from 'lucide-react'
+import { FolderOpen, FolderPlus, RefreshCw, Trash2, CheckCircle, AlertCircle, Search, XCircle, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -14,6 +14,7 @@ import {
   useSyncUploadDirectory,
 } from '@/hooks/useUploadDirectories'
 import { useModels } from '@/hooks/useModels'
+import { useFileSystemAccess } from '@/hooks/useFileSystemAccess'
 import { apiClient } from '@/services/api'
 import type { UploadDirectory, TaskType, TaskTypeMetadata, FailedFile } from '@/types/api'
 
@@ -23,6 +24,16 @@ export function UploadDirectoryManagement() {
   const createMutation = useCreateUploadDirectory()
   const deleteMutation = useDeleteUploadDirectory()
   const syncMutation = useSyncUploadDirectory()
+  const {
+    pickDirectory,
+    pickDirectoryForRegistration,
+    saveDirectoryHandle,
+    getDirectoryHandle,
+    collectFilesFromHandle,
+    verifyHandlePermission,
+    isSupported: isFileSystemAccessSupported,
+    isCollecting
+  } = useFileSystemAccess()
 
   // Filter out 'default' models and transform to match expected format
   const availableModels = models
@@ -63,6 +74,13 @@ export function UploadDirectoryManagement() {
     message: string
   } | null>(null)
   const [pollIntervals, setPollIntervals] = useState<Record<number, NodeJS.Timeout>>({})
+  const [browserUploadProgress, setBrowserUploadProgress] = useState<{
+    current: number
+    total: number
+    currentFile: string
+  } | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [directoryHandleId, setDirectoryHandleId] = useState<string | null>(null)
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
@@ -109,17 +127,24 @@ export function UploadDirectoryManagement() {
     e.preventDefault()
 
     try {
+      // Add handle ID to description if using browser picker
+      const description = formData.description || ''
+      const finalDescription = directoryHandleId
+        ? `${description}${description ? ' ' : ''}[HANDLE_ID:${directoryHandleId}]`
+        : description || undefined
+
       await createMutation.mutateAsync({
         name: formData.name,
         path: formData.path,
         model_name: formData.model_name,
         task_types: selectedTaskTypes.length > 0 ? selectedTaskTypes : undefined,
-        description: formData.description || undefined,
+        description: finalDescription,
       })
 
       // Reset form and hide
       setFormData({ name: '', path: '', model_name: '', description: '' })
       setSelectedTaskTypes([])
+      setDirectoryHandleId(null)
       setShowCreateForm(false)
     } catch (error) {
       // Error is handled by mutation
@@ -338,13 +363,28 @@ export function UploadDirectoryManagement() {
     }))
 
     try {
-      // Start background sync job
-      const response = await apiClient.syncUploadDirectory(id)
-      const jobId = response.job_id
+      // Find the directory to check if it's browser-picked
+      const directory = directories?.directories.find(d => d.id === id)
 
-      // Start polling using shared function
-      startPollingForJob(id, jobId)
+      if (!directory) {
+        throw new Error('Directory not found')
+      }
 
+      // Check if this directory was selected via browser picker
+      const handleIdMatch = directory.description?.match(/\[HANDLE_ID:([^\]]+)\]/)
+      const isBrowserPicked = directory.path.startsWith('[Browser:')
+
+      if (isBrowserPicked && handleIdMatch && isFileSystemAccessSupported()) {
+        // Browser-picked directory - use stored handle
+        await handleBrowserSync(id, handleIdMatch[1], directory.model_name)
+      } else {
+        // Server filesystem directory - use traditional sync
+        const response = await apiClient.syncUploadDirectory(id)
+        const jobId = response.job_id
+
+        // Start polling using shared function
+        startPollingForJob(id, jobId)
+      }
     } catch (error) {
       console.error('Failed to start sync job:', error)
       setSyncingDirectories(prev => {
@@ -357,6 +397,259 @@ export function UploadDirectoryManagement() {
         delete newProgress[id]
         return newProgress
       })
+      alert(`Sync failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleBrowserSync = async (directoryId: number, handleId: string, modelName: string) => {
+    try {
+      // Get the stored directory handle
+      const handle = await getDirectoryHandle(handleId)
+
+      if (!handle) {
+        throw new Error('Directory handle not found. Please re-register the directory.')
+      }
+
+      // Verify permission
+      const hasPermission = await verifyHandlePermission(handle)
+
+      if (!hasPermission) {
+        throw new Error('Permission denied. Please re-register the directory to grant access.')
+      }
+
+      // Collect files from the handle
+      const result = await collectFilesFromHandle(handle, {
+        onProgress: (progress) => {
+          setSyncProgress(prev => ({
+            ...prev,
+            [directoryId]: {
+              ...prev[directoryId],
+              current: progress.current,
+              total: progress.total,
+              file: progress.currentPath,
+              status: 'running'
+            }
+          }))
+        },
+      })
+
+      if (result.files.length === 0) {
+        throw new Error('No files found in the directory.')
+      }
+
+      // Update progress for upload phase
+      setSyncProgress(prev => ({
+        ...prev,
+        [directoryId]: {
+          current: 0,
+          total: result.files.length,
+          file: 'Uploading files to server...',
+          created: 0,
+          updated: 0,
+          failed: 0,
+          failedFiles: [],
+          status: 'running'
+        }
+      }))
+
+      let uploadedCount = 0
+      let failedCount = 0
+
+      // Upload files to server
+      for (const { file } of result.files) {
+        try {
+          await apiClient.uploadFile(file, modelName)
+          uploadedCount++
+
+          setSyncProgress(prev => ({
+            ...prev,
+            [directoryId]: {
+              ...prev[directoryId],
+              current: uploadedCount + failedCount,
+              file: file.name,
+              created: uploadedCount,
+              failed: failedCount
+            }
+          }))
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          failedCount++
+
+          setSyncProgress(prev => ({
+            ...prev,
+            [directoryId]: {
+              ...prev[directoryId],
+              current: uploadedCount + failedCount,
+              file: file.name,
+              failed: failedCount
+            }
+          }))
+        }
+      }
+
+      // Show success message
+      setLastSyncResult({
+        directory_id: directoryId,
+        files_processed: result.files.length,
+        files_created: uploadedCount,
+        files_updated: 0,
+        files_failed: failedCount,
+        message: `Browser sync completed: ${uploadedCount} files uploaded from "${result.directoryName}"`,
+      })
+
+      // Clean up
+      setSyncingDirectories(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(directoryId)
+        return newSet
+      })
+      setSyncProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[directoryId]
+        return newProgress
+      })
+    } catch (error) {
+      console.error('Browser sync failed:', error)
+
+      // Clean up on error
+      setSyncingDirectories(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(directoryId)
+        return newSet
+      })
+      setSyncProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[directoryId]
+        return newProgress
+      })
+
+      throw error
+    }
+  }
+
+  const handleBrowserDirectoryPicker = async () => {
+    if (!isFileSystemAccessSupported()) {
+      alert('File System Access API is not supported in your browser. Please use Chrome, Edge, or Safari 15.2+.')
+      return
+    }
+
+    try {
+      // Pick directory using browser's native picker
+      const result = await pickDirectoryForRegistration()
+
+      if (!result) {
+        // User cancelled
+        return
+      }
+
+      const { directoryName, directoryHandle } = result
+
+      // Generate a unique ID for this handle
+      const handleId = `dir_${Date.now()}_${Math.random().toString(36).substring(7)}`
+
+      // Save the handle to IndexedDB
+      await saveDirectoryHandle(handleId, directoryHandle)
+
+      // Update form with directory name and a placeholder path
+      setFormData({
+        ...formData,
+        name: formData.name || directoryName,
+        path: `[Browser: ${directoryName}]`,
+      })
+
+      // Store handle ID for later use
+      setDirectoryHandleId(handleId)
+    } catch (error) {
+      console.error('Browser directory picker failed:', error)
+      alert(`Failed to select directory: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleBrowserDirectoryUpload = async () => {
+    if (!isFileSystemAccessSupported()) {
+      alert('File System Access API is not supported in your browser. Please use Chrome, Edge, or Safari 15.2+.')
+      return
+    }
+
+    if (!formData.model_name) {
+      alert('Please select a model before uploading files.')
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      setBrowserUploadProgress({ current: 0, total: 0, currentFile: 'Opening directory picker...' })
+
+      // Pick directory using browser's native picker
+      const result = await pickDirectory({
+        onProgress: (progress) => {
+          setBrowserUploadProgress({
+            current: progress.current,
+            total: progress.total,
+            currentFile: progress.currentPath,
+          })
+        },
+      })
+
+      if (!result) {
+        // User cancelled
+        setBrowserUploadProgress(null)
+        setIsUploading(false)
+        return
+      }
+
+      const { files, directoryName } = result
+
+      if (files.length === 0) {
+        alert('No files found in the selected directory.')
+        setBrowserUploadProgress(null)
+        setIsUploading(false)
+        return
+      }
+
+      // Upload files to server
+      setBrowserUploadProgress({
+        current: 0,
+        total: files.length,
+        currentFile: 'Uploading files to server...',
+      })
+
+      let uploadedCount = 0
+      let failedCount = 0
+
+      for (const { file } of files) {
+        try {
+          await apiClient.uploadFile(file, formData.model_name)
+          uploadedCount++
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          failedCount++
+        }
+
+        setBrowserUploadProgress({
+          current: uploadedCount + failedCount,
+          total: files.length,
+          currentFile: file.name,
+        })
+      }
+
+      // Show success message
+      setLastSyncResult({
+        directory_id: 0, // Browser upload doesn't have a directory ID
+        files_processed: files.length,
+        files_created: uploadedCount,
+        files_updated: 0,
+        files_failed: failedCount,
+        message: `Browser upload completed: ${uploadedCount} files uploaded from "${directoryName}"`,
+      })
+
+      setBrowserUploadProgress(null)
+      setIsUploading(false)
+    } catch (error) {
+      console.error('Browser directory upload failed:', error)
+      alert(`Upload failed: ${error instanceof Error ? error.message : String(error)}`)
+      setBrowserUploadProgress(null)
+      setIsUploading(false)
     }
   }
 
@@ -399,14 +692,71 @@ export function UploadDirectoryManagement() {
               </CardTitle>
               <CardDescription>
                 Register directories for one-click document synchronization. Supports .eesignore for filtering files.
+                {isFileSystemAccessSupported() && (
+                  <span className="block mt-1 text-primary">
+                    💡 Use "Quick Upload" to upload files directly from your browser - no permission issues!
+                  </span>
+                )}
               </CardDescription>
             </div>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-              <FolderPlus className="h-4 w-4 mr-2" />
-              Register Directory
-            </Button>
+            <div className="flex gap-2">
+              {isFileSystemAccessSupported() && (
+                <Button
+                  variant="outline"
+                  onClick={handleBrowserDirectoryUpload}
+                  disabled={isUploading || isCollecting || !formData.model_name}
+                  title="Use browser's native directory picker (no permission issues)"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isUploading || isCollecting ? 'Processing...' : 'Quick Upload'}
+                </Button>
+              )}
+              <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Register Directory
+              </Button>
+            </div>
           </div>
         </CardHeader>
+
+        {/* Browser Upload Progress */}
+        {browserUploadProgress && (
+          <CardContent className="border-t">
+            <div className="bg-info/10 dark:bg-info/20 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  {isCollecting ? 'Collecting files from directory...' : 'Uploading to server...'}
+                </span>
+                <span className="text-blue-700 dark:text-blue-300 font-semibold">
+                  {browserUploadProgress.current} / {browserUploadProgress.total}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300">
+                  <span className="font-medium truncate" title={browserUploadProgress.currentFile}>
+                    {browserUploadProgress.currentFile}
+                  </span>
+                  <span className="font-medium ml-2">
+                    {browserUploadProgress.total > 0
+                      ? `${Math.round((browserUploadProgress.current / browserUploadProgress.total) * 100)}%`
+                      : '0%'}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
+                  <div
+                    className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300 ease-out"
+                    style={{
+                      width: browserUploadProgress.total > 0
+                        ? `${(browserUploadProgress.current / browserUploadProgress.total) * 100}%`
+                        : '0%'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        )}
 
         {/* Create Form */}
         {showCreateForm && (
@@ -427,7 +777,10 @@ export function UploadDirectoryManagement() {
 
               <FormField
                 label="Directory Path"
-                helpText="Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore)."
+                helpText={isFileSystemAccessSupported()
+                  ? "Use Browser Picker for easy, permission-free directory selection, or enter an absolute path."
+                  : "Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore)."
+                }
               >
                 <div className="flex gap-2 items-center">
                   <Input
@@ -437,16 +790,34 @@ export function UploadDirectoryManagement() {
                     placeholder="/Users/username/Documents"
                     required
                     className="flex-1"
+                    readOnly={formData.path.startsWith('[Browser:')}
                   />
+                  {isFileSystemAccessSupported() && (
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="default"
+                      onClick={handleBrowserDirectoryPicker}
+                      title="Use browser's native directory picker (recommended - no permission issues)"
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     size="lg"
                     variant="outline"
                     onClick={() => setShowDirectoryPicker(true)}
+                    title="Browse server filesystem (may require permissions)"
                   >
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
+                {formData.path.startsWith('[Browser:') && (
+                  <p className="text-sm text-primary mt-2">
+                    ✓ Directory selected via browser picker - no permission issues!
+                  </p>
+                )}
               </FormField>
 
               <FormSelect
