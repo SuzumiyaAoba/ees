@@ -1082,62 +1082,62 @@ const isTest = process.env["NODE_ENV"] === "test"
 if (!isTest) {
   // In production, serve static assets and SSR
   if (mode === "production") {
-  logger.info({ component: "app", phase: "ssr-setup" }, "Setting up SSR middleware for production")
+    logger.info({ component: "app", phase: "ssr-setup" }, "Setting up SSR middleware for production")
 
-  const clientDistPath = join(__dirname, "../../web/dist/client")
-  const serverDistPath = join(__dirname, "../../web/dist/server")
+    const clientDistPath = join(__dirname, "../../web/dist/client")
+    const serverDistPath = join(__dirname, "../../web/dist/server")
 
-  // Serve static assets (CSS, JS, images, etc.)
-  app.get("/assets/*", createStaticMiddleware(clientDistPath))
+    // Serve static assets (CSS, JS, images, etc.)
+    app.get("/assets/*", createStaticMiddleware(clientDistPath))
 
-  // SSR for all other routes (frontend application)
-  app.get("*", createSSRMiddleware({
-    mode,
-    clientDistPath,
-    serverDistPath
-  }))
-} else {
-  logger.info({ component: "app", phase: "ssr-setup" }, "Development mode - frontend served by Vite dev server")
+    // SSR for all other routes (frontend application)
+    app.get("*", createSSRMiddleware({
+      mode,
+      clientDistPath,
+      serverDistPath
+    }))
+  } else {
+    logger.info({ component: "app", phase: "ssr-setup" }, "Development mode - frontend served by Vite dev server")
 
-  // In development, proxy all non-API routes to Vite dev server
-  const viteUrl = process.env["VITE_DEV_SERVER_URL"] || "http://localhost:5173"
+    // In development, proxy all non-API routes to Vite dev server
+    const viteUrl = process.env["VITE_DEV_SERVER_URL"] || "http://localhost:5173"
 
-  app.get("*", async (c) => {
-    const path = c.req.path
+    app.get("*", async (c) => {
+      const path = c.req.path
 
-    // Skip proxying if this is an API route
-    if (path.startsWith("/embeddings") ||
-        path.startsWith("/upload") ||
-        path.startsWith("/migrate") ||
-        path.startsWith("/providers") ||
-        path.startsWith("/connections") ||
-        path.startsWith("/models") ||
-        path.startsWith("/upload-directories") ||
-        path.startsWith("/filesystem") ||
-        path.startsWith("/openapi.json") ||
-        path.startsWith("/docs") ||
-        path.startsWith("/health") ||
-        path.startsWith("/metrics")) {
-      // Not found for API routes that don't exist
-      return c.json({ error: "Not found" }, 404)
-    }
+      // Skip proxying if this is an API route
+      if (path.startsWith("/embeddings") ||
+          path.startsWith("/upload") ||
+          path.startsWith("/migrate") ||
+          path.startsWith("/providers") ||
+          path.startsWith("/connections") ||
+          path.startsWith("/models") ||
+          path.startsWith("/upload-directories") ||
+          path.startsWith("/filesystem") ||
+          path.startsWith("/openapi.json") ||
+          path.startsWith("/docs") ||
+          path.startsWith("/health") ||
+          path.startsWith("/metrics")) {
+        // Not found for API routes that don't exist
+        return c.json({ error: "Not found" }, 404)
+      }
 
-    // Proxy to Vite dev server for frontend routes
-    try {
-      const response = await fetch(new URL(c.req.url.replace(c.req.url.split("/").slice(0, 3).join("/"), viteUrl)))
-      return new Response(response.body, {
-        status: response.status,
-        headers: response.headers,
-      })
-    } catch (error) {
-      logger.error({
-        error: error instanceof Error ? error.message : String(error),
-        path,
-        viteUrl
-      }, "Failed to proxy to Vite dev server")
-      return c.text("Failed to connect to Vite dev server", 502)
-    }
-  })
+      // Proxy to Vite dev server for frontend routes
+      try {
+        const response = await fetch(new URL(c.req.url.replace(c.req.url.split("/").slice(0, 3).join("/"), viteUrl)))
+        return new Response(response.body, {
+          status: response.status,
+          headers: response.headers,
+        })
+      } catch (error) {
+        logger.error({
+          error: error instanceof Error ? error.message : String(error),
+          path,
+          viteUrl
+        }, "Failed to proxy to Vite dev server")
+        return c.text("Failed to connect to Vite dev server", 502)
+      }
+    })
   }
 } else {
   logger.info({ component: "app", phase: "ssr-setup" }, "Test mode - SSR/proxy disabled")

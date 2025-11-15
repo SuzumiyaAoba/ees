@@ -24,6 +24,10 @@ export default defineConfig({
       forks: {
         singleFork: true // Use single fork to avoid conflicts with external services
       }
-    }
+    },
+    env: {
+      NODE_ENV: 'test'
+    },
+    setupFiles: ['./src/__tests__/setup.ts']
   }
 })
