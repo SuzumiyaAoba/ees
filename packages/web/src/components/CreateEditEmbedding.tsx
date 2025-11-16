@@ -159,11 +159,11 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Create/Edit Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-elements">
             {isEditMode ? <Save className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             {isEditMode ? 'Edit Embedding' : 'Create New Embedding'}
           </CardTitle>
@@ -174,7 +174,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-cards">
             <FormField
               label="URI"
               helpText={isEditMode ? 'URI cannot be changed when editing' : 'Unique identifier for the embedding'}
@@ -213,10 +213,10 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
 
             {!isEditMode && !isLoadingTaskTypes && taskTypeOptions.length > 0 && (
               <div>
-                <label className="block label-large mb-3">
+                <label className="block label-large" style={{ marginBottom: 'var(--spacing-3)' }}>
                   Task Types (Optional - for models that support it)
                 </label>
-                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                <div className="flex flex-col gap-elements max-h-60 overflow-y-auto border rounded-lg" style={{ padding: 'var(--spacing-3)' }}>
                   {taskTypeOptions.map((taskType) => {
                     const taskTypeInfo = TASK_TYPES.find(t => t.value === taskType.value)
                     if (!taskTypeInfo) return null
@@ -224,7 +224,8 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                     return (
                       <label
                         key={taskType.value}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-primary/[0.08] p-2 rounded-lg transition-colors"
+                        className="flex items-start gap-elements cursor-pointer hover:bg-primary/[0.08] rounded-lg transition-colors"
+                        style={{ padding: 'var(--spacing-2)' }}
                       >
                         <input
                           type="checkbox"
@@ -241,7 +242,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
                     )
                   })}
                 </div>
-                <p className="body-small text-on-surface-variant mt-2">
+                <p className="body-small text-on-surface-variant" style={{ marginTop: 'var(--spacing-2)' }}>
                   {selectedTaskTypes.length > 0
                     ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s)`
                     : 'Select one or more task types to create specialized embeddings (e.g., "Document Retrieval" + "Clustering")'}
@@ -249,16 +250,16 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-elements">
               <Button type="submit" disabled={isSubmitting || !text.trim() || !modelName || (!isEditMode && !uri.trim())}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="h-4 w-4 animate-spin" style={{ marginRight: 'var(--spacing-2)' }} />
                     {isEditMode ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
                   <>
-                    {isEditMode ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                    {isEditMode ? <Save className="h-4 w-4" style={{ marginRight: 'var(--spacing-2)' }} /> : <Plus className="h-4 w-4" style={{ marginRight: 'var(--spacing-2)' }} />}
                     {isEditMode ? 'Update Embedding' : 'Create Embedding'}
                   </>
                 )}
@@ -271,7 +272,11 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
             </div>
           </form>
 
-          {error && <ErrorCard error={error} className="mt-4" />}
+          {error && (
+            <div style={{ marginTop: 'var(--spacing-card-gap)' }}>
+              <ErrorCard error={error} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -280,16 +285,16 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
         <CardHeader>
           <CardTitle>Usage Instructions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="flex flex-col gap-elements text-sm">
           <div>
-            <h4 className="font-medium mb-1">Creating Embeddings</h4>
+            <h4 className="font-medium" style={{ marginBottom: 'var(--spacing-1)' }}>Creating Embeddings</h4>
             <p className="text-muted-foreground">
               Provide a unique URI and text content. The system will generate an embedding vector
               that can be used for semantic search and similarity comparisons.
             </p>
           </div>
           <div>
-            <h4 className="font-medium mb-1">URI Format</h4>
+            <h4 className="font-medium" style={{ marginBottom: 'var(--spacing-1)' }}>URI Format</h4>
             <p className="text-muted-foreground">
               Use descriptive URIs like <code className="text-xs bg-muted px-1 py-0.5 rounded">file://docs/readme.md</code> or{' '}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">doc:user-guide-123</code>.
@@ -297,7 +302,7 @@ export function CreateEditEmbedding({ editingEmbedding, onEditComplete }: Create
             </p>
           </div>
           <div>
-            <h4 className="font-medium mb-1">Model Selection</h4>
+            <h4 className="font-medium" style={{ marginBottom: 'var(--spacing-1)' }}>Model Selection</h4>
             <p className="text-muted-foreground">
               Select a model from those registered in Config. Different models may produce embeddings
               with different dimensions. Models must be registered in the Config section before use.

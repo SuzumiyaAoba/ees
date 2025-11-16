@@ -82,12 +82,12 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       <Card className="p-6">
         <h2 className="headline-medium mb-6">Model Migration</h2>
 
         {/* Model Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-cards" style={{ marginBottom: 'var(--spacing-6)' }}>
           <FormSelect
             label="From Model"
             value={fromModel}
@@ -158,7 +158,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
         {compatibility?.compatible && (
           <div className="mb-6 p-4 bg-gray-50 rounded-md">
             <h3 className="font-medium mb-3">Migration Options</h3>
-            <div className="space-y-3">
+            <div className="flex flex-col gap-cards">
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -170,7 +170,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
                 Preserve original embeddings
               </label>
 
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-cards">
                 <label className="flex items-center">
                   <span className="mr-2">Batch size:</span>
                   <Input
@@ -224,7 +224,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
         {migrationResult && (
           <div className="p-4 bg-info/10 dark:bg-info/20 border border-info/30 rounded-md">
             <h3 className="font-medium text-blue-800 mb-3">Migration Results</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-cards text-sm">
               <div>
                 <div className="font-medium">Total Processed</div>
                 <div className="text-lg">{migrationResult.totalProcessed}</div>
@@ -246,7 +246,7 @@ export function ModelMigration({ onMigrationComplete }: ModelMigrationProps) {
             {migrationResult.details.some(d => d.status === 'error') && (
               <div className="mt-4">
                 <div className="font-medium text-red-600 mb-2">Failed Items:</div>
-                <div className="max-h-40 overflow-y-auto space-y-1">
+                <div className="max-h-40 overflow-y-auto flex flex-col" style={{ gap: 'var(--spacing-1)' }}>
                   {migrationResult.details
                     .filter(d => d.status === 'error')
                     .map((detail, index) => (

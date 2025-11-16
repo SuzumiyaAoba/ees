@@ -152,7 +152,7 @@ function AppContent() {
         }} />
       case 'config':
         return (
-          <div className="space-y-8">
+          <div className="section-content">
             <div className="flex justify-between items-center">
               <h1 className="headline-large">Configuration</h1>
             </div>
@@ -171,9 +171,9 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header - M3 Top App Bar with Integrated Tabs */}
-      <header className="bg-surface sticky top-0 z-20 shadow-elevation0">
-        <div className="w-full px-6 sm:px-8 lg:px-12">
-          <div className="flex items-center gap-6 h-16">
+      <header className="bg-surface sticky top-0 z-20 shadow-[var(--elevation-0)]">
+        <div className="page-container">
+          <div className="flex items-center gap-cards h-16">
             {/* Logo */}
             <Logo size="md" variant={isDark ? 'white' : 'gradient'} className="shrink-0" />
 
@@ -188,7 +188,7 @@ function AppContent() {
                       value={tab.id}
                       active={activeTab === tab.id}
                       onClick={() => handleTabChange(tab.id)}
-                      className="gap-2"
+                      className="gap-elements"
                     >
                       <Icon className="h-5 w-5" />
                       {tab.label}
@@ -217,16 +217,16 @@ function AppContent() {
       </header>
 
       {/* Main Content */}
-      <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8'}`}>
+      <main className={`flex-1 w-full ${isFullWidthTab ? '' : 'page-container page-section'}`}>
         {renderActiveTab()}
       </main>
 
       {/* Footer */}
       {!isFullWidthTab && (
         <footer className="mt-auto bg-surface">
-          <div className="w-full px-6 sm:px-8 lg:px-12 py-6">
+          <div className="page-container" style={{ paddingTop: 'var(--spacing-card-padding)', paddingBottom: 'var(--spacing-card-padding)' }}>
             <div className="flex justify-between items-center body-small text-muted-foreground">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-elements">
                 <Badge variant="outline" className="body-small">
                   <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
                   Online

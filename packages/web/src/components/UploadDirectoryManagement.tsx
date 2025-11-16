@@ -680,13 +680,13 @@ export function UploadDirectoryManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-elements">
                 <FolderOpen className="h-5 w-5" />
                 Upload Directory Management
               </CardTitle>
@@ -699,7 +699,7 @@ export function UploadDirectoryManagement() {
                 )}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-elements">
               {isFileSystemAccessSupported() && (
                 <Button
                   variant="outline"
@@ -722,9 +722,9 @@ export function UploadDirectoryManagement() {
         {/* Browser Upload Progress */}
         {browserUploadProgress && (
           <CardContent className="border-t">
-            <div className="bg-info/10 dark:bg-info/20 rounded-lg p-4 space-y-3">
+            <div className="bg-info/10 dark:bg-info/20 rounded-lg flex flex-col gap-cards" style={{ padding: 'var(--spacing-4)' }}>
               <div className="flex items-center justify-between">
-                <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-elements">
                   <div className="h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
                   {isCollecting ? 'Collecting files from directory...' : 'Uploading to server...'}
                 </span>
@@ -732,7 +732,7 @@ export function UploadDirectoryManagement() {
                   {browserUploadProgress.current} / {browserUploadProgress.total}
                 </span>
               </div>
-              <div className="space-y-1">
+              <div className="flex flex-col" style={{ gap: 'var(--spacing-1)' }}>
                 <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300">
                   <span className="font-medium truncate" title={browserUploadProgress.currentFile}>
                     {browserUploadProgress.currentFile}
@@ -761,7 +761,7 @@ export function UploadDirectoryManagement() {
         {/* Create Form */}
         {showCreateForm && (
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4 border-t pt-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-cards border-t" style={{ paddingTop: 'var(--spacing-4)' }}>
               <FormField
                 label="Directory Name"
                 helpText="A user-friendly name for this directory"
@@ -782,7 +782,7 @@ export function UploadDirectoryManagement() {
                   : "Absolute path to the directory. Place a .eesignore file in the directory root to filter files (like .gitignore)."
                 }
               >
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-elements items-center">
                   <Input
                     type="text"
                     value={formData.path}
@@ -833,14 +833,15 @@ export function UploadDirectoryManagement() {
               {/* Task Types Selection */}
               {!isLoadingTaskTypes && taskTypeOptions.length > 0 && (
                 <div>
-                  <label className="block label-large mb-3">
+                  <label className="block label-large" style={{ marginBottom: 'var(--spacing-3)' }}>
                     Task Types (Optional - for models that support it)
                   </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                  <div className="flex flex-col gap-elements max-h-60 overflow-y-auto border rounded-lg" style={{ padding: 'var(--spacing-3)' }}>
                     {taskTypeOptions.map((taskType) => (
                       <label
                         key={taskType.value}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-primary/[0.08] p-2 rounded-lg transition-colors"
+                        className="flex items-start gap-elements cursor-pointer hover:bg-primary/[0.08] rounded-lg transition-colors"
+                        style={{ padding: 'var(--spacing-2)' }}
                       >
                         <input
                           type="checkbox"
@@ -855,7 +856,7 @@ export function UploadDirectoryManagement() {
                       </label>
                     ))}
                   </div>
-                  <p className="body-small text-on-surface-variant mt-2">
+                  <p className="body-small text-on-surface-variant" style={{ marginTop: 'var(--spacing-2)' }}>
                     {selectedTaskTypes.length > 0
                       ? `${selectedTaskTypes.length} task type(s) selected - will create ${selectedTaskTypes.length} embedding(s) per file`
                       : 'Select one or more task types to create specialized embeddings for each file'}
@@ -872,7 +873,7 @@ export function UploadDirectoryManagement() {
                 />
               </FormField>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-elements">
                 <Button
                   type="button"
                   variant="outline"
@@ -889,7 +890,7 @@ export function UploadDirectoryManagement() {
               </div>
 
               {createMutation.isError && (
-                <div className="flex items-center gap-2 text-red-600 text-sm">
+                <div className="flex items-center gap-elements text-red-600 text-sm">
                   <AlertCircle className="h-4 w-4" />
                   <p>{createMutation.error.message}</p>
                 </div>
@@ -912,15 +913,16 @@ export function UploadDirectoryManagement() {
         </CardHeader>
         <CardContent>
           {directories?.directories && directories.directories.length > 0 ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-cards">
               {directories.directories.map((directory: UploadDirectory) => (
                 <div
                   key={directory.id}
-                  className="border rounded-lg p-4 space-y-3"
+                  className="border rounded-lg flex flex-col gap-cards"
+                  style={{ padding: 'var(--spacing-4)' }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-elements">
                         <FolderOpen className="h-4 w-4 text-primary" />
                         <h3 className="font-medium">{directory.name}</h3>
                       </div>
@@ -933,7 +935,7 @@ export function UploadDirectoryManagement() {
                         </p>
                       )}
                       {directory.task_types && directory.task_types.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
+                        <div className="flex flex-wrap" style={{ gap: 'var(--spacing-1)', marginTop: 'var(--spacing-2)' }}>
                           {directory.task_types.map((taskType) => (
                             <Badge key={taskType} variant="outline" className="text-xs">
                               {taskType}
@@ -942,7 +944,7 @@ export function UploadDirectoryManagement() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-elements">
                       <Button
                         size="sm"
                         onClick={() => handleSync(directory.id)}
@@ -981,9 +983,9 @@ export function UploadDirectoryManagement() {
 
                   {/* Progress indicator during sync */}
                   {syncingDirectories.has(directory.id) && syncProgress[directory.id] && (
-                    <div className="border-t pt-3 space-y-2 bg-info/10 dark:bg-info/20 -mx-4 -mb-3 px-4 pb-3 rounded-b-lg">
-                      <div className="flex items-center justify-between text-sm pt-1">
-                        <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                    <div className="border-t bg-info/10 dark:bg-info/20 rounded-b-lg flex flex-col gap-elements" style={{ paddingTop: 'var(--spacing-3)', paddingBottom: 'var(--spacing-3)', paddingLeft: 'var(--spacing-4)', paddingRight: 'var(--spacing-4)', marginLeft: 'calc(var(--spacing-4) * -1)', marginRight: 'calc(var(--spacing-4) * -1)', marginBottom: 'calc(var(--spacing-3) * -1)' }}>
+                      <div className="flex items-center justify-between text-sm" style={{ paddingTop: 'var(--spacing-1)' }}>
+                        <span className="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-elements">
                           <div className="h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
                           Processing files...
                         </span>
@@ -991,7 +993,7 @@ export function UploadDirectoryManagement() {
                           {syncProgress[directory.id].current} / {syncProgress[directory.id].total}
                         </span>
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex flex-col" style={{ gap: 'var(--spacing-1)' }}>
                         <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300">
                           <span className="font-medium truncate" title={syncProgress[directory.id].file}>
                             {syncProgress[directory.id].file || 'Collecting files...'}
@@ -1013,7 +1015,7 @@ export function UploadDirectoryManagement() {
                           />
                         </div>
                       </div>
-                      <div className="flex gap-4 text-xs text-blue-700 dark:text-blue-300">
+                      <div className="flex text-xs text-blue-700 dark:text-blue-300" style={{ gap: 'var(--spacing-4)' }}>
                         <span>Created: <span className="font-semibold">{syncProgress[directory.id].created}</span></span>
                         <span>Updated: <span className="font-semibold">{syncProgress[directory.id].updated}</span></span>
                         <span>Failed: <span className="font-semibold text-red-600 dark:text-red-400">{syncProgress[directory.id].failed}</span></span>
@@ -1021,15 +1023,15 @@ export function UploadDirectoryManagement() {
 
                       {/* Failed files list */}
                       {syncProgress[directory.id].failedFiles.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
-                          <div className="text-xs font-semibold text-red-700 dark:text-red-400 mb-2">Failed Files:</div>
-                          <div className="max-h-32 overflow-y-auto space-y-1">
+                        <div className="border-t border-blue-200 dark:border-blue-700" style={{ marginTop: 'var(--spacing-3)', paddingTop: 'var(--spacing-3)' }}>
+                          <div className="text-xs font-semibold text-red-700 dark:text-red-400" style={{ marginBottom: 'var(--spacing-2)' }}>Failed Files:</div>
+                          <div className="max-h-32 overflow-y-auto flex flex-col" style={{ gap: 'var(--spacing-1)' }}>
                             {syncProgress[directory.id].failedFiles.map((failedFile, index) => (
-                              <div key={index} className="text-xs bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded px-2 py-1">
+                              <div key={index} className="text-xs bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded" style={{ paddingLeft: 'var(--spacing-2)', paddingRight: 'var(--spacing-2)', paddingTop: 'var(--spacing-1)', paddingBottom: 'var(--spacing-1)' }}>
                                 <div className="font-medium text-destructive-foreground truncate" title={failedFile.path}>
                                   {failedFile.path}
                                 </div>
-                                <div className="text-red-600 dark:text-red-400 text-[10px] mt-0.5" title={failedFile.error}>
+                                <div className="text-red-600 dark:text-red-400 text-[10px]" style={{ marginTop: 'calc(var(--spacing-1) / 2)' }} title={failedFile.error}>
                                   {failedFile.error}
                                 </div>
                               </div>
@@ -1040,7 +1042,7 @@ export function UploadDirectoryManagement() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground border-t pt-3">
+                  <div className="flex items-center text-sm text-muted-foreground border-t" style={{ gap: 'var(--spacing-4)', paddingTop: 'var(--spacing-3)' }}>
                     <div>
                       <span className="font-medium">Model:</span> {directory.model_name}
                     </div>
@@ -1068,7 +1070,7 @@ export function UploadDirectoryManagement() {
       {lastSyncResult && (
         <Card className="border-success/30 bg-success/10 dark:bg-success/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-success mb-4">
+            <div className="flex items-center gap-elements text-success" style={{ marginBottom: 'var(--spacing-4)' }}>
               <CheckCircle className="h-5 w-5" />
               <div className="flex-1">
                 <p className="font-medium">Directory synced successfully!</p>
@@ -1079,7 +1081,7 @@ export function UploadDirectoryManagement() {
             </div>
 
             {/* Statistics */}
-            <div className="space-y-3 mb-4">
+            <div className="flex flex-col gap-cards" style={{ marginBottom: 'var(--spacing-4)' }}>
               {/* Summary card */}
               <div className="bg-background rounded-lg p-4 border border-success/30">
                 <div className="flex items-center justify-between mb-2">
@@ -1107,7 +1109,7 @@ export function UploadDirectoryManagement() {
               </div>
 
               {/* Detailed statistics */}
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-3 gap-cards text-sm">
                 <div className="bg-background rounded p-3 border border-success/30">
                   <p className="text-muted-foreground text-xs">Created</p>
                   <p className="text-xl font-semibold text-success">{lastSyncResult.files_created}</p>

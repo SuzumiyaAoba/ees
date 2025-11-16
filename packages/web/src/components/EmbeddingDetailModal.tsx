@@ -45,7 +45,7 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
   return (
     <Dialog open={open} onClose={onClose} className="w-full max-w-4xl">
       <DialogHeader onClose={onClose}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-cards">
           <DialogTitle>Embedding Details</DialogTitle>
           <Badge variant="secondary">{embedding.model_name}</Badge>
           {embedding.task_type && (
@@ -56,9 +56,9 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
         </div>
       </DialogHeader>
 
-      <DialogContent className="space-y-6">
+      <DialogContent className="flex flex-col gap-cards">
         {/* Basic Information */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-cards">
           <div>
             <label className="text-sm font-medium text-muted-foreground">ID</label>
             <p className="mt-1 font-mono text-sm">{embedding.id}</p>
@@ -164,8 +164,8 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
         {/* Embedding Vector Information */}
         <div>
           <label className="text-sm font-medium text-muted-foreground">Embedding Vector</label>
-          <div className="mt-2 space-y-2">
-            <div className="flex gap-4 text-sm">
+          <div className="flex flex-col gap-elements" style={{ marginTop: 'var(--spacing-2)' }}>
+            <div className="flex gap-cards text-sm">
               <span className="text-muted-foreground">Dimensions:</span>
               <span className="font-medium">{embedding.embedding.length}</span>
             </div>
@@ -186,7 +186,7 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
         </div>
 
         {/* Timestamps */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+        <div className="grid grid-cols-2 gap-cards border-t" style={{ paddingTop: 'var(--spacing-4)' }}>
           <div>
             <label className="text-sm font-medium text-muted-foreground">Created</label>
             <p className="mt-1 text-sm">{formatDate(embedding.created_at)}</p>

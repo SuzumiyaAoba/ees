@@ -162,11 +162,11 @@ export function FileUpload() {
   const errorCount = files.filter(f => f.status === 'error').length
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Upload Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-elements">
             <Upload className="h-5 w-5" />
             File Upload Configuration
           </CardTitle>
@@ -175,7 +175,7 @@ export function FileUpload() {
             For directory synchronization, use the Directory Management feature.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-cards">
           <FormSelect
             label="Embedding Model"
             value={selectedModel}
@@ -207,8 +207,8 @@ export function FileUpload() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <div className="space-y-2">
+            <Upload className="mx-auto h-12 w-12 text-muted-foreground" style={{ marginBottom: 'var(--spacing-card-gap)' }} />
+            <div className="flex flex-col gap-elements">
               <p className="title-large">
                 {dragActive ? 'Drop files here' : 'Drag & drop files here'}
               </p>
@@ -235,7 +235,7 @@ export function FileUpload() {
 
           {/* Upload Controls */}
           {files.length > 0 && (
-            <div className="flex justify-between items-center pt-4" data-testid="upload-controls">
+            <div className="flex justify-between items-center" style={{ paddingTop: 'var(--spacing-card-gap)' }} data-testid="upload-controls">
               <div className="text-sm text-muted-foreground">
                 {files.length} file(s) selected
                 {pendingCount > 0 && ` • ${pendingCount} pending`}
@@ -243,7 +243,7 @@ export function FileUpload() {
                 {successCount > 0 && ` • ${successCount} completed`}
                 {errorCount > 0 && ` • ${errorCount} failed`}
               </div>
-              <div className="space-x-2">
+              <div className="flex gap-elements">
                 <Button variant="outline" onClick={clearAllFiles}>
                   Clear All
                 </Button>
@@ -269,13 +269,14 @@ export function FileUpload() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-elements">
               {files.map((fileWithStatus) => (
                 <div
                   key={fileWithStatus.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between border rounded-lg"
+                  style={{ padding: 'var(--spacing-3)' }}
                 >
-                  <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-elements flex-1">
                     {getStatusIcon(fileWithStatus.status)}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">
@@ -291,7 +292,7 @@ export function FileUpload() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-elements">
                     {fileWithStatus.status === 'pending' && (
                       <Button
                         size="sm"

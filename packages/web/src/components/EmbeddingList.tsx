@@ -118,11 +118,11 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Filters and Controls */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-elements">
             <List className="h-5 w-5" />
             Embedding Collection
           </CardTitle>
@@ -130,8 +130,8 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             Browse and manage your embedded documents and texts
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="flex flex-col gap-cards">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-cards">
             <FormField label="Filter by URI">
               <Input
                 placeholder="Enter URI to filter..."
@@ -164,7 +164,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
 
           {/* Bulk actions */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-elements text-sm">
               <input
                 type="checkbox"
                 checked={isAllSelected}
@@ -172,7 +172,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
               />
               <span>Select all on page</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-elements">
               <Button
                 variant="outline"
                 onClick={clearSelection}
@@ -216,7 +216,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
             <LoadingState message="Loading embeddings..." />
           ) : data && data.embeddings.length > 0 ? (
             <>
-              <div className="space-y-4">
+              <div className="flex flex-col gap-cards">
                 {data.embeddings.map((embedding) => (
                   <EmbeddingCard
                     key={embedding.id}
@@ -237,7 +237,7 @@ export function EmbeddingList({ onEmbeddingSelect, onEmbeddingEdit }: EmbeddingL
 
               {/* Pagination Controls */}
               {data && data.total > pagination.limit && (
-                <div className="mt-6 pt-4 border-t">
+                <div style={{ marginTop: 'var(--spacing-card-padding)', paddingTop: 'var(--spacing-card-gap)' }} className="border-t">
                   <PaginationControls
                     pagination={pagination}
                     total={data.total}
