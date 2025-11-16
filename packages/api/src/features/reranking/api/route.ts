@@ -11,7 +11,7 @@ export const rerankingRoute = createRoute({
   path: "/rerank",
   tags: ["Reranking"],
   summary: "Rerank documents by relevance to query",
-  description: "Rerank a list of documents based on their relevance to a given query using AI-powered reranking models",
+  description: "Rerank a list of documents based on their relevance to a given query using configured reranking models",
   request: {
     body: {
       content: {
