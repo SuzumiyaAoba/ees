@@ -24,6 +24,7 @@ export function ModelFormModal({
     providerId: providers[0]?.id || 0,
     name: '',
     displayName: '',
+    modelType: 'embedding',
     isActive: false,
   })
 
@@ -33,6 +34,7 @@ export function ModelFormModal({
         providerId: model.providerId,
         name: model.name,
         displayName: model.displayName || '',
+        modelType: model.modelType,
         isActive: model.isActive,
       })
     } else {
@@ -40,6 +42,7 @@ export function ModelFormModal({
         providerId: providers[0]?.id || 0,
         name: '',
         displayName: '',
+        modelType: 'embedding',
         isActive: false,
       })
     }

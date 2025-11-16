@@ -420,11 +420,14 @@ export interface ProviderTestResponse {
 }
 
 // Model Management Types
+export type ModelType = 'embedding' | 'reranking'
+
 export interface Model {
   id: number
   providerId: number
   name: string
   displayName?: string | null
+  modelType: ModelType
   isActive: boolean
   metadata?: Record<string, unknown> | null
   createdAt: string | null
@@ -435,6 +438,7 @@ export interface CreateModelRequest {
   providerId: number
   name: string
   displayName?: string
+  modelType?: ModelType
   isActive?: boolean
   metadata?: Record<string, unknown>
 }
@@ -498,4 +502,35 @@ export interface ConnectionTestResponse {
 export interface ConnectionsListResponse {
   connections: Connection[]
   total: number
+}
+
+// Reranking Types
+export interface RerankDocument {
+  text: string
+  uri?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface RerankRequest {
+  query: string
+  documents: RerankDocument[]
+  model_name?: string
+  top_n?: number
+  provider_options?: Record<string, unknown>
+}
+
+export interface RerankResult {
+  index: number
+  uri?: string
+  text: string
+  score: number
+  metadata?: Record<string, unknown>
+}
+
+export interface RerankResponse {
+  query: string
+  model_name: string
+  results: RerankResult[]
+  total_documents: number
+  top_n: number
 }

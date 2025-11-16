@@ -182,3 +182,20 @@ export {
   ReductionMethodSchema,
   VisualizationDimensionsSchema,
 } from './entities/visualization/model/openapi'
+
+// Export reranking service and types
+export { RerankingService } from './entities/reranking/api/reranking'
+export type {
+  RerankRequest,
+  RerankResponse,
+  RerankDocument,
+  RerankResult,
+  RerankingService as RerankingServiceType,
+} from './entities/reranking/api/reranking'
+
+export {
+  RerankRequestSchema,
+  RerankResponseSchema,
+  RerankDocumentSchema,
+  RerankResultSchema,
+} from './entities/reranking/model/openapi'

@@ -2,12 +2,13 @@ import { Effect, Runtime, Layer, Scope } from "effect"
 import type { Context } from "hono"
 import { AppLayer } from "@/app/providers/main"
 import { handleErrorResponse } from "@/shared/error-handler"
-import { EmbeddingApplicationService, ModelManagerTag, UploadDirectoryRepository, FileSystemService, VisualizationService } from "@ees/core"
+import { EmbeddingApplicationService, ModelManagerTag, UploadDirectoryRepository, FileSystemService, VisualizationService, RerankingService } from "@ees/core"
 import type { EmbeddingApplicationService as EmbeddingApplicationServiceType } from "@ees/core"
 import type { ModelManager } from "@ees/core"
 import type { UploadDirectoryRepository as UploadDirectoryRepositoryType } from "@ees/core"
 import type { FileSystemService as FileSystemServiceType } from "@ees/core"
 import type { VisualizationService as VisualizationServiceType } from "@ees/core"
+import type { RerankingServiceType } from "@ees/core"
 
 /**
  * Shared runtime for test environment to ensure database persistence
@@ -136,6 +137,19 @@ export function withVisualizationService<T, E, R>(
 ): Effect.Effect<T, E, VisualizationServiceType | R> {
   return Effect.gen(function* () {
     const service = yield* VisualizationService
+    return yield* serviceCall(service)
+  })
+}
+
+/**
+ * Helper for creating Effect programs with RerankingService
+ * Reduces boilerplate in reranking endpoints
+ */
+export function withRerankingService<T, E, R>(
+  serviceCall: (service: RerankingServiceType) => Effect.Effect<T, E, R>
+): Effect.Effect<T, E, RerankingServiceType | R> {
+  return Effect.gen(function* () {
+    const service = yield* RerankingService
     return yield* serviceCall(service)
   })
 }
