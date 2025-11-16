@@ -83,7 +83,7 @@ export function ModelManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="headline-medium">Models</h2>
@@ -116,7 +116,7 @@ export function ModelManagement() {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-cards">
         {loading && filteredModels.length === 0 ? (
           <div className="text-center py-12 body-large text-muted-foreground">Loading models...</div>
         ) : filteredModels.length === 0 ? (
@@ -136,7 +136,7 @@ export function ModelManagement() {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-cards">
                       <h3 className="title-large">
                         {model.displayName || model.name}
                       </h3>
@@ -146,7 +146,7 @@ export function ModelManagement() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-3 space-y-2 body-medium text-muted-foreground">
+                    <div className="flex flex-col gap-elements body-medium text-muted-foreground" style={{ marginTop: 'var(--spacing-3)' }}>
                       {model.displayName && model.displayName !== model.name && (
                         <p><span className="label-medium">Model ID:</span> {model.name}</p>
                       )}
@@ -158,7 +158,7 @@ export function ModelManagement() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-cards">
                     {!model.isActive && (
                       <Button
                         variant="filled-tonal"

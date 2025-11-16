@@ -80,7 +80,7 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
           <CardDescription>Configure your embedding provider connection</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-cards">
             <div>
               <label className="text-sm font-medium">Provider Name</label>
               <Input
@@ -126,7 +126,7 @@ function ConnectionModal({ isOpen, onClose, onSave, initialData, title }: Connec
               />
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-elements">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
@@ -180,7 +180,7 @@ function DiscoverModelsModal({
       </DialogHeader>
 
       <DialogContent>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-cards">
           <p className="text-sm text-muted-foreground">
             Select models to register from this connection. Registered models can be used throughout the application.
           </p>
@@ -190,11 +190,12 @@ function DiscoverModelsModal({
               No models available from this connection
             </div>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="flex flex-col gap-elements max-h-96 overflow-y-auto">
               {availableModels.map((modelName) => (
                 <div
                   key={modelName}
-                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-cards border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  style={{ padding: 'var(--spacing-3)' }}
                   onClick={() => toggleModel(modelName)}
                 >
                   <input
@@ -255,7 +256,7 @@ function ConnectionCard({
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-elements flex-wrap" style={{ marginBottom: 'var(--spacing-2)' }}>
               <h4 className="font-medium truncate">
                 {connection.name}
                 <span className="text-sm font-normal text-muted-foreground ml-2">
@@ -270,7 +271,7 @@ function ConnectionCard({
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground">
+            <div className="grid grid-cols-1 gap-elements text-sm text-muted-foreground">
               <div>
                 <span className="font-medium">Base URL:</span> {connection.baseUrl}
               </div>
@@ -283,7 +284,7 @@ function ConnectionCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-elements" style={{ marginLeft: 'var(--spacing-4)' }}>
             <Button
               variant="ghost"
               size="sm"
@@ -488,7 +489,7 @@ export function ConnectionManagement() {
   const connections = connectionsData?.connections || []
 
   return (
-    <div className="space-y-6">
+    <div className="section-content">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -497,12 +498,12 @@ export function ConnectionManagement() {
             Manage embedding provider connections
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => refetch()} variant="outline" className="gap-2">
+        <div className="flex gap-elements">
+          <Button onClick={() => refetch()} variant="outline" className="gap-elements">
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button onClick={handleOpenAddModal} className="gap-2">
+          <Button onClick={handleOpenAddModal} className="gap-elements">
             <Plus className="h-4 w-4" />
             Add Connection
           </Button>
@@ -520,7 +521,7 @@ export function ConnectionManagement() {
                 ({activeConnection.type})
               </span>
             </div>
-            <div className="space-y-1 text-sm mt-2">
+            <div className="flex flex-col text-sm" style={{ gap: 'var(--spacing-1)', marginTop: 'var(--spacing-2)' }}>
               <div>
                 <span className="text-muted-foreground">Base URL:</span>{' '}
                 <span className="font-mono">{activeConnection.baseUrl}</span>
@@ -545,7 +546,7 @@ export function ConnectionManagement() {
                 <p className="text-sm text-muted-foreground">
                   Available models: {testResult.models.length}
                 </p>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-elements" style={{ marginTop: 'var(--spacing-2)' }}>
                   {testResult.models.slice(0, 5).map((model) => (
                     <Badge key={model} variant="secondary">
                       {model}
@@ -564,7 +565,7 @@ export function ConnectionManagement() {
       {/* Connections List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-elements">
             <Server className="h-5 w-5" />
             Connections
           </CardTitle>
@@ -581,7 +582,7 @@ export function ConnectionManagement() {
               <span className="ml-2">Loading connections...</span>
             </div>
           ) : connections.length > 0 ? (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-cards">
               {connections.map((connection) => (
                 <ConnectionCard
                   key={connection.id}

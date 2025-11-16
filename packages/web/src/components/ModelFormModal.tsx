@@ -58,7 +58,7 @@ export function ModelFormModal({
       </DialogHeader>
 
       <form onSubmit={handleSubmit}>
-        <DialogContent className="space-y-4">
+        <DialogContent className="flex flex-col gap-cards">
           <div>
             <label className="block label-large mb-3">
               Provider
@@ -127,7 +127,7 @@ export function ModelFormModal({
         </DialogContent>
 
         <DialogFooter>
-          <div className="flex gap-2 w-full justify-end">
+          <div className="flex gap-elements w-full justify-end">
             <Button
               type="button"
               variant="outline"
