@@ -317,6 +317,7 @@ const make = Effect.gen(function* () {
             provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             display_name TEXT,
+            model_type TEXT NOT NULL DEFAULT 'embedding',
             is_active INTEGER NOT NULL DEFAULT 0,
             metadata TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -330,6 +331,10 @@ const make = Effect.gen(function* () {
 
         await client.execute(`
           CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_model_type ON models(model_type)
         `)
 
         await client.execute(`
@@ -417,6 +422,7 @@ const make = Effect.gen(function* () {
             provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             display_name TEXT,
+            model_type TEXT NOT NULL DEFAULT 'embedding',
             is_active INTEGER NOT NULL DEFAULT 0,
             metadata TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -430,6 +436,10 @@ const make = Effect.gen(function* () {
 
         await client.execute(`
           CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)
+        `)
+
+        await client.execute(`
+          CREATE INDEX IF NOT EXISTS idx_models_model_type ON models(model_type)
         `)
 
         await client.execute(`

@@ -134,9 +134,10 @@ export const models = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     providerId: integer("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
-    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text")
+    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text", "rerank-v3.5")
     displayName: text("display_name"), // Optional display name for UI
-    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Only one model can be active
+    modelType: text("model_type").notNull().default("embedding"), // Model type: "embedding" | "reranking"
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Only one model can be active per type
     metadata: text("metadata"), // JSON string for model-specific settings
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
@@ -144,6 +145,7 @@ export const models = sqliteTable(
   (table) => ({
     providerIdIdx: index("idx_models_provider_id").on(table.providerId),
     nameIdx: index("idx_models_name").on(table.name),
+    modelTypeIdx: index("idx_models_model_type").on(table.modelType),
     isActiveIdx: index("idx_models_is_active").on(table.isActive),
     // Unique constraint: same model name cannot exist for the same provider
     uniqueProviderModel: index("idx_models_provider_name").on(table.providerId, table.name),
