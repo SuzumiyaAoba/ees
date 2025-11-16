@@ -61,7 +61,7 @@ export const RerankResponseSchema = z.object({
   }),
   model_name: z.string().openapi({
     description: "Model used for reranking",
-    example: "rerank-english-v3.0",
+    example: "rerank-model",
   }),
   results: z.array(RerankResultSchema).openapi({
     description: "Reranked results ordered by relevance score (descending)",
