@@ -106,8 +106,8 @@ function AppContent() {
     try {
       const full = await apiClient.getEmbedding(result.uri, result.model_name)
       setSelectedEmbedding(full)
-    } catch (e) {
-      console.error('Failed to load embedding details from search result:', e)
+    } catch {
+      // Silently fail - user can still see search results
     }
   }
 

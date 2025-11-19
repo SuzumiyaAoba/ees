@@ -5,6 +5,9 @@
 import type { Context } from 'hono'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { createPinoLogger, createLoggerConfig } from "@ees/core"
+
+const logger = createPinoLogger(createLoggerConfig())
 
 interface SSROptions {
   mode: 'development' | 'production'
@@ -82,7 +85,7 @@ export function createSSRMiddleware(options: SSROptions) {
 
       return c.html(html)
     } catch (error) {
-      console.error('SSR Error:', error)
+      logger.error({ error }, 'SSR rendering failed')
 
       // Fallback to basic HTML in case of error
       return c.html(`
@@ -95,9 +98,7 @@ export function createSSRMiddleware(options: SSROptions) {
           </head>
           <body>
             <div id="root"></div>
-            <script>
-              console.error('SSR failed, application may not render correctly');
-            </script>
+            <script type="module" src="/src/entry-client.tsx"></script>
           </body>
         </html>
       `, 500)

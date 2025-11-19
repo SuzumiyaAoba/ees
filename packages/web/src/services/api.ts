@@ -174,8 +174,6 @@ class ApiClient {
     // Use webkitRelativePath if available (for directory uploads), otherwise use file name
     const fileName = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
 
-    console.log('[API] Uploading file:', fileName, 'Original name:', file.name, 'Model:', modelName)
-
     // Create a new File with the correct name if webkitRelativePath exists
     const fileToUpload = fileName !== file.name
       ? new File([file], fileName, { type: file.type })
@@ -186,25 +184,19 @@ class ApiClient {
       formData.append('model_name', modelName)
     }
 
-    console.log('[API] FormData prepared, sending request to:', `${API_BASE_URL}/embeddings/upload`)
-
     const response = await fetch(`${API_BASE_URL}/embeddings/upload`, {
       method: 'POST',
       body: formData,
     })
 
-    console.log('[API] Response status:', response.status, response.statusText)
-
     if (!response.ok) {
       const error: ErrorResponse = await response.json().catch(() => ({
         error: `HTTP ${response.status}: ${response.statusText}`,
       }))
-      console.error('[API] Upload error:', error)
       throw new Error(error.error)
     }
 
     const result = await response.json()
-    console.log('[API] Upload result:', result)
     return result
   }
 
