@@ -1,17 +1,16 @@
 /**
- * Reranking API using AI SDK
- * Provides reranking capabilities using various providers (Cohere, etc.)
+ * Reranking API
+ * Provides reranking capabilities using configured providers
  */
 
 import { Effect } from "effect"
+import { and, eq } from "drizzle-orm"
 import {
   DatabaseConnectionError,
-  ProviderConnectionError,
   ProviderModelError,
 } from "@/shared/errors/database"
-import { models } from "@/shared/database/schema"
 import { DatabaseService } from "@/shared/database/connection"
-import { eq, and } from "drizzle-orm"
+import { models } from "@/shared/database/schema"
 
 /**
  * Document to be reranked
@@ -63,7 +62,7 @@ export interface RerankingService {
     request: RerankRequest
   ) => Effect.Effect<
     RerankResponse,
-    DatabaseConnectionError | ProviderConnectionError | ProviderModelError
+    DatabaseConnectionError | ProviderModelError
   >
 }
 
@@ -90,7 +89,7 @@ export const createRerankingService = (
     if (!activeModel) {
       return yield* Effect.fail(
         new ProviderModelError({
-          provider: "cohere",
+          provider: "unknown",
           modelName: "unknown",
           message: "No active reranking model found. Please set an active reranking model in Config.",
         })
@@ -126,7 +125,7 @@ export const createRerankingService = (
             if (!found) {
               return yield* Effect.fail(
                 new ProviderModelError({
-                  provider: "cohere",
+                  provider: "unknown",
                   modelName: request.modelName ?? "unknown",
                   message: `Reranking model '${request.modelName}' not found`,
                 })
@@ -137,58 +136,36 @@ export const createRerankingService = (
           })
         : yield* getActiveRerankingModel
 
-      // Currently only supporting Cohere
-      // Call Cohere rerank API directly using fetch
-      const result = yield* Effect.tryPromise({
-        try: async () => {
-          const response = await fetch("https://api.cohere.com/v2/rerank", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${process.env["COHERE_API_KEY"] ?? ""}`,
-            },
-            body: JSON.stringify({
-              model: model.name,
-              query: request.query,
-              documents: request.documents.map((doc) => doc.text),
-              top_n: request.topN,
-              ...request.providerOptions,
-            }),
-          })
-
-          if (!response.ok) {
-            const errorText = await response.text()
-            throw new Error(`Cohere API error: ${response.status} ${errorText}`)
-          }
-
-          return await response.json() as {
-            results: Array<{ index: number; relevance_score: number }>
-          }
-        },
-        catch: (error) =>
-          new ProviderConnectionError({
-            provider: "cohere",
-            message: `Reranking failed: ${error instanceof Error ? error.message : String(error)}`,
-          }),
-      })
-
-      // Map results back to include original document metadata
-      const rankedResults: RerankResult[] = result.results.map((item) => {
-        const originalDoc = request.documents[item.index]
+      // Placeholder implementation - to be replaced with actual provider integration
+      // For now, return simple score-based ranking using text similarity
+      const rankedResults: RerankResult[] = request.documents.map((doc, index) => {
+        // Simple scoring based on query term matches (placeholder)
+        const queryTerms = request.query.toLowerCase().split(/\s+/)
+        const docText = doc.text.toLowerCase()
+        const matchCount = queryTerms.filter(term => docText.includes(term)).length
+        const score = matchCount / queryTerms.length
 
         return {
-          index: item.index,
-          ...(originalDoc?.uri ? { uri: originalDoc.uri } : {}),
-          text: originalDoc?.text ?? "",
-          score: item.relevance_score,
-          ...(originalDoc?.metadata ? { metadata: originalDoc.metadata } : {}),
+          index,
+          ...(doc.uri ? { uri: doc.uri } : {}),
+          text: doc.text,
+          score,
+          ...(doc.metadata ? { metadata: doc.metadata } : {}),
         }
       })
+
+      // Sort by score descending
+      const sortedResults = rankedResults.sort((a, b) => b.score - a.score)
+
+      // Apply top_n filter if specified
+      const finalResults = request.topN
+        ? sortedResults.slice(0, request.topN)
+        : sortedResults
 
       return {
         query: request.query,
         modelName: model.name,
-        results: rankedResults,
+        results: finalResults,
         totalDocuments: request.documents.length,
         topN: request.topN ?? request.documents.length,
       }
