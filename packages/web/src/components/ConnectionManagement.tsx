@@ -386,7 +386,7 @@ export function ConnectionManagement() {
       }
       handleCloseModal()
     } catch (error) {
-      console.error('Error saving connection:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save connection')
     }
   }
 
@@ -395,7 +395,7 @@ export function ConnectionManagement() {
       try {
         await deleteMutation.mutateAsync(id)
       } catch (error) {
-        console.error('Error deleting connection:', error)
+        alert(error instanceof Error ? error.message : 'Failed to delete connection')
       }
     }
   }
@@ -404,7 +404,7 @@ export function ConnectionManagement() {
     try {
       await activateMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error activating connection:', error)
+      alert(error instanceof Error ? error.message : 'Failed to activate connection')
     }
   }
 
@@ -414,7 +414,6 @@ export function ConnectionManagement() {
       const result = await testMutation.mutateAsync({ id })
       setTestResult(result)
     } catch (error) {
-      console.error('Error testing connection:', error)
       setTestResult({
         success: false,
         message: error instanceof Error ? error.message : 'Connection test failed',
@@ -436,7 +435,6 @@ export function ConnectionManagement() {
         alert('No models found for this connection')
       }
     } catch (error) {
-      console.error('Error discovering models:', error)
       alert(error instanceof Error ? error.message : 'Failed to discover models')
     }
   }
@@ -471,7 +469,6 @@ export function ConnectionManagement() {
 
       alert(`Successfully registered ${selectedModels.length} model(s)`)
     } catch (error) {
-      console.error('Error registering models:', error)
       alert(error instanceof Error ? error.message : 'Failed to register models')
     } finally {
       setRegisteringModels(false)
