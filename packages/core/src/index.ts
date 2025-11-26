@@ -18,6 +18,18 @@ export type {
   Embedding
 } from './entities/embedding/model/embedding'
 
+export {
+  DatabaseError,
+  DatabaseConnectionError,
+  DatabaseQueryError,
+  ProviderError,
+  ProviderConnectionError,
+  ProviderModelError,
+  ProviderAuthenticationError,
+  ProviderRateLimitError,
+  EmbeddingDataParseError,
+} from './shared/errors/database'
+
 export { ConnectionService } from './entities/connection/index'
 export type {
   CreateConnectionRequest,
@@ -182,20 +194,3 @@ export {
   ReductionMethodSchema,
   VisualizationDimensionsSchema,
 } from './entities/visualization/model/openapi'
-
-// Export reranking service and types
-export { RerankingService } from './entities/reranking/api/reranking'
-export type {
-  RerankRequest,
-  RerankResponse,
-  RerankDocument,
-  RerankResult,
-  RerankingService as RerankingServiceType,
-} from './entities/reranking/api/reranking'
-
-export {
-  RerankRequestSchema,
-  RerankResponseSchema,
-  RerankDocumentSchema,
-  RerankResultSchema,
-} from './entities/reranking/model/openapi'

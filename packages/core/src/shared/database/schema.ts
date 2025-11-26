@@ -134,9 +134,9 @@ export const models = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     providerId: integer("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
-    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text", "rerank-v3.5")
+    name: text("name").notNull(), // Model name (e.g., "nomic-embed-text")
     displayName: text("display_name"), // Optional display name for UI
-    modelType: text("model_type").notNull().default("embedding"), // Model type: "embedding" | "reranking"
+    modelType: text("model_type").notNull().default("embedding"), // Model type (currently embedding)
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(false), // Only one model can be active per type
     metadata: text("metadata"), // JSON string for model-specific settings
     createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),

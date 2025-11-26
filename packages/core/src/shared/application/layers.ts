@@ -70,8 +70,7 @@ const ModelManagerLayer = Layer.provide(ModelManagerLive, BaseWithAllEmbeddingSe
 const BaseWithModelManagerLayer = Layer.merge(BaseWithAllEmbeddingServicesLayer, ModelManagerLayer)
 const EmbeddingApplicationLayer = Layer.provide(EmbeddingApplicationServiceLive, BaseWithModelManagerLayer)
 
-// Final layer merges everything including RerankingService
-// RerankingService is an Effect.Service that automatically provides its layer when DatabaseService is available
+// Final layer merges everything required for application services
 export const CoreApplicationLayer = Layer.merge(BaseWithModelManagerLayer, EmbeddingApplicationLayer)
 
 /**

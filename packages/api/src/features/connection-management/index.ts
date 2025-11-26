@@ -11,6 +11,7 @@ import {
   ConnectionService,
   EmbeddingService,
 } from "@ees/core"
+import { executeEffectHandler } from "@/shared/route-handler"
 import {
   listConnectionsRoute,
   getConnectionRoute,
@@ -284,20 +285,21 @@ connectionApp.openapi(testConnectionRoute, async (c) => {
  * Handler for listing available models from active connection
  */
 connectionApp.openapi(listAvailableModelsRoute, async (c) => {
-  try {
-    const { AppLayer } = await import("@/app/providers/main")
-
-    const listAvailableModelsProgram = Effect.gen(function* () {
+  return executeEffectHandler(c, "listAvailableModels",
+    Effect.gen(function* () {
       const connectionService = yield* ConnectionService
       const activeConnection = yield* connectionService.getActiveConnection()
 
-      // If no active connection, return empty list
       if (!activeConnection) {
         return { models: [] }
       }
 
       const embeddingService = yield* EmbeddingService
-      const models = yield* embeddingService.getProviderModels()
+      const models: Array<{
+        name: string
+        provider: string
+        dimensions?: number
+      }> = yield* embeddingService.getProviderModels()
 
       return {
         models: models.map((model) => ({
@@ -307,25 +309,5 @@ connectionApp.openapi(listAvailableModelsRoute, async (c) => {
         })),
       }
     })
-
-    const result = await Effect.runPromise(
-      listAvailableModelsProgram.pipe(Effect.provide(AppLayer))
-    )
-
-    return c.json(result, 200)
-  } catch (error) {
-    logger.error({ error: String(error) }, "Error listing available models")
-
-    if (String(error).includes("No active connection")) {
-      return c.json(
-        { error: "No active connection configured" },
-        404
-      )
-    }
-
-    return c.json(
-      { error: "Failed to list available models" },
-      500
-    )
-  }
+  ) as never
 })
