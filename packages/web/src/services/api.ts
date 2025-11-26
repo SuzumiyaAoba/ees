@@ -874,7 +874,7 @@ const isStorybook = typeof window !== 'undefined' &&
   (window.location?.pathname?.includes('storybook') ||
    window.location?.hostname?.includes('localhost:6006') ||
    window.location?.hostname?.includes('localhost:6007') ||
-   import.meta.env.VITE_STORYBOOK_MOCK === 'true')
+   process.env.NEXT_PUBLIC_STORYBOOK_MOCK === 'true')
 
 export const apiClient = isStorybook ? createMockApiClient() : new ApiClient()
 
