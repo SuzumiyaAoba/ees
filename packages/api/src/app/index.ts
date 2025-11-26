@@ -71,6 +71,15 @@ logger.info({ component: "app", phase: "initialization" }, "Initializing Hono ap
 const app = new OpenAPIHono()
 
 logger.info({ component: "app", phase: "middleware-setup" }, "Setting up observability middleware")
+
+// Ignore Next.js HMR requests to reduce log noise in development
+app.use(async (c, next) => {
+  if (c.req.path === '/__webpack_hmr' || c.req.path.startsWith('/_next/')) {
+    return c.text('', 404)
+  }
+  await next()
+})
+
 // Observability middleware (must be first for proper request tracking)
 app.use(requestLoggingMiddleware)
 app.use(metricsMiddleware)
