@@ -265,7 +265,7 @@ class ApiClient {
       return await this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/latest`, {
         method: 'GET',
       })
-    } catch (error) {
+    } catch {
       // If no job exists, return null instead of throwing
       // This is expected when checking for running jobs on page load
       return null

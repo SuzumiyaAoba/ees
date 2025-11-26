@@ -3,6 +3,18 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@ees/core'],
 
+  // ESLint configuration
+  eslint: {
+    // Only fail on errors, not warnings
+    ignoreDuringBuilds: false,
+  },
+
+  // TypeScript configuration
+  typescript: {
+    // Only fail on errors, not warnings
+    ignoreBuildErrors: false,
+  },
+
   // Redirect /api requests to the backend API server
   async rewrites() {
     const apiPort = process.env.API_PORT || '3000'

@@ -694,7 +694,7 @@ export function UploadDirectoryManagement() {
                 Register directories for one-click document synchronization. Supports .eesignore for filtering files.
                 {isFileSystemAccessSupported() && (
                   <span className="block mt-1 text-primary">
-                    💡 Use "Quick Upload" to upload files directly from your browser - no permission issues!
+                    💡 Use &quot;Quick Upload&quot; to upload files directly from your browser - no permission issues!
                   </span>
                 )}
               </CardDescription>
@@ -1060,7 +1060,7 @@ export function UploadDirectoryManagement() {
             <div className="text-center py-12 text-muted-foreground">
               <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No directories registered yet.</p>
-              <p className="text-sm">Click "Register Directory" to get started.</p>
+              <p className="text-sm">Click &quot;Register Directory&quot; to get started.</p>
             </div>
           )}
         </CardContent>

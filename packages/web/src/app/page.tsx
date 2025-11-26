@@ -1,8 +1,9 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Search, List, Upload, Settings, ArrowLeftRight, Plus, FolderOpen, Eye, Moon, Sun } from 'lucide-react'
 import { SearchInterface } from '@/components/SearchInterface'
 import { EmbeddingList } from '@/components/EmbeddingList'
@@ -13,7 +14,6 @@ import { ModelManagement } from '@/components/ModelManagement'
 import { ModelMigration } from '@/components/ModelMigration'
 import { EmbeddingDetailModal } from '@/components/EmbeddingDetailModal'
 import { UploadDirectoryManagement } from '@/components/UploadDirectoryManagement'
-import { EmbeddingVisualization } from '@/components/EmbeddingVisualization'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +21,12 @@ import { Logo } from '@/design-system/components/Logo'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { apiClient } from '@/services/api'
 import type { Embedding, SearchResult } from '@/types/api'
+
+// Dynamically import EmbeddingVisualization to avoid SSR issues with Plotly.js
+const EmbeddingVisualization = dynamic(
+  () => import('@/components/EmbeddingVisualization').then(mod => ({ default: mod.EmbeddingVisualization })),
+  { ssr: false }
+)
 
 // Create a client
 const queryClient = new QueryClient({
@@ -246,7 +252,9 @@ function AppContent() {
 export default function Home() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+        <AppContent />
+      </Suspense>
     </QueryClientProvider>
   )
 }
