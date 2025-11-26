@@ -1,5 +1,5 @@
 -- Migration: Add model_type column to models table
--- This migration adds support for different model types (embedding, reranking)
+-- This migration adds support for tracking model types (initially embedding)
 
 -- Add model_type column with default value 'embedding'
 ALTER TABLE models ADD COLUMN model_type TEXT NOT NULL DEFAULT 'embedding';

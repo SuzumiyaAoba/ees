@@ -20,9 +20,9 @@ describe('Input', () => {
       render(<Input />)
 
       const input = screen.getByRole('textbox')
-      expect(input).toHaveClass('rounded-md')
-      expect(input).toHaveClass('border')
-      expect(input).toHaveClass('bg-background')
+      expect(input).toHaveClass('rounded-lg')
+      expect(input).toHaveClass('border-outline')
+      expect(input).toHaveClass('bg-surface')
     })
 
     it('should apply custom className', () => {
@@ -30,7 +30,7 @@ describe('Input', () => {
 
       const input = screen.getByRole('textbox')
       expect(input).toHaveClass('custom-input')
-      expect(input).toHaveClass('rounded-md') // Should keep default classes
+      expect(input).toHaveClass('rounded-lg') // Should keep default classes
     })
 
     it('should render with placeholder', () => {

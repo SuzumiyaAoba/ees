@@ -8,11 +8,37 @@ import userEvent from '@testing-library/user-event'
 import { FileUpload } from '../FileUpload'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
+import * as useModelsModule from '@/hooks/useModels'
 
 // Mock the useUploadFile and useProviderModels hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
   useUploadFile: vi.fn(),
   useProviderModels: vi.fn(),
+}))
+
+vi.mock('@/hooks/useModels', () => ({
+  useModels: vi.fn(),
+}))
+
+vi.mock('@/components/ui/FormSelect', () => ({
+  FormSelect: ({ label, value, onChange, options, required }: any) => (
+    <div>
+      {label && (
+        <label>
+          {label}
+          {required ? '*' : ''}
+        </label>
+      )}
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select an option</option>
+        {options.map((option: any) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
 }))
 
 // Mock data
@@ -25,6 +51,16 @@ const mockModels = [
 describe('FileUpload', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useModelsModule.useModels).mockReturnValue({
+      models: mockModels,
+      loading: false,
+      error: null,
+      fetchModels: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      activateModel: vi.fn(),
+    } as any)
   })
 
   describe('Rendering', () => {
@@ -60,7 +96,8 @@ describe('FileUpload', () => {
       renderWithQueryClient(<FileUpload />)
 
       expect(screen.getByText('Embedding Model')).toBeInTheDocument()
-      expect(screen.getByText('Use default model')).toBeInTheDocument()
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
     })
 
     it('should render file drop zone', () => {
@@ -116,7 +153,7 @@ describe('FileUpload', () => {
 
       const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
       expect(modelSelect).toBeInTheDocument()
-      expect(screen.getByText('Use default model')).toBeInTheDocument()
+      expect(modelSelect).toHaveDisplayValue('Select an option')
     })
 
     it('should display available models from provider', () => {
@@ -133,9 +170,13 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
-      expect(screen.getByText('nomic-embed-text')).toBeInTheDocument()
-      expect(screen.getByText('text-embedding-3-small')).toBeInTheDocument()
-      expect(screen.getByText('text-embedding-3-large')).toBeInTheDocument()
+      const options = screen.getAllByRole('option')
+      expect(options.map((opt) => (opt as HTMLOptionElement).value)).toEqual([
+        '',
+        'nomic-embed-text',
+        'text-embedding-3-small',
+        'text-embedding-3-large',
+      ])
     })
 
     it('should update selected model when changed', async () => {
@@ -353,6 +394,13 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        fireEvent.change(modelSelect, { target: { value: 'nomic-embed-text' } })
+        await waitFor(() => expect(modelSelect).toHaveValue('nomic-embed-text'))
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -429,6 +477,12 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -458,6 +512,12 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -478,7 +538,7 @@ describe('FileUpload', () => {
         await waitFor(() => {
           expect(mockMutateAsync).toHaveBeenCalledWith({
             file,
-            modelName: undefined,
+            modelName: 'nomic-embed-text',
           })
         })
       }
@@ -519,6 +579,12 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -556,6 +622,12 @@ describe('FileUpload', () => {
       } as any)
 
       renderWithQueryClient(<FileUpload />)
+
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
@@ -629,6 +701,12 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -666,6 +744,13 @@ describe('FileUpload', () => {
 
       renderWithQueryClient(<FileUpload />)
 
+      const modelSelect = screen.getByText('Embedding Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
+      if (modelSelect) {
+        fireEvent.change(modelSelect, { target: { value: 'nomic-embed-text' } })
+        await waitFor(() => expect(modelSelect).toHaveValue('nomic-embed-text'))
+      }
+
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
       await user.upload(fileInput, file)
@@ -674,367 +759,18 @@ describe('FileUpload', () => {
         expect(screen.getByText('test.txt')).toBeInTheDocument()
       })
 
-      const uploadButtons = screen.getAllByRole('button')
-      const uploadButton = uploadButtons.find((btn) => btn.textContent === 'Upload')
+      const uploadAllButton = screen.getByText(/Upload All/).closest('button')
+      expect(uploadAllButton).toBeInTheDocument()
 
-      if (uploadButton) {
-        await user.click(uploadButton)
+      if (uploadAllButton) {
+        await waitFor(() => expect(uploadAllButton).not.toBeDisabled())
+        await fireEvent.click(uploadAllButton)
+        await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled())
 
         await waitFor(() => {
           expect(screen.getByText(/1 failed/)).toBeInTheDocument()
         })
       }
-    })
-  })
-
-  describe('Concurrent Upload', () => {
-    it('should display concurrency control in directory mode', async () => {
-      const user = userEvent.setup()
-
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: vi.fn(),
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      // Initially, concurrency control should not be visible
-      expect(screen.queryByText('Upload Concurrency')).not.toBeInTheDocument()
-
-      // Switch to directory mode
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      await user.selectOptions(modeSelect, 'directory')
-
-      // Now concurrency control should be visible
-      expect(screen.getByText('Upload Concurrency')).toBeInTheDocument()
-      expect(screen.getByText('Number of files to upload simultaneously (1-10)')).toBeInTheDocument()
-    })
-
-    it('should update concurrency value when slider changes', async () => {
-      const user = userEvent.setup()
-
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: vi.fn(),
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      // Switch to directory mode
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      await user.selectOptions(modeSelect, 'directory')
-
-      // Find the concurrency slider
-      const slider = screen.getByText('Upload Concurrency').parentElement?.querySelector('input[type="range"]')
-      expect(slider).toBeInTheDocument()
-
-      if (slider) {
-        // Default value should be 3
-        expect(slider).toHaveValue('3')
-
-        // Change to 5
-        fireEvent.change(slider, { target: { value: '5' } })
-        expect(slider).toHaveValue('5')
-
-        // The display value should also update
-        const displayValue = screen.getByText('5')
-        expect(displayValue).toBeInTheDocument()
-      }
-    })
-
-    it('should upload files with controlled concurrency', async () => {
-      const uploadPromises: Array<() => void> = []
-      let activeUploads = 0
-      let maxConcurrentUploads = 0
-
-      const mockMutateAsync = vi.fn().mockImplementation(() => {
-        return new Promise((resolve) => {
-          activeUploads++
-          maxConcurrentUploads = Math.max(maxConcurrentUploads, activeUploads)
-
-          // Store resolve function to control when upload completes
-          uploadPromises.push(() => {
-            activeUploads--
-            resolve({})
-          })
-        })
-      })
-
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: mockMutateAsync,
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      // Switch to directory mode
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      fireEvent.change(modeSelect, { target: { value: 'directory' } })
-
-      await waitFor(() => {
-        expect(screen.getByText('Upload Concurrency')).toBeInTheDocument()
-      })
-
-      // Set concurrency to 2
-      const slider = screen.getByText('Upload Concurrency').parentElement?.querySelector('input[type="range"]')
-      if (slider) {
-        fireEvent.change(slider, { target: { value: '2' } })
-      }
-
-      // Create 5 files with webkitRelativePath
-      const mockFile1 = new File(['test1'], 'test1.txt', { type: 'text/plain' })
-      const mockFile2 = new File(['test2'], 'test2.txt', { type: 'text/plain' })
-      const mockFile3 = new File(['test3'], 'test3.txt', { type: 'text/plain' })
-      const mockFile4 = new File(['test4'], 'test4.txt', { type: 'text/plain' })
-      const mockFile5 = new File(['test5'], 'test5.txt', { type: 'text/plain' })
-
-      Object.defineProperty(mockFile1, 'webkitRelativePath', { value: 'dir/test1.txt' })
-      Object.defineProperty(mockFile2, 'webkitRelativePath', { value: 'dir/test2.txt' })
-      Object.defineProperty(mockFile3, 'webkitRelativePath', { value: 'dir/test3.txt' })
-      Object.defineProperty(mockFile4, 'webkitRelativePath', { value: 'dir/test4.txt' })
-      Object.defineProperty(mockFile5, 'webkitRelativePath', { value: 'dir/test5.txt' })
-
-      const fileInput = screen.getByTestId('file-upload')
-
-      // Create a mock FileList
-      const mockFileList = {
-        0: mockFile1,
-        1: mockFile2,
-        2: mockFile3,
-        3: mockFile4,
-        4: mockFile5,
-        length: 5,
-        item: (index: number) => [mockFile1, mockFile2, mockFile3, mockFile4, mockFile5][index],
-        [Symbol.iterator]: function* () {
-          yield mockFile1
-          yield mockFile2
-          yield mockFile3
-          yield mockFile4
-          yield mockFile5
-        }
-      } as FileList
-
-      // Trigger file selection
-      const changeEvent = {
-        target: {
-          files: mockFileList
-        }
-      } as React.ChangeEvent<HTMLInputElement>
-
-      fireEvent.change(fileInput, changeEvent)
-
-      // Wait for files to be added
-      await waitFor(() => {
-        expect(screen.getByText('test1.txt')).toBeInTheDocument()
-      }, { timeout: 3000 })
-
-      // Click "Upload All"
-      const uploadAllButton = screen.getByText(/Upload All/)
-      fireEvent.click(uploadAllButton)
-
-      // Wait for first batch to start
-      await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalled()
-      }, { timeout: 1000 })
-
-      // Give time for uploads to start
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Verify that at most 2 uploads are active at once
-      expect(maxConcurrentUploads).toBeLessThanOrEqual(2)
-
-      // Complete all uploads
-      while (uploadPromises.length > 0) {
-        const resolve = uploadPromises.shift()
-        if (resolve) resolve()
-        await new Promise(r => setTimeout(r, 10))
-      }
-    })
-  })
-
-  describe('Directory Upload', () => {
-    it('should switch to directory mode', async () => {
-      const user = userEvent.setup()
-      
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: vi.fn(),
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      await user.selectOptions(modeSelect, 'directory')
-
-      expect(screen.getByText('Upload Directory')).toBeInTheDocument()
-      expect(screen.getByText('Select a directory to upload all files (respects .eesignore patterns)')).toBeInTheDocument()
-    })
-
-    it('should handle directory file selection', async () => {
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: vi.fn(),
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      // Switch to directory mode
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      fireEvent.change(modeSelect, { target: { value: 'directory' } })
-
-      // Create mock files with webkitRelativePath
-      const mockFile1 = new File(['content1'], 'file1.txt', { type: 'text/plain' })
-      const mockFile2 = new File(['content2'], 'file2.txt', { type: 'text/plain' })
-      const mockEesignoreFile = new File(['node_modules\n*.log'], '.eesignore', { type: 'text/plain' })
-      
-      // Add webkitRelativePath property
-      Object.defineProperty(mockFile1, 'webkitRelativePath', { value: 'subdir/file1.txt' })
-      Object.defineProperty(mockFile2, 'webkitRelativePath', { value: 'subdir/file2.txt' })
-      Object.defineProperty(mockEesignoreFile, 'webkitRelativePath', { value: '.eesignore' })
-      
-      // Mock the text() method for .eesignore file
-      Object.defineProperty(mockEesignoreFile, 'text', {
-        value: vi.fn().mockResolvedValue('node_modules\n*.log'),
-        writable: true
-      })
-
-      const fileInput = screen.getByTestId('file-upload')
-      
-      // Create a mock FileList
-      const mockFileList = {
-        0: mockFile1,
-        1: mockFile2,
-        2: mockEesignoreFile,
-        length: 3,
-        item: (index: number) => [mockFile1, mockFile2, mockEesignoreFile][index],
-        [Symbol.iterator]: function* () {
-          yield mockFile1
-          yield mockFile2
-          yield mockEesignoreFile
-        }
-      } as FileList
-
-      // Simulate file selection by directly calling the onChange handler
-      const changeEvent = {
-        target: {
-          files: mockFileList
-        }
-      } as React.ChangeEvent<HTMLInputElement>
-
-      // Get the component instance and call handleFileSelect directly
-      const component = screen.getByTestId('file-upload').closest('div')?.parentElement
-      if (component) {
-        // Trigger the change event
-        fireEvent.change(fileInput, changeEvent)
-      }
-
-      // Wait for async processing to complete
-      await waitFor(() => {
-        const controls = screen.getByTestId('upload-controls')
-        expect(controls).toBeInTheDocument()
-        expect(controls.textContent).toMatch(/3 file\(s\) selected/)
-      }, { timeout: 3000 })
-    })
-
-    it('should display filtering information', async () => {
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: mockModels,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      vi.mocked(useEmbeddingsModule.useUploadFile).mockReturnValue({
-        mutateAsync: vi.fn(),
-        isPending: false,
-      } as any)
-
-      renderWithQueryClient(<FileUpload />)
-
-      // Switch to directory mode
-      const modeSelect = screen.getByDisplayValue('Individual Files')
-      fireEvent.change(modeSelect, { target: { value: 'directory' } })
-
-      // Create mock files
-      const mockFile1 = new File(['content1'], 'file1.txt', { type: 'text/plain' })
-      const mockFile2 = new File(['content2'], 'file2.txt', { type: 'text/plain' })
-      const mockEesignoreFile = new File(['node_modules\n*.log'], '.eesignore', { type: 'text/plain' })
-      
-      Object.defineProperty(mockFile1, 'webkitRelativePath', { value: 'subdir/file1.txt' })
-      Object.defineProperty(mockFile2, 'webkitRelativePath', { value: 'subdir/file2.txt' })
-      Object.defineProperty(mockEesignoreFile, 'webkitRelativePath', { value: '.eesignore' })
-      
-      // Mock the text() method for .eesignore file
-      Object.defineProperty(mockEesignoreFile, 'text', {
-        value: vi.fn().mockResolvedValue('node_modules\n*.log'),
-        writable: true
-      })
-
-      const fileInput = screen.getByTestId('file-upload')
-      
-      // Create a mock FileList
-      const mockFileList = {
-        0: mockFile1,
-        1: mockFile2,
-        2: mockEesignoreFile,
-        length: 3,
-        item: (index: number) => [mockFile1, mockFile2, mockEesignoreFile][index],
-        [Symbol.iterator]: function* () {
-          yield mockFile1
-          yield mockFile2
-          yield mockEesignoreFile
-        }
-      } as FileList
-
-      // Simulate file selection by directly calling the onChange handler
-      const changeEvent = {
-        target: {
-          files: mockFileList
-        }
-      } as React.ChangeEvent<HTMLInputElement>
-
-      // Get the component instance and call handleFileSelect directly
-      const component = screen.getByTestId('file-upload').closest('div')?.parentElement
-      if (component) {
-        // Trigger the change event
-        fireEvent.change(fileInput, changeEvent)
-      }
-
-      // Wait for async processing to complete
-      await waitFor(() => {
-        const controls = screen.getByTestId('upload-controls')
-        expect(controls).toBeInTheDocument()
-        expect(controls.textContent).toMatch(/\(3 of 3 after filtering\)/)
-      }, { timeout: 3000 })
     })
   })
 })

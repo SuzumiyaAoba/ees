@@ -263,10 +263,14 @@ const createSystemMetrics = (): SystemMetrics => ({
  */
 class MetricsServiceImpl implements MetricsService {
   private readonly metrics: Metrics
+  private static defaultMetricsRegistered = false
 
   constructor() {
     // Enable default system metrics collection
-    collectDefaultMetrics({ prefix: "ees_" })
+    if (!MetricsServiceImpl.defaultMetricsRegistered) {
+      collectDefaultMetrics({ prefix: "ees_" })
+      MetricsServiceImpl.defaultMetricsRegistered = true
+    }
 
     const business = createBusinessMetrics()
     const system = createSystemMetrics()

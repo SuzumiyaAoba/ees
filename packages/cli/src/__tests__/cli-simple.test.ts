@@ -110,7 +110,11 @@ describe("CLI Application Service Layer", () => {
       expect(mockEmbeddingService.createEmbedding).toHaveBeenCalledWith(
         "test-doc",
         "Test content",
-        "test-model"
+        "test-model",
+        undefined,
+        undefined,
+        undefined,
+        undefined
       )
     })
   })

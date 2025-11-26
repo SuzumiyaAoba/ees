@@ -25,9 +25,9 @@ describe('Card', () => {
       const { container } = render(<Card>Test</Card>)
       const card = container.firstChild as HTMLElement
 
-      expect(card).toHaveClass('rounded-lg')
-      expect(card).toHaveClass('border')
-      expect(card).toHaveClass('bg-card')
+      expect(card).toHaveClass('rounded-xl')
+      expect(card).toHaveClass('text-card-foreground')
+      expect(card).toHaveClass('bg-gray-100')
     })
 
     it('should apply custom className', () => {
@@ -35,7 +35,7 @@ describe('Card', () => {
       const card = container.firstChild as HTMLElement
 
       expect(card).toHaveClass('custom-card')
-      expect(card).toHaveClass('rounded-lg') // Should keep default classes
+      expect(card).toHaveClass('rounded-xl') // Should keep default classes
     })
   })
 
@@ -128,7 +128,7 @@ describe('CardHeader', () => {
       const { container } = render(<CardHeader>Test</CardHeader>)
       const header = container.firstChild as HTMLElement
 
-      expect(header).toHaveClass('flex', 'flex-col', 'p-6')
+      expect(header).toHaveClass('flex', 'flex-col', 'gap-elements', 'card-header-spacing')
     })
 
     it('should apply custom className', () => {
@@ -163,7 +163,7 @@ describe('CardTitle', () => {
       render(<CardTitle>Title</CardTitle>)
 
       const title = screen.getByText('Title')
-      expect(title).toHaveClass('text-2xl', 'font-semibold')
+      expect(title).toHaveClass('title-large')
     })
 
     it('should apply custom className', () => {
@@ -207,7 +207,7 @@ describe('CardDescription', () => {
       render(<CardDescription>Description</CardDescription>)
 
       const desc = screen.getByText('Description')
-      expect(desc).toHaveClass('text-sm', 'text-muted-foreground')
+      expect(desc).toHaveClass('body-medium', 'text-muted-foreground')
     })
 
     it('should apply custom className', () => {
@@ -241,7 +241,7 @@ describe('CardContent', () => {
       const { container } = render(<CardContent>Content</CardContent>)
       const content = container.firstChild as HTMLElement
 
-      expect(content).toHaveClass('p-6', 'pt-0')
+      expect(content).toHaveClass('card-content-spacing')
     })
 
     it('should apply custom className', () => {
@@ -275,7 +275,7 @@ describe('CardFooter', () => {
       const { container } = render(<CardFooter>Footer</CardFooter>)
       const footer = container.firstChild as HTMLElement
 
-      expect(footer).toHaveClass('flex', 'items-center', 'p-6', 'pt-0')
+      expect(footer).toHaveClass('flex', 'items-center', 'gap-elements', 'card-content-spacing')
     })
 
     it('should apply custom className', () => {

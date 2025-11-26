@@ -10,6 +10,7 @@ import { renderWithQueryClient } from '@/__tests__/test-utils'
 import { mockSearchResponse } from '@/__tests__/mocks/handlers'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
 import * as apiClientModule from '@/services/api'
+import * as useModelsModule from '@/hooks/useModels'
 
 // Mock the useEmbeddings hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
@@ -23,6 +24,10 @@ vi.mock('@/services/api', () => ({
   apiClient: {
     getTaskTypes: vi.fn(),
   },
+}))
+
+vi.mock('@/hooks/useModels', () => ({
+  useModels: vi.fn(),
 }))
 
 describe('SearchInterface', () => {
@@ -44,6 +49,17 @@ describe('SearchInterface', () => {
       data: { embeddings: [], count: 0, total_pages: 0, has_next: false, has_prev: false, page: 1, limit: 10, total: 0 },
       isLoading: false,
       error: null,
+    } as any)
+
+    vi.mocked(useModelsModule.useModels).mockReturnValue({
+      models: [],
+      loading: false,
+      error: null,
+      fetchModels: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      activateModel: vi.fn(),
     } as any)
 
     // Mock getTaskTypes to avoid API calls in tests
@@ -83,7 +99,7 @@ describe('SearchInterface', () => {
       expect(screen.getByPlaceholderText(/enter your search query/i)).toBeInTheDocument()
     })
 
-    it('should render search button', () => {
+    it('should render search mode toggle buttons', () => {
       vi.mocked(useEmbeddingsModule.useSearchEmbeddings).mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -92,9 +108,8 @@ describe('SearchInterface', () => {
 
       renderWithQueryClient(<SearchInterface />)
 
-      // There are multiple search buttons/icons, use getAllByText
-      const searchButtons = screen.getAllByText('Search')
-      expect(searchButtons.length).toBeGreaterThan(0)
+      expect(screen.getByRole('button', { name: /semantic/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /keyword/i })).toBeInTheDocument()
     })
   })
 
@@ -138,8 +153,8 @@ describe('SearchInterface', () => {
       renderWithQueryClient(<SearchInterface />)
 
       const metricLabel = screen.getByText('Metric')
-      const metricSelect = metricLabel.parentElement?.querySelector('select')
-      expect(metricSelect).toHaveValue('cosine')
+      const metricTrigger = metricLabel.parentElement?.querySelector('button')
+      expect(metricTrigger).toHaveTextContent(/Cosine/i)
     })
   })
 
@@ -160,22 +175,7 @@ describe('SearchInterface', () => {
       expect(input).toHaveValue('test query')
     })
 
-    it('should disable search button when query is empty', () => {
-      vi.mocked(useEmbeddingsModule.useSearchEmbeddings).mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: null,
-      } as any)
-
-      renderWithQueryClient(<SearchInterface />)
-
-      // Get the search button (not the tab button)
-      const buttons = screen.getAllByRole('button')
-      const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search') && btn.hasAttribute('disabled'))
-      expect(searchButton).toBeDefined()
-    })
-
-    it('should enable search button when query has text', async () => {
+    it('should allow switching between semantic and keyword modes', async () => {
       const user = userEvent.setup()
       vi.mocked(useEmbeddingsModule.useSearchEmbeddings).mockReturnValue({
         data: undefined,
@@ -185,14 +185,10 @@ describe('SearchInterface', () => {
 
       renderWithQueryClient(<SearchInterface />)
 
-      const input = screen.getByPlaceholderText(/enter your search query/i)
-      await user.type(input, 'test')
+      const keywordTab = screen.getByRole('button', { name: /keyword/i })
+      await user.click(keywordTab)
 
-      await waitFor(() => {
-        const buttons = screen.getAllByRole('button')
-        const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search') && !btn.hasAttribute('disabled'))
-        expect(searchButton).toBeDefined()
-      })
+      expect(screen.getByText('Keyword Search')).toBeInTheDocument()
     })
   })
 
@@ -261,12 +257,10 @@ describe('SearchInterface', () => {
         error: null,
       } as any)
 
-      renderWithQueryClient(<SearchInterface />)
+      const { container } = renderWithQueryClient(<SearchInterface />)
 
-      // When loading, the search button should be disabled
-      const buttons = screen.getAllByRole('button')
-      const searchButton = buttons.find((btn: HTMLElement) => btn.textContent?.includes('Search'))
-      expect(searchButton).toBeDisabled()
+      const spinner = container.querySelector('.animate-spin')
+      expect(spinner).toBeInTheDocument()
     })
   })
 

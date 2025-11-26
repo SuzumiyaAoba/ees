@@ -28,7 +28,6 @@ import { connectionApp } from "@/features/connection-management"
 import { modelApp } from "@/features/model-management"
 import { searchEmbeddingsRoute } from "@/features/search-embeddings"
 import { visualizeEmbeddingsRoute } from "@/features/visualize-embeddings"
-import { rerankingRoute } from "@/features/reranking"
 import { uploadApp } from "@/features/upload-embeddings"
 import {
   createUploadDirectoryRoute,
@@ -43,7 +42,7 @@ import {
 } from "@/features/upload-directory"
 import { listDirectoryRoute } from "@/features/file-system"
 import { rootRoute } from "./config/routes"
-import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService, withVisualizationService, withRerankingService } from "@/shared/route-handler"
+import { executeEffectHandler, withEmbeddingService, withModelManager, executeEffectHandlerWithConditional, validateNumericId, withUploadDirectoryRepository, withFileSystemService, withVisualizationService } from "@/shared/route-handler"
 import { AppLayer } from "@/app/providers/main"
 import { createSecurityMiddleware } from "@/middleware/security"
 import {
@@ -230,21 +229,6 @@ app.openapi(visualizeEmbeddingsRoute, async (c) => {
 })
 
 /**
- * Reranking endpoint
- * Reranks documents by relevance to a query using AI-powered reranking models
- */
-app.use("/rerank", security.rateLimits.general)
-app.openapi(rerankingRoute, async (c) => {
-  const request = c.req.valid("json")
-
-  return executeEffectHandler(c, "rerank",
-    withRerankingService(rerankingService =>
-      rerankingService.rerank(request)
-    )
-  ) as never
-})
-
-/**
  * Get embedding by URI endpoint
  * Retrieves a specific embedding using its unique URI identifier
  */
@@ -404,11 +388,15 @@ app.openapi(createUploadDirectoryRoute, async (c) => {
 
       // Validate model availability from active connection
       if (model_name) {
-        const availableModels = yield* embeddingService.getProviderModels()
-        const isModelAvailable = availableModels.some((m) => m.name === model_name)
+        const availableModels: Array<{
+          name: string
+          provider: string
+          dimensions?: number
+        }> = yield* embeddingService.getProviderModels()
+        const isModelAvailable = availableModels.some((model) => model.name === model_name)
 
         if (!isModelAvailable) {
-          const modelNames = availableModels.map((m) => m.name).join(", ")
+          const modelNames = availableModels.map((model) => model.name).join(", ")
           return yield* Effect.fail(
             new Error(
               `Model "${model_name}" is not available in the active connection. Available models: ${modelNames}`
@@ -540,11 +528,15 @@ app.openapi(updateUploadDirectoryRoute, async (c) => {
 
       // Validate model availability from active connection if model_name is being updated
       if (updates.model_name) {
-        const availableModels = yield* embeddingService.getProviderModels()
-        const isModelAvailable = availableModels.some((m) => m.name === updates.model_name)
+        const availableModels: Array<{
+          name: string
+          provider: string
+          dimensions?: number
+        }> = yield* embeddingService.getProviderModels()
+        const isModelAvailable = availableModels.some((model) => model.name === updates.model_name)
 
         if (!isModelAvailable) {
-          const modelNames = availableModels.map((m) => m.name).join(", ")
+          const modelNames = availableModels.map((model) => model.name).join(", ")
           return yield* Effect.fail(
             new Error(
               `Model "${updates.model_name}" is not available in the active connection. Available models: ${modelNames}`

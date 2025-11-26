@@ -21,8 +21,7 @@
     "noUncheckedIndexedAccess": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/core/*": ["../core/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],
