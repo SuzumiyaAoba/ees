@@ -41,7 +41,7 @@ describe('Button', () => {
       render(<Button variant="destructive">Delete</Button>)
 
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-destructive')
+      expect(button).toHaveClass('bg-error')
     })
 
     it('should render outline variant', () => {
@@ -55,14 +55,14 @@ describe('Button', () => {
       render(<Button variant="secondary">Secondary</Button>)
 
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-secondary')
+      expect(button).toHaveClass('bg-secondary-container')
     })
 
     it('should render ghost variant', () => {
       render(<Button variant="ghost">Ghost</Button>)
 
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('hover:bg-accent')
+      expect(button).toHaveClass('hover:bg-muted/50')
     })
 
     it('should render link variant', () => {
@@ -85,14 +85,14 @@ describe('Button', () => {
       render(<Button size="sm">Small</Button>)
 
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-9')
+      expect(button).toHaveClass('h-8')
     })
 
     it('should render large size', () => {
       render(<Button size="lg">Large</Button>)
 
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('h-11')
+      expect(button).toHaveClass('h-14')
     })
 
     it('should render icon size', () => {
@@ -188,7 +188,7 @@ describe('Button', () => {
 
       const button = screen.getByRole('button')
       expect(button).toHaveClass('border')
-      expect(button).toHaveClass('h-11')
+      expect(button).toHaveClass('h-14')
     })
   })
 })

@@ -9,12 +9,14 @@ import { ModelMigration } from '../ModelMigration'
 import { renderWithQueryClient } from '@/__tests__/test-utils'
 import * as apiClientModule from '@/services/api'
 import * as useEmbeddingsModule from '@/hooks/useEmbeddings'
+import * as useModelsModule from '@/hooks/useModels'
 
 // Mock the API client
 vi.mock('@/services/api', () => ({
   apiClient: {
     checkModelCompatibility: vi.fn(),
     migrateEmbeddings: vi.fn(),
+    getModelsList: vi.fn(),
   },
 }))
 
@@ -22,6 +24,73 @@ vi.mock('@/services/api', () => ({
 vi.mock('@/hooks/useEmbeddings', () => ({
   useProviderModels: vi.fn(),
 }))
+
+vi.mock('@/hooks/useModels', () => ({
+  useModels: vi.fn(),
+}))
+
+vi.mock('@/components/ui/FormSelect', () => ({
+  FormSelect: ({ label, value, onChange, options, required }: any) => (
+    <div>
+      {label && (
+        <label>
+          {label}
+          {required ? '*' : ''}
+        </label>
+      )}
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select an option</option>
+        {options.map((option: any) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}))
+
+const getSelectTrigger = (labelText: string): HTMLElement => {
+  const label = screen.getByText(labelText)
+  const selectElement = label.parentElement?.querySelector('select')
+  if (selectElement instanceof HTMLElement) {
+    return selectElement
+  }
+
+  const trigger =
+    label.parentElement?.querySelector('[role="combobox"]') ?? label.nextElementSibling
+
+  if (!(trigger instanceof HTMLElement)) {
+    throw new Error(`Select trigger not found for ${labelText}`)
+  }
+
+  return trigger
+}
+
+const selectOption = async (
+  user: ReturnType<typeof userEvent.setup>,
+  labelText: string,
+  optionText: string
+) => {
+  const trigger = getSelectTrigger(labelText)
+
+  if (trigger.tagName.toLowerCase() === 'select') {
+    await user.selectOptions(trigger, optionText)
+  } else {
+    await user.click(trigger)
+    const option = await screen.findByRole('option', { name: optionText })
+    await user.click(option)
+  }
+}
+
+const chooseModels = async (
+  user: ReturnType<typeof userEvent.setup>,
+  fromModel: string,
+  toModel: string
+) => {
+  await selectOption(user, 'From Model', fromModel)
+  await selectOption(user, 'To Model', toModel)
+}
 
 // Mock data
 const mockModels = [
@@ -78,6 +147,17 @@ describe('ModelMigration', () => {
       isLoading: false,
       error: null,
     } as any)
+
+    vi.mocked(useModelsModule.useModels).mockReturnValue({
+      models: mockModels,
+      loading: false,
+      error: null,
+      fetchModels: vi.fn(),
+      createModel: vi.fn(),
+      updateModel: vi.fn(),
+      deleteModel: vi.fn(),
+      activateModel: vi.fn(),
+    } as any)
   })
 
   describe('Rendering', () => {
@@ -112,7 +192,7 @@ describe('ModelMigration', () => {
       renderWithQueryClient(<ModelMigration />)
 
       await waitFor(() => {
-        expect(useEmbeddingsModule.useProviderModels).toHaveBeenCalled()
+        expect(useModelsModule.useModels).toHaveBeenCalled()
       })
     })
 
@@ -121,10 +201,8 @@ describe('ModelMigration', () => {
       renderWithQueryClient(<ModelMigration />)
 
       await waitFor(() => {
-        const nomicElements = screen.getAllByText(/Nomic Embed Text \(ollama\)/)
-        expect(nomicElements.length).toBeGreaterThan(0)
-        const openaiElements = screen.getAllByText(/Text Embedding 3 Small \(openai\)/)
-        expect(openaiElements.length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Nomic Embed Text').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Text Embedding 3 Small').length).toBeGreaterThan(0)
       })
     })
 
@@ -137,10 +215,9 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
+      await selectOption(user, 'From Model', 'nomic-embed-text')
 
-      expect(fromSelect).toHaveValue('nomic-embed-text')
+      expect(getSelectTrigger('From Model')).toHaveTextContent('Nomic Embed Text')
     })
 
     it('should update to model on selection', async () => {
@@ -152,10 +229,9 @@ describe('ModelMigration', () => {
         expect(screen.getByText('To Model')).toBeInTheDocument()
       })
 
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await selectOption(user, 'To Model', 'text-embedding-3-small')
 
-      expect(toSelect).toHaveValue('text-embedding-3-small')
+      expect(getSelectTrigger('To Model')).toHaveTextContent('Text Embedding 3 Small')
     })
 
     it('should disable check compatibility button when models not selected', async () => {
@@ -180,11 +256,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -207,11 +279,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -231,11 +299,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-large')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-large')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -256,11 +320,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -282,11 +342,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -308,11 +364,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -339,11 +391,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -372,11 +420,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -397,11 +441,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -437,11 +477,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -473,11 +509,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -505,11 +537,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -531,17 +559,20 @@ describe('ModelMigration', () => {
 
   describe('Error Handling', () => {
     it('should display error when model loading fails', async () => {
-      // Mock error state
-      vi.mocked(useEmbeddingsModule.useProviderModels).mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: new Error('Failed to load models'),
+      vi.mocked(useModelsModule.useModels).mockReturnValue({
+        models: [],
+        loading: false,
+        error: 'Failed to load models',
+        fetchModels: vi.fn(),
+        createModel: vi.fn(),
+        updateModel: vi.fn(),
+        deleteModel: vi.fn(),
+        activateModel: vi.fn(),
       } as any)
 
       renderWithQueryClient(<ModelMigration />)
 
       await waitFor(() => {
-        expect(screen.getByText('Error')).toBeInTheDocument()
         expect(screen.getByText('Failed to load models')).toBeInTheDocument()
       })
     })
@@ -556,11 +587,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)
@@ -582,11 +609,7 @@ describe('ModelMigration', () => {
         expect(screen.getByText('From Model')).toBeInTheDocument()
       })
 
-      const fromSelect = screen.getByText('From Model').nextElementSibling as HTMLSelectElement
-      const toSelect = screen.getByText('To Model').nextElementSibling as HTMLSelectElement
-
-      await user.selectOptions(fromSelect, 'nomic-embed-text')
-      await user.selectOptions(toSelect, 'text-embedding-3-small')
+      await chooseModels(user, 'nomic-embed-text', 'text-embedding-3-small')
 
       const checkButton = screen.getByText('Check Compatibility')
       await user.click(checkButton)

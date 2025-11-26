@@ -5,10 +5,7 @@
     "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/core/*": ["../core/src/*"],
-      "@ees/core": ["../core/src/index.ts"],
-      "@ees/core/*": ["../core/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

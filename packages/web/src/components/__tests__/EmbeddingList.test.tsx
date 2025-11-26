@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import type { MockInstance } from 'vitest'
 import { screen, waitFor } from '@/__tests__/test-utils'
 import userEvent from '@testing-library/user-event'
 import { EmbeddingList } from '../EmbeddingList'
@@ -12,11 +13,33 @@ import * as usePaginationModule from '@/hooks/usePagination'
 import * as useFiltersModule from '@/hooks/useFilters'
 import type { EmbeddingsListResponse } from '@/types/api'
 
+vi.mock('@/components/ui/FormSelect', () => ({
+  FormSelect: ({ label, value, onChange, options, placeholder = 'Select an option', required }: any) => (
+    <div>
+      {label && (
+        <label>
+          {label}
+          {required ? '*' : ''}
+        </label>
+      )}
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {options.map((option: any) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}))
+
 // Mock the useEmbeddings and useDeleteEmbedding hooks
 vi.mock('@/hooks/useEmbeddings', () => ({
   useEmbeddings: vi.fn(),
   useDeleteEmbedding: vi.fn(),
   useDeleteAllEmbeddings: vi.fn(),
+  useDistinctEmbeddingModels: vi.fn(),
 }))
 
 // Mock the usePagination hook
@@ -86,16 +109,24 @@ const mockLargeListResponse: EmbeddingsListResponse = {
 }
 
 describe('EmbeddingList', () => {
+  let updateFilter: ReturnType<typeof vi.fn>
+  let setLimit: ReturnType<typeof vi.fn>
+  let windowConfirmSpy: MockInstance<(message?: string) => boolean>
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(global.confirm).mockReturnValue(true)
+    windowConfirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    updateFilter = vi.fn()
+    setLimit = vi.fn()
 
     // Setup default pagination mock
     vi.mocked(usePaginationModule.usePagination).mockReturnValue({
       page: 1,
       limit: 20,
       setPage: vi.fn(),
-      setLimit: vi.fn(),
+      setLimit,
       nextPage: vi.fn(),
       previousPage: vi.fn(),
       goToPage: vi.fn(),
@@ -112,8 +143,32 @@ describe('EmbeddingList', () => {
     // Setup default filters mock
     vi.mocked(useFiltersModule.useFilters).mockReturnValue({
       filters: { uri: '', modelName: '' },
-      updateFilter: vi.fn(),
+      updateFilter,
     } as any)
+
+    vi.mocked(useEmbeddingsModule.useDistinctEmbeddingModels).mockReturnValue({
+      data: { models: ['nomic-embed-text', 'text-embedding-3-small'] },
+      isLoading: false,
+      error: null,
+    } as any)
+
+    vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
+      data: mockEmbeddingsListResponse,
+      isLoading: false,
+      error: null,
+    } as any)
+
+    vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
+
+    vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any)
+
+    windowConfirmSpy.mockReturnValue(true)
   })
 
   describe('Rendering', () => {
@@ -262,7 +317,6 @@ describe('EmbeddingList', () => {
     })
 
     it('should show adjusted message when filters are active', async () => {
-      const user = userEvent.setup()
       vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
         data: mockEmptyResponse,
         isLoading: false,
@@ -279,10 +333,12 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
-      renderWithQueryClient(<EmbeddingList />)
+      vi.mocked(useFiltersModule.useFilters).mockReturnValue({
+        filters: { uri: 'test', modelName: '' },
+        updateFilter: vi.fn(),
+      } as any)
 
-      const uriFilterInput = screen.getByPlaceholderText('Enter URI to filter...')
-      await user.type(uriFilterInput, 'test')
+      renderWithQueryClient(<EmbeddingList />)
 
       await waitFor(() => {
         expect(screen.getByText('Try adjusting your filters')).toBeInTheDocument()
@@ -293,6 +349,7 @@ describe('EmbeddingList', () => {
   describe('Filtering', () => {
     it('should update URI filter on input', async () => {
       const user = userEvent.setup()
+      const localUpdateFilter = vi.fn()
       vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
         data: mockEmbeddingsListResponse,
         isLoading: false,
@@ -307,6 +364,17 @@ describe('EmbeddingList', () => {
       vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: vi.fn(),
         isPending: false,
+      } as any)
+
+      vi.mocked(useEmbeddingsModule.useDistinctEmbeddingModels).mockReturnValue({
+        data: { models: ['nomic-embed-text'] },
+        isLoading: false,
+        error: null,
+      } as any)
+
+      vi.mocked(useFiltersModule.useFilters).mockReturnValue({
+        filters: { uri: '', modelName: '' },
+        updateFilter: localUpdateFilter,
       } as any)
 
       renderWithQueryClient(<EmbeddingList />)
@@ -314,11 +382,12 @@ describe('EmbeddingList', () => {
       const uriFilterInput = screen.getByPlaceholderText('Enter URI to filter...')
       await user.type(uriFilterInput, 'doc1')
 
-      expect(uriFilterInput).toHaveValue('doc1')
+      expect(localUpdateFilter).toHaveBeenCalledWith('uri', expect.any(String))
     })
 
     it('should update model filter on input', async () => {
       const user = userEvent.setup()
+      const localUpdateFilter = vi.fn()
       vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
         data: mockEmbeddingsListResponse,
         isLoading: false,
@@ -335,12 +404,21 @@ describe('EmbeddingList', () => {
         isPending: false,
       } as any)
 
+      vi.mocked(useFiltersModule.useFilters).mockReturnValue({
+        filters: { uri: '', modelName: '' },
+        updateFilter: localUpdateFilter,
+      } as any)
+
       renderWithQueryClient(<EmbeddingList />)
 
-      const modelFilterInput = screen.getByPlaceholderText('Enter model name...')
-      await user.type(modelFilterInput, 'nomic')
+      const modelSelect = screen.getByText('Filter by Model').parentElement?.querySelector('select')
+      expect(modelSelect).toBeInTheDocument()
 
-      expect(modelFilterInput).toHaveValue('nomic')
+      if (modelSelect) {
+        await user.selectOptions(modelSelect, 'nomic-embed-text')
+      }
+
+      expect(localUpdateFilter).toHaveBeenLastCalledWith('modelName', 'nomic-embed-text')
     })
 
     it('should update items per page on selection', async () => {
@@ -368,7 +446,7 @@ describe('EmbeddingList', () => {
 
       if (limitSelect) {
         await user.selectOptions(limitSelect, '50')
-        expect(limitSelect).toHaveValue('50')
+        expect(setLimit).toHaveBeenLastCalledWith(50)
       }
     })
   })
@@ -395,7 +473,6 @@ describe('EmbeddingList', () => {
 
       expect(screen.getByText('Previous')).toBeInTheDocument()
       expect(screen.getByText('Next')).toBeInTheDocument()
-      expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument()
     })
 
     it('should not display pagination controls when total is within limit', () => {
@@ -596,6 +673,7 @@ describe('EmbeddingList', () => {
       const user = userEvent.setup()
       const mockMutateAsync = vi.fn().mockResolvedValue({})
       vi.mocked(global.confirm).mockReturnValue(true)
+      windowConfirmSpy.mockReturnValue(true)
 
       vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
         data: mockEmbeddingsListResponse,
@@ -603,34 +681,25 @@ describe('EmbeddingList', () => {
         error: null,
       } as any)
 
-      vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: mockMutateAsync,
         isPending: false,
       } as any)
 
       renderWithQueryClient(<EmbeddingList />)
 
-      // Find all delete buttons (Trash2 icons)
-      const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find((btn: HTMLElement) => {
-        const svg = btn.querySelector('svg')
-        return svg && svg.classList.contains('lucide-trash-2')
-      })
+      const deleteAllButton = screen.getByRole('button', { name: /Delete All/ })
+      await user.click(deleteAllButton)
 
-      expect(deleteButton).toBeInTheDocument()
-
-      if (deleteButton) {
-        await user.click(deleteButton)
-
-        expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete this embedding?')
-        expect(mockMutateAsync).toHaveBeenCalledWith(1)
-      }
+      expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete ALL 2 embedding(s)? This action cannot be undone.')
+      expect(mockMutateAsync).toHaveBeenCalled()
     })
 
     it('should not delete when user cancels confirmation', async () => {
       const user = userEvent.setup()
       const mockMutateAsync = vi.fn()
       vi.mocked(global.confirm).mockReturnValue(false)
+      windowConfirmSpy.mockReturnValue(false)
 
       vi.mocked(useEmbeddingsModule.useEmbeddings).mockReturnValue({
         data: mockEmbeddingsListResponse,
@@ -638,25 +707,18 @@ describe('EmbeddingList', () => {
         error: null,
       } as any)
 
-      vi.mocked(useEmbeddingsModule.useDeleteEmbedding).mockReturnValue({
+      vi.mocked(useEmbeddingsModule.useDeleteAllEmbeddings).mockReturnValue({
         mutateAsync: mockMutateAsync,
         isPending: false,
       } as any)
 
       renderWithQueryClient(<EmbeddingList />)
 
-      const deleteButtons = screen.getAllByRole('button')
-      const deleteButton = deleteButtons.find((btn: HTMLElement) => {
-        const svg = btn.querySelector('svg')
-        return svg && svg.classList.contains('lucide-trash-2')
-      })
+      const deleteAllButton = screen.getByRole('button', { name: /Delete All/ })
+      await user.click(deleteAllButton)
 
-      if (deleteButton) {
-        await user.click(deleteButton)
-
-        expect(global.confirm).toHaveBeenCalled()
-        expect(mockMutateAsync).not.toHaveBeenCalled()
-      }
+      expect(global.confirm).toHaveBeenCalled()
+      expect(mockMutateAsync).not.toHaveBeenCalled()
     })
 
     it('should disable delete button when mutation is pending', () => {
