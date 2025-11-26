@@ -373,7 +373,7 @@ export function EmbeddingVisualization() {
     }
 
     // 2D uses pointIndex, 3D uses pointNumber
-    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as any).pointIndices?.[0]
+    const pointIndex = firstPoint.pointIndex ?? firstPoint.pointNumber ?? (firstPoint as unknown as { pointIndices?: number[] }).pointIndices?.[0]
 
     if (pointIndex === undefined || pointIndex === null) {
       return
@@ -490,7 +490,7 @@ export function EmbeddingVisualization() {
           await apiClient.getEmbedding(tempUri, modelName)
           embeddingVerified = true
           break
-        } catch (e) {
+        } catch {
           await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)))
         }
       }
@@ -774,7 +774,7 @@ export function EmbeddingVisualization() {
       type: 'scatter' as const,
       name: 'Your Input',
       text: points.map(() => 'Your Input'),
-      textposition: 'top center' as 'top center',
+      textposition: 'top center' as const,
       textfont: {
         size: 14,
         color: '#ff6b00',
@@ -783,7 +783,7 @@ export function EmbeddingVisualization() {
       marker: {
         size: 20,
         color: '#ff6b00',
-        symbol: 'star' as 'star',
+        symbol: 'star' as const,
         line: {
           color: '#ffffff',
           width: 3,
@@ -806,7 +806,7 @@ export function EmbeddingVisualization() {
       marker: {
         size: 8,
         color: '#ff6b00',
-        symbol: 'diamond' as 'diamond',
+        symbol: 'diamond' as const,
         line: {
           color: '#ffffff',
           width: 1.5,
@@ -1421,7 +1421,7 @@ export function EmbeddingVisualization() {
                 <Eye className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">Ready to Visualize</h3>
                 <p className="text-sm text-muted-foreground">
-                  Configure your parameters in the left panel and click "Visualize" to generate
+                  Configure your parameters in the left panel and click &quot;Visualize&quot; to generate
                   a 2D or 3D scatter plot of your embeddings.
                 </p>
               </div>

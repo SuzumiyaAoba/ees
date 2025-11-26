@@ -1,5 +1,4 @@
-import type { StorybookConfig } from '@storybook/react-vite'
-import path from 'path'
+import type { StorybookConfig } from '@storybook/nextjs'
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
@@ -10,27 +9,12 @@ const config: StorybookConfig = {
     '@storybook/addon-interactions',
   ],
   framework: {
-    name: '@storybook/react-vite',
+    name: '@storybook/nextjs',
     options: {},
   },
   docs: {
     autodocs: 'tag',
   },
-  viteFinal: async (config) => {
-    config.resolve = config.resolve || { alias: {} }
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      '@': path.resolve(__dirname, '../src'),
-    }
-    
-    // Mock apiClient for Storybook
-    config.define = {
-      ...config.define,
-      'process.env.NODE_ENV': JSON.stringify('development'),
-      'process.env.STORYBOOK_MOCK': JSON.stringify('true'),
-    }
-    
-    return config
-  },
+  staticDirs: ['../public'],
 }
 export default config

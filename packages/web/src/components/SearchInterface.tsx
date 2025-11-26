@@ -325,7 +325,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
               <div className="flex-1">
                 <CardTitle>Search Results</CardTitle>
                 <CardDescription>
-                  Found {searchResults.total_results} results for "{searchResults.query}"
+                  Found {searchResults.total_results} results for &quot;{searchResults.query}&quot;
                   using {searchResults.model_name} model
                 </CardDescription>
                 <div className="text-sm text-muted-foreground pt-2">

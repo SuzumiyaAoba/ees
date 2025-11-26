@@ -265,7 +265,7 @@ class ApiClient {
       return await this.request<SyncJobStatus>(`/upload-directories/${directoryId}/sync/jobs/latest`, {
         method: 'GET',
       })
-    } catch (error) {
+    } catch {
       // If no job exists, return null instead of throwing
       // This is expected when checking for running jobs on page load
       return null
@@ -874,7 +874,7 @@ const isStorybook = typeof window !== 'undefined' &&
   (window.location?.pathname?.includes('storybook') ||
    window.location?.hostname?.includes('localhost:6006') ||
    window.location?.hostname?.includes('localhost:6007') ||
-   import.meta.env.VITE_STORYBOOK_MOCK === 'true')
+   process.env.NEXT_PUBLIC_STORYBOOK_MOCK === 'true')
 
 export const apiClient = isStorybook ? createMockApiClient() : new ApiClient()
 
