@@ -1,0 +1,208 @@
+import { useState } from 'react'
+import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs'
+import { Zap, FileText, FileCode } from 'lucide-react'
+import type { Embedding } from '@/types/api'
+import { MarkdownRenderer } from '@/shared/ui'
+
+interface EmbeddingDetailModalProps {
+  embedding: Embedding | null
+  open: boolean
+  onClose: () => void
+}
+
+export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDetailModalProps) {
+  const [renderMarkdown, setRenderMarkdown] = useState(false)
+  const [activeTab, setActiveTab] = useState<'markdown' | 'original'>('markdown')
+
+  if (!embedding) return null
+
+  const isMarkdownContent = embedding.converted_format === 'markdown' || embedding.text.includes('```') || embedding.text.includes('#')
+  const hasOriginalContent = Boolean(embedding.original_content)
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
+
+  const formatUri = (uri: string) => {
+    if (uri.startsWith('file://')) {
+      return uri.split('/').pop() || uri
+    }
+    return uri
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} className="w-full max-w-4xl">
+      <DialogHeader onClose={onClose}>
+        <div className="flex items-center gap-cards">
+          <DialogTitle>Embedding Details</DialogTitle>
+          <Badge variant="secondary">{embedding.model_name}</Badge>
+          {embedding.task_type && (
+            <Badge variant="outline" className="bg-info/10 dark:bg-info/20 border-info/30">
+              {embedding.task_type}
+            </Badge>
+          )}
+        </div>
+      </DialogHeader>
+
+      <DialogContent className="flex flex-col gap-cards">
+        {/* Basic Information */}
+        <div className="grid grid-cols-2 gap-cards">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">ID</label>
+            <p className="mt-1 font-mono text-sm">{embedding.id}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Dimensions</label>
+            <p className="mt-1 font-medium">{embedding.embedding.length}</p>
+          </div>
+        </div>
+
+        {/* URI */}
+        <div>
+          <label className="text-sm font-medium text-muted-foreground">URI</label>
+          <p className="mt-1 font-mono text-sm break-all">{embedding.uri}</p>
+          <p className="text-xs text-muted-foreground mt-1">Display name: {formatUri(embedding.uri)}</p>
+        </div>
+
+        {/* Conversion Information */}
+        {embedding.converted_format && (
+          <Alert variant="success">
+            <Zap className="h-4 w-4" />
+            <AlertDescription>
+              Converted from org-mode to {embedding.converted_format}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Content Tabs */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            {hasOriginalContent ? (
+              <Tabs className="flex-1">
+                <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-lg">
+                  <TabsTrigger
+                    value="markdown"
+                    active={activeTab === 'markdown'}
+                    onClick={() => setActiveTab('markdown')}
+                    className="gap-2"
+                  >
+                    <FileCode className="h-4 w-4" />
+                    {embedding.converted_format ? 'Converted (Markdown)' : 'Text Content'}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="original"
+                    active={activeTab === 'original'}
+                    onClick={() => setActiveTab('original')}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Original (Org-mode)
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            ) : (
+              <label className="text-sm font-medium text-muted-foreground">
+                {embedding.converted_format ? 'Converted Content (Markdown)' : 'Text Content'}
+              </label>
+            )}
+            {activeTab === 'markdown' && isMarkdownContent && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRenderMarkdown(!renderMarkdown)}
+                className="gap-2 ml-auto"
+              >
+                {renderMarkdown ? (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Show Raw
+                  </>
+                ) : (
+                  <>
+                    <FileCode className="h-4 w-4" />
+                    Render Markdown
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          <Card className="p-4 bg-muted/30">
+            <div className={activeTab === 'markdown' ? 'block' : 'hidden'}>
+              {renderMarkdown && isMarkdownContent ? (
+                <div className="max-h-96 overflow-y-auto">
+                  <MarkdownRenderer content={embedding.text} />
+                </div>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                  {embedding.text}
+                </p>
+              )}
+            </div>
+            {hasOriginalContent && (
+              <div className={activeTab === 'original' ? 'block' : 'hidden'}>
+                <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                  {embedding.original_content}
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Embedding Vector Information */}
+        <div>
+          <label className="text-sm font-medium text-muted-foreground">Embedding Vector</label>
+          <div className="flex flex-col gap-elements" style={{ marginTop: 'var(--spacing-2)' }}>
+            <div className="flex gap-cards text-sm">
+              <span className="text-muted-foreground">Dimensions:</span>
+              <span className="font-medium">{embedding.embedding.length}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground">First 10 values:</span>
+              <Card className="mt-1 p-3 bg-muted/30">
+                {embedding.embedding.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">Loading embedding vector...</span>
+                ) : (
+                  <code className="text-xs font-mono block overflow-x-auto">
+                    [{embedding.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                    {embedding.embedding.length > 10 ? ', ...' : ''}]
+                  </code>
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Timestamps */}
+        <div className="grid grid-cols-2 gap-cards border-t" style={{ paddingTop: 'var(--spacing-4)' }}>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Created</label>
+            <p className="mt-1 text-sm">{formatDate(embedding.created_at)}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+            <p className="mt-1 text-sm">{formatDate(embedding.updated_at)}</p>
+          </div>
+        </div>
+      </DialogContent>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  )
+}

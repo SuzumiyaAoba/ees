@@ -19,6 +19,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/pages/*": ["./src/pages/*"],
+      "@/widgets/*": ["./src/widgets/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/entities/*": ["./src/entities/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/types/*": ["./src/shared/types/*"],
       "@/core/*": ["../core/src/*"],
       "@ees/core": ["../core/src/index.ts"],
       "@ees/core/*": ["../core/src/*"]
