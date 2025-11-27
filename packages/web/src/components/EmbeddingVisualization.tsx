@@ -162,7 +162,7 @@ export function EmbeddingVisualization() {
     }
 
     loadModels()
-  }, [])
+  }, [modelName])
 
   // Load task types when model changes
   useEffect(() => {
@@ -203,7 +203,7 @@ export function EmbeddingVisualization() {
     }
 
     loadTaskTypes()
-  }, [modelName])
+  }, [modelName, taskType])
 
   // Handle hover events
   const handlePlotHover = useCallback((eventData: Readonly<Plotly.PlotMouseEvent>) => {
@@ -397,7 +397,7 @@ export function EmbeddingVisualization() {
     } finally {
       setLoadingDetail(false)
     }
-  }, [data, inputTextContent])
+  }, [data, inputTextContent, inputPoints])
 
 
   // Cleanup timeouts on unmount
