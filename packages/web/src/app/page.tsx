@@ -66,7 +66,7 @@ function AppContent() {
 
   // Get initial tab from URL query parameter or default to 'search'
   const getInitialTab = (): TabType => {
-    const tab = searchParams.get('tab') as TabType
+    const tab = searchParams?.get('tab') as TabType
     return VALID_TABS.includes(tab) ? tab : 'search'
   }
 
@@ -77,7 +77,7 @@ function AppContent() {
 
   // Sync tab with URL query parameter
   useEffect(() => {
-    const tab = searchParams.get('tab') as TabType
+    const tab = searchParams?.get('tab') as TabType
     if (VALID_TABS.includes(tab) && tab !== activeTab) {
       setActiveTab(tab)
     }
@@ -86,7 +86,7 @@ function AppContent() {
   // Update URL query parameter when tab changes
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(searchParams?.toString() ?? '')
     params.set('tab', tab)
     router.push(`?${params.toString()}`, { scroll: false })
   }
