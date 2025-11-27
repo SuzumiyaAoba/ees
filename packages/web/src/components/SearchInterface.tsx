@@ -150,7 +150,7 @@ export function SearchInterface({ onResultSelect }: SearchInterfaceProps) {
     }
 
     loadTaskTypes()
-  }, [searchParams.model_name])
+  }, [searchParams.model_name, searchParams.task_type, updateFilter])
 
   // Debounced search for query
   useEffect(() => {
