@@ -270,6 +270,55 @@
     @apply underline decoration-primary-500/50;
     @apply hover:decoration-primary-400;
   }
+
+  /* Markdown Container Styles */
+  .markdown-container {
+    @apply text-neutral-100;
+  }
+
+  .markdown-container :is(h1, h2, h3, h4, h5, h6) {
+    @apply text-neutral-100 font-semibold;
+  }
+
+  .markdown-container :is(p, li, td, th) {
+    @apply text-neutral-200;
+  }
+
+  .markdown-container a {
+    @apply text-primary-400 hover:text-primary-300;
+  }
+
+  .markdown-container code {
+    @apply text-neutral-100 bg-neutral-800/50 px-1.5 py-0.5 rounded;
+  }
+
+  .markdown-container pre {
+    @apply bg-neutral-900 border border-neutral-800;
+  }
+
+  .markdown-container blockquote {
+    @apply border-l-4 border-neutral-700 text-neutral-300;
+  }
+
+  .markdown-container strong {
+    @apply text-neutral-100 font-semibold;
+  }
+
+  .markdown-container em {
+    @apply text-neutral-200;
+  }
+
+  .markdown-container table {
+    @apply text-neutral-200;
+  }
+
+  .markdown-container th {
+    @apply bg-neutral-800/50 text-neutral-100;
+  }
+
+  .markdown-container td {
+    @apply border-neutral-700;
+  }
 }
 
 @layer utilities {
