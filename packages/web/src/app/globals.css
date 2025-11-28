@@ -48,14 +48,13 @@
   .glass-card {
     @apply bg-neutral-900/50 backdrop-blur-xl;
     @apply border border-neutral-800/50;
-    @apply rounded-2xl shadow-glass;
+    @apply rounded-2xl;
   }
 
   .glass-card-hover {
     @apply glass-card;
     @apply transition-all duration-300;
     @apply hover:bg-neutral-900/70 hover:border-neutral-700/50;
-    @apply hover:shadow-glass-lg hover:scale-[1.02];
   }
 
   /* Gradient Card */
@@ -63,7 +62,7 @@
     @apply relative overflow-hidden;
     @apply bg-gradient-to-br from-primary-900/20 to-accent-900/20;
     @apply border border-primary-500/20;
-    @apply rounded-2xl shadow-lg;
+    @apply rounded-2xl;
   }
 
   .gradient-card::before {
@@ -90,7 +89,7 @@
   .btn-primary {
     @apply btn;
     @apply bg-gradient-primary text-white;
-    @apply hover:shadow-neon hover:scale-105;
+    @apply hover:bg-opacity-90;
     @apply focus:ring-primary-500;
   }
 
@@ -105,7 +104,7 @@
   .btn-accent {
     @apply btn;
     @apply bg-gradient-accent text-white;
-    @apply hover:shadow-neon-accent hover:scale-105;
+    @apply hover:bg-opacity-90;
     @apply focus:ring-accent-500;
   }
 
@@ -331,14 +330,7 @@
     @apply bg-gradient-to-r from-accent-400 to-accent-600 bg-clip-text text-transparent;
   }
 
-  /* Glow Effects */
-  .glow-primary {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
-  }
-
-  .glow-accent {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
-  }
+  /* Glow Effects - Removed for flat design */
 
   /* Smooth Transitions */
   .transition-smooth {
