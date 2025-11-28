@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, Suspense } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { MarkdownRenderer } from '@/shared/ui'
 import { getTextFileSize } from '@/utils/format'
@@ -71,7 +71,14 @@ export function SearchResultCard({
       </div>
       {renderMarkdown ? (
         <div className="mb-2 max-h-48 overflow-y-auto">
-          <MarkdownRenderer content={result.text} />
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-2">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              <span className="ml-2 text-xs text-muted-foreground">Rendering...</span>
+            </div>
+          }>
+            <MarkdownRenderer content={result.text} />
+          </Suspense>
         </div>
       ) : (
         <p className="body-medium text-muted-foreground mb-3 line-clamp-3">

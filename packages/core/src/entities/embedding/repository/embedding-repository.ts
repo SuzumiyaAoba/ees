@@ -19,13 +19,14 @@ import type { Embedding } from "@/entities/embedding/model/embedding"
  */
 const EMBEDDING_QUERIES = {
   INSERT_OR_UPDATE: `
-    INSERT INTO embeddings (uri, text, model_name, task_type, embedding, original_content, converted_format)
-    VALUES (?, ?, ?, ?, vector(?), ?, ?)
+    INSERT INTO embeddings (uri, text, model_name, task_type, embedding, original_content, converted_format, rendered_html)
+    VALUES (?, ?, ?, ?, vector(?), ?, ?, ?)
     ON CONFLICT(uri, model_name, task_type) DO UPDATE SET
       text = excluded.text,
       embedding = excluded.embedding,
       original_content = excluded.original_content,
       converted_format = excluded.converted_format,
+      rendered_html = excluded.rendered_html,
       updated_at = CURRENT_TIMESTAMP
     RETURNING id
   `,
@@ -36,6 +37,7 @@ const EMBEDDING_QUERIES = {
       text,
       model_name,
       task_type,
+      rendered_html,
       (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
       created_at,
       updated_at
@@ -51,6 +53,7 @@ const EMBEDDING_QUERIES = {
       text,
       model_name,
       task_type,
+      rendered_html,
       (1.0 - vector_distance_cos(embedding, vector(?))) as similarity,
       created_at,
       updated_at
@@ -66,6 +69,7 @@ const EMBEDDING_QUERIES = {
       text,
       model_name,
       task_type,
+      rendered_html,
       vector_distance_l2(embedding, vector(?)) as distance,
       created_at,
       updated_at
@@ -81,6 +85,7 @@ const EMBEDDING_QUERIES = {
       text,
       model_name,
       task_type,
+      rendered_html,
       embedding,
       created_at,
       updated_at
@@ -143,6 +148,7 @@ type VectorSearchRowRaw = {
   text: string | null
   model_name: string | null
   task_type?: string | null
+  rendered_html?: string | null
   similarity?: number | string | null
   distance?: number | string | null
   embedding?: string | Uint8Array | null
@@ -159,6 +165,7 @@ export interface SimilarEmbedding {
   text: string
   model_name: string
   task_type?: string
+  rendered_html?: string
   similarity: number
   created_at: string | null
   updated_at: string | null
@@ -178,6 +185,7 @@ export interface EmbeddingRepository {
    * @param taskType - Optional task type for the embedding
    * @param originalContent - Optional original content before conversion
    * @param convertedFormat - Optional format after conversion (e.g., "markdown")
+   * @param renderedHtml - Optional server-rendered HTML from markdown content
    * @returns Effect containing the saved embedding's ID
    */
   readonly save: (
@@ -187,7 +195,8 @@ export interface EmbeddingRepository {
     embedding: number[],
     taskType?: string,
     originalContent?: string,
-    convertedFormat?: string
+    convertedFormat?: string,
+    renderedHtml?: string
   ) => Effect.Effect<SaveEmbeddingResult, DatabaseQueryError>
 
   /**
@@ -271,7 +280,8 @@ const make = Effect.gen(function* () {
     embedding: number[],
     taskType?: string,
     originalContent?: string,
-    convertedFormat?: string
+    convertedFormat?: string,
+    renderedHtml?: string
   ): Effect.Effect<SaveEmbeddingResult, DatabaseQueryError> =>
     Effect.gen(function* () {
       // Convert embedding array to libSQL F32_BLOB format using vector() function
@@ -282,7 +292,7 @@ const make = Effect.gen(function* () {
         try: async () => {
           const insertResult = await client.execute({
             sql: EMBEDDING_QUERIES.INSERT_OR_UPDATE,
-            args: [uri, text, modelName, taskType ?? null, embeddingVector, originalContent ?? null, convertedFormat ?? null],
+            args: [uri, text, modelName, taskType ?? null, embeddingVector, originalContent ?? null, convertedFormat ?? null, renderedHtml ?? null],
           })
           return insertResult.rows
         },
@@ -350,6 +360,7 @@ const make = Effect.gen(function* () {
         embedding,
         original_content: row.originalContent,
         converted_format: row.convertedFormat,
+        ...(row.renderedHtml ? { rendered_html: row.renderedHtml } : {}),
         created_at: row.createdAt,
         updated_at: row.updatedAt,
       }
@@ -440,6 +451,7 @@ const make = Effect.gen(function* () {
               embedding,
               original_content: row.originalContent,
               converted_format: row.convertedFormat,
+              ...(row.renderedHtml ? { rendered_html: row.renderedHtml } : {}),
               created_at: row.createdAt,
               updated_at: row.updatedAt,
             })),
@@ -634,12 +646,14 @@ const make = Effect.gen(function* () {
               )
 
               const taskType = row["task_type"] ? String(row["task_type"]) : null
+              const renderedHtml = row["rendered_html"] ? String(row["rendered_html"]) : null
               return {
                 id: Number(row["id"] ?? 0),
                 uri: String(row["uri"] ?? ""),
                 text: String(row["text"] ?? ""),
                 model_name: String(row["model_name"] ?? ""),
                 ...(taskType !== null ? { task_type: taskType } : {}),
+                ...(renderedHtml !== null ? { rendered_html: renderedHtml } : {}),
                 // Dot product as similarity: higher values = more similar
                 // Note: Only valid for normalized vectors
                 similarity: dotProduct,
@@ -664,12 +678,14 @@ const make = Effect.gen(function* () {
         results = searchResults
           .map((row) => {
             const taskType = row["task_type"] ? String(row["task_type"]) : null
+            const renderedHtml = row["rendered_html"] ? String(row["rendered_html"]) : null
             return {
               id: Number(row["id"] ?? 0),
               uri: String(row["uri"] ?? ""),
               text: String(row["text"] ?? ""),
               model_name: String(row["model_name"] ?? ""),
               ...(taskType !== null ? { task_type: taskType } : {}),
+              ...(renderedHtml !== null ? { rendered_html: renderedHtml } : {}),
               // Similarity score calculation varies by metric:
               // - Cosine: pre-calculated in SQL (0-1 range, higher = more similar)
               // - Euclidean: convert distance to similarity (lower distance = higher similarity)

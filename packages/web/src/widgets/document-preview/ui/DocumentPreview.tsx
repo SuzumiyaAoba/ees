@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { FileText, Calendar, Tag, Layers, Code, FileCode } from 'lucide-react'
+import { useState, useEffect, Suspense, startTransition, useDeferredValue } from 'react'
+import { FileText, Calendar, Tag, Layers, Code, FileCode, Hash } from 'lucide-react'
 import { apiClient } from '@/shared/api'
-import { Badge, Card, Button, MarkdownRenderer } from '@/shared/ui'
+import { MarkdownRenderer } from '@/shared/ui'
 import type { Embedding } from '@/shared/types/api'
 
 interface DocumentPreviewProps {
@@ -16,20 +16,23 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   const [error, setError] = useState<string | null>(null)
   const [renderMarkdown, setRenderMarkdown] = useState(true)
 
+  const deferredDocumentId = useDeferredValue(documentId)
+
   useEffect(() => {
-    if (documentId === null) {
-      setDocument(null)
+    if (deferredDocumentId === null) {
+      startTransition(() => {
+        setDocument(null)
+        setLoading(false)
+      })
       return
     }
 
-    loadDocument(documentId)
-  }, [documentId])
+    setLoading(true)
+    loadDocument(deferredDocumentId)
+  }, [deferredDocumentId])
 
   const loadDocument = async (id: number) => {
-    setLoading(true)
-    setError(null)
     try {
-      // First get the list to find the URI and model_name
       const listResponse = await apiClient.getEmbeddings({ limit: 1000 })
       const embedding = listResponse.embeddings.find(e => e.id === id)
 
@@ -37,13 +40,18 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
         throw new Error('Document not found')
       }
 
-      // Then fetch full details
       const fullDoc = await apiClient.getEmbedding(embedding.uri, embedding.model_name)
-      setDocument(fullDoc)
+
+      startTransition(() => {
+        setDocument(fullDoc)
+        setError(null)
+        setLoading(false)
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load document')
-    } finally {
-      setLoading(false)
+      startTransition(() => {
+        setError(err instanceof Error ? err.message : 'Failed to load document')
+        setLoading(false)
+      })
     }
   }
 
@@ -72,10 +80,11 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
 
   if (documentId === null) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div className="h-full flex-center">
         <div className="text-center">
-          <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-          <p className="text-lg">Select a document to preview</p>
+          <FileText className="h-24 w-24 mx-auto mb-6 text-neutral-700 opacity-30" />
+          <h2 className="heading-4 mb-2">Select a document</h2>
+          <p className="text-small">Choose a document from the sidebar to preview</p>
         </div>
       </div>
     )
@@ -83,10 +92,10 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div className="h-full flex-center">
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p>Loading document...</p>
+          <div className="spinner h-12 w-12 mb-4 mx-auto" />
+          <p className="text-body">Loading document...</p>
         </div>
       </div>
     )
@@ -94,9 +103,11 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full text-error">
+      <div className="h-full flex-center">
         <div className="text-center">
-          <p className="text-lg">{error}</p>
+          <div className="bg-error/10 border border-error/30 rounded-2xl p-6">
+            <p className="text-error text-lg">{error}</p>
+          </div>
         </div>
       </div>
     )
@@ -109,37 +120,36 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="border-b border-outline-variant bg-surface-variant px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
+      <div className="glass-card rounded-none border-b border-neutral-800/50 px-8 py-6">
+        <div className="flex items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold mb-2 truncate">
+            <h1 className="heading-3 mb-3 truncate">
               {formatUri(document.uri)}
             </h1>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                <Tag className="h-3 w-3 mr-1" />
+              <span className="badge-primary">
+                <Tag className="h-3 w-3" />
                 {document.model_name}
-              </Badge>
+              </span>
               {document.task_type && (
-                <Badge variant="outline">
-                  <Layers className="h-3 w-3 mr-1" />
+                <span className="badge-accent">
+                  <Layers className="h-3 w-3" />
                   {document.task_type}
-                </Badge>
+                </span>
               )}
               {document.converted_format && (
-                <Badge variant="outline" className="bg-success/10">
-                  Converted from org-mode to {document.converted_format}
-                </Badge>
+                <span className="badge-success">
+                  <FileCode className="h-3 w-3" />
+                  Converted to {document.converted_format}
+                </span>
               )}
             </div>
           </div>
 
           {isMarkdownContent && (
-            <Button
-              size="sm"
-              variant="outline"
+            <button
               onClick={() => setRenderMarkdown(!renderMarkdown)}
-              className="gap-2"
+              className="btn-secondary"
             >
               {renderMarkdown ? (
                 <>
@@ -152,93 +162,109 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
                   Render Markdown
                 </>
               )}
-            </Button>
+            </button>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Metadata */}
-          <Card className="p-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Created</span>
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Metadata Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
+            <div className="grid grid-cols-2 gap-6 text-sm">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Created</div>
+                  <div className="text-neutral-300">{formatDate(document.created_at)}</div>
                 </div>
-                <p>{formatDate(document.created_at)}</p>
               </div>
-              <div>
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Updated</span>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Updated</div>
+                  <div className="text-neutral-300">{formatDate(document.updated_at)}</div>
                 </div>
-                <p>{formatDate(document.updated_at)}</p>
               </div>
-              <div className="col-span-2">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <FileText className="h-4 w-4" />
-                  <span>URI</span>
+              <div className="col-span-2 flex items-start gap-3">
+                <FileText className="h-4 w-4 text-accent-400 mt-1" />
+                <div className="flex-1">
+                  <div className="text-neutral-500 text-xs mb-1">URI</div>
+                  <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
+                    {document.uri}
+                  </code>
                 </div>
-                <p className="font-mono text-xs break-all">{document.uri}</p>
               </div>
-              <div>
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Layers className="h-4 w-4" />
-                  <span>Dimensions</span>
+              <div className="flex items-center gap-3">
+                <Layers className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
                 </div>
-                <p>{document.embedding.length}</p>
               </div>
             </div>
-          </Card>
+          </div>
 
-          {/* Content Preview */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">
+          {/* Content Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">
               {document.converted_format ? 'Converted Content (Markdown)' : 'Content'}
             </h2>
 
             {renderMarkdown && isMarkdownContent ? (
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <MarkdownRenderer content={document.text} />
-              </div>
+              <Suspense fallback={
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Rendering markdown...</span>
+                </div>
+              }>
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <MarkdownRenderer content={document.text} />
+                </div>
+              </Suspense>
             ) : (
-              <pre className="whitespace-pre-wrap break-words text-sm font-mono bg-muted/30 p-4 rounded-lg">
+              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                 {document.text}
               </pre>
             )}
-          </Card>
+          </div>
 
-          {/* Original Content (if exists) */}
+          {/* Original Content Card */}
           {document.original_content && (
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Original Content (Org-mode)</h2>
-              <pre className="whitespace-pre-wrap break-words text-sm font-mono bg-muted/30 p-4 rounded-lg">
+            <div className="glass-card p-6">
+              <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
+              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                 {document.original_content}
               </pre>
-            </Card>
+            </div>
           )}
 
-          {/* Embedding Vector Preview */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Embedding Vector</h2>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">
-                Dimensions: {document.embedding.length}
+          {/* Embedding Vector Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Hash className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+                </div>
               </div>
               {document.embedding.length > 0 && (
                 <div>
-                  <div className="text-xs text-muted-foreground mb-2">First 10 values:</div>
-                  <code className="text-xs font-mono block overflow-x-auto bg-muted/30 p-3 rounded">
-                    [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
-                    {document.embedding.length > 10 ? ', ...' : ''}]
-                  </code>
+                  <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
+                  <div className="code-block">
+                    <code className="text-xs">
+                      [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                      {document.embedding.length > 10 ? ', ...' : ''}]
+                    </code>
+                  </div>
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

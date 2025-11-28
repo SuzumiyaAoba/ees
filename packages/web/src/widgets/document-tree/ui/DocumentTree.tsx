@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, startTransition } from 'react'
 import { ChevronRight, ChevronDown, FileText, Folder, Search } from 'lucide-react'
 import { apiClient } from '@/shared/api'
-import { Input } from '@/shared/ui'
 import type { Embedding } from '@/shared/types/api'
 
 interface DocumentTreeProps {
@@ -32,7 +31,6 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
 
   const loadDocuments = useCallback(async () => {
     const formatDocumentLabel = (uri: string): string => {
-      // Extract filename from URI
       if (uri.startsWith('file://')) {
         return uri.split('/').pop() || uri
       }
@@ -40,7 +38,6 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
     }
 
     const buildTree = (embeddings: Embedding[]): TreeNode[] => {
-      // Group by model name
       const modelGroups = embeddings.reduce((acc, emb) => {
         const modelName = emb.model_name
         if (!acc[modelName]) {
@@ -50,7 +47,6 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
         return acc
       }, {} as Record<string, Embedding[]>)
 
-      // Build tree structure
       return Object.entries(modelGroups).map(([modelName, docs]) => ({
         id: `model-${modelName}`,
         label: modelName,
@@ -76,15 +72,18 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
     try {
       const response = await apiClient.getEmbeddings({ limit: 1000 })
       const tree = buildTree(response.embeddings)
-      setTreeData(tree)
 
-      // Auto-expand first level
-      const firstLevelIds = tree.map(node => node.id)
-      setExpandedNodes(new Set(firstLevelIds))
+      startTransition(() => {
+        setTreeData(tree)
+        const firstLevelIds = tree.map(node => node.id)
+        setExpandedNodes(new Set(firstLevelIds))
+        setLoading(false)
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load documents')
-    } finally {
-      setLoading(false)
+      startTransition(() => {
+        setError(err instanceof Error ? err.message : 'Failed to load documents')
+        setLoading(false)
+      })
     }
   }, [])
 
@@ -130,11 +129,15 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
     const hasChildren = node.children && node.children.length > 0
 
     return (
-      <div key={node.id}>
+      <div key={node.id} className="animate-fade-in">
         <div
           className={`
-            flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-surface-variant
-            ${isSelected ? 'bg-primary-container text-on-primary-container' : ''}
+            flex items-center gap-2 px-3 py-2.5 cursor-pointer
+            transition-all duration-200
+            ${isSelected
+              ? 'bg-primary-500/20 text-primary-300 border-l-2 border-primary-500'
+              : 'hover:bg-neutral-800/50 text-neutral-400 hover:text-neutral-200'
+            }
           `}
           style={{ paddingLeft: `${level * 16 + 12}px` }}
           onClick={() => {
@@ -146,36 +149,36 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
           }}
         >
           {node.type === 'folder' && (
-            <span className="flex-shrink-0">
+            <span className="flex-shrink-0 text-neutral-500">
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 transition-transform duration-200" />
               )}
             </span>
           )}
 
           <span className="flex-shrink-0">
             {node.type === 'folder' ? (
-              <Folder className="h-4 w-4" />
+              <Folder className="h-4 w-4 text-accent-400" />
             ) : (
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4 text-neutral-500" />
             )}
           </span>
 
-          <span className="flex-1 truncate text-sm">
+          <span className="flex-1 truncate text-sm font-medium">
             {node.label}
           </span>
 
           {node.type === 'folder' && node.children && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-neutral-600 badge-neutral px-2 py-0.5">
               {node.children.length}
             </span>
           )}
         </div>
 
         {isExpanded && hasChildren && (
-          <div>
+          <div className="animate-slide-down">
             {node.children!.map(child => renderNode(child, level + 1))}
           </div>
         )}
@@ -188,37 +191,39 @@ export function DocumentTree({ onDocumentSelect, selectedDocumentId }: DocumentT
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-outline-variant">
-        <h2 className="text-lg font-semibold mb-3">Documents</h2>
+      <div className="p-4 border-b border-neutral-800/50">
+        <h2 className="text-lg font-semibold mb-3 text-gradient-primary">Documents</h2>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+          <input
             type="text"
             placeholder="Search documents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="input pl-10 text-sm"
           />
         </div>
       </div>
 
       {/* Tree Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {loading && (
-          <div className="p-4 text-center text-muted-foreground">
-            Loading documents...
+          <div className="p-4 flex-center">
+            <div className="spinner h-6 w-6" />
+            <span className="ml-3 text-sm text-neutral-500">Loading...</span>
           </div>
         )}
 
         {error && (
-          <div className="p-4 text-center text-error">
-            {error}
+          <div className="p-4 text-center">
+            <p className="text-sm text-error">{error}</p>
           </div>
         )}
 
         {!loading && !error && filteredTree.length === 0 && (
-          <div className="p-4 text-center text-muted-foreground">
-            No documents found
+          <div className="p-4 text-center">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-neutral-700 opacity-50" />
+            <p className="text-sm text-neutral-500">No documents found</p>
           </div>
         )}
 

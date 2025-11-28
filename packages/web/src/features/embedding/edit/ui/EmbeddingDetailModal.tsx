@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -142,9 +142,16 @@ export function EmbeddingDetailModal({ embedding, open, onClose }: EmbeddingDeta
           <Card className="p-4 bg-muted/30">
             <div className={activeTab === 'markdown' ? 'block' : 'hidden'}>
               {renderMarkdown && isMarkdownContent ? (
-                <div className="max-h-96 overflow-y-auto">
-                  <MarkdownRenderer content={embedding.text} />
-                </div>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-4">
+                    <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                    <span className="ml-2 text-sm text-muted-foreground">Rendering...</span>
+                  </div>
+                }>
+                  <div className="max-h-96 overflow-y-auto">
+                    <MarkdownRenderer content={embedding.text} />
+                  </div>
+                </Suspense>
               ) : (
                 <p className="text-sm whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                   {embedding.text}

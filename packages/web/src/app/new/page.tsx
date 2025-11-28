@@ -8,9 +8,9 @@ export default function NewDocumentUI() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null)
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-neutral-950 overflow-hidden">
       {/* Left Sidebar - Document Tree */}
-      <aside className="w-80 border-r border-outline-variant overflow-y-auto">
+      <aside className="w-80 glass-card rounded-none border-r border-neutral-800/50 overflow-y-auto">
         <DocumentTree
           onDocumentSelect={setSelectedDocumentId}
           selectedDocumentId={selectedDocumentId}
