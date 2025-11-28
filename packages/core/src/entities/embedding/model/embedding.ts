@@ -11,6 +11,7 @@ export interface Embedding {
   embedding: number[]
   original_content?: string | null
   converted_format?: string | null
+  rendered_html?: string
   created_at: string | null
   updated_at: string | null
 }
@@ -95,6 +96,7 @@ export interface SearchEmbeddingResult {
   model_name: string
   task_type?: string
   similarity: number
+  rendered_html?: string
   created_at: string | null
   updated_at: string | null
 }

@@ -77,7 +77,7 @@ app.use(async (c, next) => {
   if (c.req.path === '/__webpack_hmr' || c.req.path.startsWith('/_next/')) {
     return c.text('', 404)
   }
-  await next()
+  return await next()
 })
 
 // Observability middleware (must be first for proper request tracking)

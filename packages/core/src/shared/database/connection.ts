@@ -176,6 +176,7 @@ const make = Effect.gen(function* () {
           text TEXT NOT NULL,
           original_content TEXT,
           converted_format TEXT,
+          rendered_html TEXT,
           model_name TEXT NOT NULL DEFAULT 'nomic-embed-text',
           task_type TEXT,
           embedding F32_BLOB(768) NOT NULL,

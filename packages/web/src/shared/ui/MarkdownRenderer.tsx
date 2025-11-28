@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useDeferredValue, startTransition } from 'react'
 import MarkdownIt from 'markdown-it'
 import frontMatter from 'markdown-it-front-matter'
 import { load as parseYaml } from 'js-yaml'
@@ -49,6 +49,9 @@ function setCachedRender(key: string, html: string): void {
 }
 
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+  // Use deferred value to prevent blocking UI on content changes
+  const deferredContent = useDeferredValue(content)
+
   const [html, setHtml] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [frontMatterData, setFrontMatterData] = useState<Record<string, unknown> | null>(null)
@@ -58,20 +61,23 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
   useEffect(() => {
     let mounted = true
 
-    const contentHash = hashContent(content)
+    const contentHash = hashContent(deferredContent)
     contentHashRef.current = contentHash
 
     // Check cache first
     const cachedHtml = getCachedRender(contentHash)
     if (cachedHtml) {
-      setHtml(cachedHtml)
-      setIsLoading(false)
+      // Use startTransition to make this update non-urgent
+      startTransition(() => {
+        setHtml(cachedHtml)
+        setIsLoading(false)
+      })
       return
     }
 
     const initializeHighlighter = async () => {
       if (highlighterRef.current) {
-        renderMarkdown(content, contentHash)
+        renderMarkdown(deferredContent, contentHash)
         return
       }
 
@@ -84,7 +90,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         if (!mounted) return
 
         highlighterRef.current = highlighter
-        renderMarkdown(content, contentHash)
+        renderMarkdown(deferredContent, contentHash)
       } catch (error) {
         console.error('Failed to initialize highlighter:', error)
         if (mounted) {
@@ -100,9 +106,12 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               console.error('Failed to parse front matter:', error)
             }
           })
-          const renderedHtml = md.render(content)
-          setHtml(renderedHtml)
-          setIsLoading(false)
+          const renderedHtml = md.render(deferredContent)
+          // Use startTransition for non-urgent state updates
+          startTransition(() => {
+            setHtml(renderedHtml)
+            setIsLoading(false)
+          })
           // Cache the fallback result too
           setCachedRender(contentHash, renderedHtml)
         }
@@ -150,8 +159,12 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
       })
 
       const renderedHtml = md.render(text)
-      setHtml(renderedHtml)
-      setIsLoading(false)
+
+      // Use startTransition for non-urgent state updates
+      startTransition(() => {
+        setHtml(renderedHtml)
+        setIsLoading(false)
+      })
 
       // Cache the rendered result
       setCachedRender(hash, renderedHtml)
@@ -162,7 +175,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
     return () => {
       mounted = false
     }
-  }, [content])
+  }, [deferredContent])
 
   if (isLoading) {
     return (

@@ -15,6 +15,7 @@ export const embeddings = sqliteTable(
     text: text("text").notNull(),
     originalContent: text("original_content"), // Store original content before conversion (e.g., org-mode text)
     convertedFormat: text("converted_format"), // Format of converted content (e.g., "markdown" for org->md conversion)
+    renderedHtml: text("rendered_html"), // Server-rendered HTML from markdown content
     modelName: text("model_name").notNull(),
     taskType: text("task_type"), // Task type for embedding (e.g., "retrieval_document", "clustering")
     embedding: blob("embedding").notNull(),

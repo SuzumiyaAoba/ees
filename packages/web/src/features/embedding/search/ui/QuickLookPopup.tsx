@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { X, FileText, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -124,7 +124,14 @@ export function QuickLookPopup({
           <CardContent className="pt-0 flex-1 overflow-hidden flex flex-col">
             <div className="overflow-y-auto flex-1 rounded-md bg-muted/30 p-4">
               {renderMarkdown ? (
-                <MarkdownRenderer content={item.text} />
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-4">
+                    <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                    <span className="ml-2 text-sm text-muted-foreground">Rendering...</span>
+                  </div>
+                }>
+                  <MarkdownRenderer content={item.text} />
+                </Suspense>
               ) : (
                 <p className="body-medium whitespace-pre-wrap break-words">
                   {item.text}

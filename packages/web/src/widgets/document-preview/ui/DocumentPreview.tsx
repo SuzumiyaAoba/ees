@@ -1,0 +1,272 @@
+'use client'
+
+import { useState, useEffect, Suspense, startTransition, useDeferredValue } from 'react'
+import { FileText, Calendar, Tag, Layers, Code, FileCode, Hash } from 'lucide-react'
+import { apiClient } from '@/shared/api'
+import { MarkdownRenderer } from '@/shared/ui'
+import type { Embedding } from '@/shared/types/api'
+
+interface DocumentPreviewProps {
+  documentId: number | null
+}
+
+export function DocumentPreview({ documentId }: DocumentPreviewProps) {
+  const [document, setDocument] = useState<Embedding | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [renderMarkdown, setRenderMarkdown] = useState(true)
+
+  const deferredDocumentId = useDeferredValue(documentId)
+
+  useEffect(() => {
+    if (deferredDocumentId === null) {
+      startTransition(() => {
+        setDocument(null)
+        setLoading(false)
+      })
+      return
+    }
+
+    setLoading(true)
+    loadDocument(deferredDocumentId)
+  }, [deferredDocumentId])
+
+  const loadDocument = async (id: number) => {
+    try {
+      const listResponse = await apiClient.getEmbeddings({ limit: 1000 })
+      const embedding = listResponse.embeddings.find(e => e.id === id)
+
+      if (!embedding) {
+        throw new Error('Document not found')
+      }
+
+      const fullDoc = await apiClient.getEmbedding(embedding.uri, embedding.model_name)
+
+      startTransition(() => {
+        setDocument(fullDoc)
+        setError(null)
+        setLoading(false)
+      })
+    } catch (err) {
+      startTransition(() => {
+        setError(err instanceof Error ? err.message : 'Failed to load document')
+        setLoading(false)
+      })
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const formatUri = (uri: string) => {
+    if (uri.startsWith('file://')) {
+      return uri.split('/').pop() || uri
+    }
+    return uri
+  }
+
+  const isMarkdownContent = document && (
+    document.converted_format === 'markdown' ||
+    document.text.includes('```') ||
+    document.text.includes('#')
+  )
+
+  if (documentId === null) {
+    return (
+      <div className="h-full flex-center">
+        <div className="text-center">
+          <FileText className="h-24 w-24 mx-auto mb-6 text-neutral-700 opacity-30" />
+          <h2 className="heading-4 mb-2">Select a document</h2>
+          <p className="text-small">Choose a document from the sidebar to preview</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="h-full flex-center">
+        <div className="text-center">
+          <div className="spinner h-12 w-12 mb-4 mx-auto" />
+          <p className="text-body">Loading document...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex-center">
+        <div className="text-center">
+          <div className="bg-error/10 border border-error/30 rounded-2xl p-6">
+            <p className="text-error text-lg">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!document) {
+    return null
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="glass-card rounded-none border-b border-neutral-800/50 px-8 py-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <h1 className="heading-3 mb-3 truncate">
+              {formatUri(document.uri)}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              <span className="badge-primary">
+                <Tag className="h-3 w-3" />
+                {document.model_name}
+              </span>
+              {document.task_type && (
+                <span className="badge-accent">
+                  <Layers className="h-3 w-3" />
+                  {document.task_type}
+                </span>
+              )}
+              {document.converted_format && (
+                <span className="badge-success">
+                  <FileCode className="h-3 w-3" />
+                  Converted to {document.converted_format}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {isMarkdownContent && (
+            <button
+              onClick={() => setRenderMarkdown(!renderMarkdown)}
+              className="btn-secondary"
+            >
+              {renderMarkdown ? (
+                <>
+                  <Code className="h-4 w-4" />
+                  Show Raw
+                </>
+              ) : (
+                <>
+                  <FileCode className="h-4 w-4" />
+                  Render Markdown
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Metadata Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
+            <div className="grid grid-cols-2 gap-6 text-sm">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Created</div>
+                  <div className="text-neutral-300">{formatDate(document.created_at)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Updated</div>
+                  <div className="text-neutral-300">{formatDate(document.updated_at)}</div>
+                </div>
+              </div>
+              <div className="col-span-2 flex items-start gap-3">
+                <FileText className="h-4 w-4 text-accent-400 mt-1" />
+                <div className="flex-1">
+                  <div className="text-neutral-500 text-xs mb-1">URI</div>
+                  <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
+                    {document.uri}
+                  </code>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Layers className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Content Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">
+              {document.converted_format ? 'Converted Content (Markdown)' : 'Content'}
+            </h2>
+
+            {renderMarkdown && isMarkdownContent ? (
+              <Suspense fallback={
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Rendering markdown...</span>
+                </div>
+              }>
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <MarkdownRenderer content={document.text} />
+                </div>
+              </Suspense>
+            ) : (
+              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                {document.text}
+              </pre>
+            )}
+          </div>
+
+          {/* Original Content Card */}
+          {document.original_content && (
+            <div className="glass-card p-6">
+              <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
+              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                {document.original_content}
+              </pre>
+            </div>
+          )}
+
+          {/* Embedding Vector Card */}
+          <div className="glass-card p-6">
+            <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Hash className="h-4 w-4 text-accent-400" />
+                <div>
+                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+                </div>
+              </div>
+              {document.embedding.length > 0 && (
+                <div>
+                  <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
+                  <div className="code-block">
+                    <code className="text-xs">
+                      [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                      {document.embedding.length > 10 ? ', ...' : ''}]
+                    </code>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
