@@ -10,11 +10,14 @@ interface DocumentPreviewProps {
   documentId: number | null
 }
 
+type TabType = 'metadata' | 'content' | 'original' | 'embedding'
+
 export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   const [document, setDocument] = useState<Embedding | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [renderMarkdown, setRenderMarkdown] = useState(true)
+  const [activeTab, setActiveTab] = useState<TabType>('metadata')
 
   const deferredDocumentId = useDeferredValue(documentId)
 
@@ -46,6 +49,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
         setDocument(fullDoc)
         setError(null)
         setLoading(false)
+        setActiveTab('metadata')
       })
     } catch (err) {
       startTransition(() => {
@@ -117,6 +121,13 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
     return null
   }
 
+  const tabs: { id: TabType; label: string; show: boolean }[] = [
+    { id: 'metadata', label: 'Metadata', show: true },
+    { id: 'content', label: 'Content', show: true },
+    { id: 'original', label: 'Original Content', show: !!document.original_content },
+    { id: 'embedding', label: 'Embedding Vector', show: true },
+  ]
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -146,7 +157,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             </div>
           </div>
 
-          {isMarkdownContent && (
+          {isMarkdownContent && activeTab === 'content' && (
             <button
               onClick={() => setRenderMarkdown(!renderMarkdown)}
               className="btn-secondary"
@@ -167,73 +178,99 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-neutral-800/50 bg-neutral-900/30 px-8">
+        <div className="flex gap-1">
+          {tabs.filter(tab => tab.show).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                px-6 py-3 text-sm font-medium transition-all duration-200
+                border-b-2 -mb-[1px]
+                ${activeTab === tab.id
+                  ? 'border-primary-500 text-primary-300 bg-primary-500/10'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
+                }
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          {/* Metadata Card */}
-          <div className="glass-card p-6">
-            <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
-            <div className="grid grid-cols-2 gap-6 text-sm">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-accent-400" />
-                <div>
-                  <div className="text-neutral-500 text-xs mb-1">Created</div>
-                  <div className="text-neutral-300">{formatDate(document.created_at)}</div>
+        <div className="max-w-5xl mx-auto">
+          {/* Metadata Tab */}
+          {activeTab === 'metadata' && (
+            <div className="glass-card p-6 animate-fade-in">
+              <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
+              <div className="grid grid-cols-2 gap-6 text-sm">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-accent-400" />
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-1">Created</div>
+                    <div className="text-neutral-300">{formatDate(document.created_at)}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-accent-400" />
-                <div>
-                  <div className="text-neutral-500 text-xs mb-1">Updated</div>
-                  <div className="text-neutral-300">{formatDate(document.updated_at)}</div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-accent-400" />
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-1">Updated</div>
+                    <div className="text-neutral-300">{formatDate(document.updated_at)}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-2 flex items-start gap-3">
-                <FileText className="h-4 w-4 text-accent-400 mt-1" />
-                <div className="flex-1">
-                  <div className="text-neutral-500 text-xs mb-1">URI</div>
-                  <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
-                    {document.uri}
-                  </code>
+                <div className="col-span-2 flex items-start gap-3">
+                  <FileText className="h-4 w-4 text-accent-400 mt-1" />
+                  <div className="flex-1">
+                    <div className="text-neutral-500 text-xs mb-1">URI</div>
+                    <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
+                      {document.uri}
+                    </code>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Layers className="h-4 w-4 text-accent-400" />
-                <div>
-                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+                <div className="flex items-center gap-3">
+                  <Layers className="h-4 w-4 text-accent-400" />
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                    <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Content Card */}
-          <div className="glass-card p-6">
-            <h2 className="heading-6 mb-4 text-gradient-primary">
-              {document.converted_format ? 'Converted Content (Markdown)' : 'Content'}
-            </h2>
+          {/* Content Tab */}
+          {activeTab === 'content' && (
+            <div className="glass-card p-6 animate-fade-in">
+              <h2 className="heading-6 mb-4 text-gradient-primary">
+                {document.converted_format ? 'Converted Content (Markdown)' : 'Content'}
+              </h2>
 
-            {renderMarkdown && isMarkdownContent ? (
-              <Suspense fallback={
-                <div className="flex-center p-12">
-                  <div className="spinner h-8 w-8" />
-                  <span className="ml-3 text-neutral-500">Rendering markdown...</span>
-                </div>
-              }>
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <MarkdownRenderer content={document.text} />
-                </div>
-              </Suspense>
-            ) : (
-              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
-                {document.text}
-              </pre>
-            )}
-          </div>
+              {renderMarkdown && isMarkdownContent ? (
+                <Suspense fallback={
+                  <div className="flex-center p-12">
+                    <div className="spinner h-8 w-8" />
+                    <span className="ml-3 text-neutral-500">Rendering markdown...</span>
+                  </div>
+                }>
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <MarkdownRenderer content={document.text} />
+                  </div>
+                </Suspense>
+              ) : (
+                <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                  {document.text}
+                </pre>
+              )}
+            </div>
+          )}
 
-          {/* Original Content Card */}
-          {document.original_content && (
-            <div className="glass-card p-6">
+          {/* Original Content Tab */}
+          {activeTab === 'original' && document.original_content && (
+            <div className="glass-card p-6 animate-fade-in">
               <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
               <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                 {document.original_content}
@@ -241,30 +278,32 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             </div>
           )}
 
-          {/* Embedding Vector Card */}
-          <div className="glass-card p-6">
-            <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Hash className="h-4 w-4 text-accent-400" />
-                <div>
-                  <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                  <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
-                </div>
-              </div>
-              {document.embedding.length > 0 && (
-                <div>
-                  <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
-                  <div className="code-block">
-                    <code className="text-xs">
-                      [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
-                      {document.embedding.length > 10 ? ', ...' : ''}]
-                    </code>
+          {/* Embedding Vector Tab */}
+          {activeTab === 'embedding' && (
+            <div className="glass-card p-6 animate-fade-in">
+              <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Hash className="h-4 w-4 text-accent-400" />
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                    <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
                   </div>
                 </div>
-              )}
+                {document.embedding.length > 0 && (
+                  <div>
+                    <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
+                    <div className="code-block">
+                      <code className="text-xs">
+                        [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                        {document.embedding.length > 10 ? ', ...' : ''}]
+                      </code>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
