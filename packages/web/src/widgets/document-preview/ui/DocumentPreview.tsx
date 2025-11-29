@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense, startTransition, useDeferredValue } from 'react'
-import { FileText, Calendar, Tag, Layers, Code, FileCode, Hash } from 'lucide-react'
+import { FileText, Calendar, Tag, Layers, Code, FileCode, Hash, Loader2 } from 'lucide-react'
 import { apiClient } from '@/shared/api'
 import { MarkdownRenderer } from '@/shared/ui'
 import type { Embedding } from '@/shared/types/api'
@@ -17,9 +17,10 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [renderMarkdown, setRenderMarkdown] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabType>('metadata')
+  const [activeTab, setActiveTab] = useState<TabType>('content')
 
   const deferredDocumentId = useDeferredValue(documentId)
+  const deferredDocument = useDeferredValue(document)
 
   useEffect(() => {
     if (deferredDocumentId === null) {
@@ -30,13 +31,25 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
       return
     }
 
-    setLoading(true)
-    loadDocument(deferredDocumentId)
+    const abortController = new AbortController()
+
+    startTransition(() => {
+      setLoading(true)
+    })
+
+    loadDocument(deferredDocumentId, abortController.signal)
+
+    return () => {
+      abortController.abort()
+    }
   }, [deferredDocumentId])
 
-  const loadDocument = async (id: number) => {
+  const loadDocument = async (id: number, signal: AbortSignal) => {
     try {
       const listResponse = await apiClient.getEmbeddings({ limit: 1000 })
+
+      if (signal.aborted) return
+
       const embedding = listResponse.embeddings.find(e => e.id === id)
 
       if (!embedding) {
@@ -45,13 +58,17 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
 
       const fullDoc = await apiClient.getEmbedding(embedding.uri, embedding.model_name)
 
+      if (signal.aborted) return
+
       startTransition(() => {
         setDocument(fullDoc)
         setError(null)
         setLoading(false)
-        setActiveTab('metadata')
+        setActiveTab('content')
       })
     } catch (err) {
+      if (signal.aborted) return
+
       startTransition(() => {
         setError(err instanceof Error ? err.message : 'Failed to load document')
         setLoading(false)
@@ -60,13 +77,14 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
 
   const formatUri = (uri: string) => {
@@ -76,10 +94,10 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
     return uri
   }
 
-  const isMarkdownContent = document && (
-    document.converted_format === 'markdown' ||
-    document.text.includes('```') ||
-    document.text.includes('#')
+  const isMarkdownContent = deferredDocument && (
+    deferredDocument.converted_format === 'markdown' ||
+    deferredDocument.text.includes('```') ||
+    deferredDocument.text.includes('#')
   )
 
   if (documentId === null) {
@@ -94,7 +112,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
     )
   }
 
-  if (loading) {
+  if (loading && !deferredDocument) {
     return (
       <div className="h-full flex-center">
         <div className="text-center">
@@ -105,7 +123,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
     )
   }
 
-  if (error) {
+  if (error && !deferredDocument) {
     return (
       <div className="h-full flex-center">
         <div className="text-center">
@@ -122,9 +140,9 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
   }
 
   const tabs: { id: TabType; label: string; show: boolean }[] = [
-    { id: 'metadata', label: 'Metadata', show: true },
     { id: 'content', label: 'Content', show: true },
-    { id: 'original', label: 'Original Content', show: !!document.original_content },
+    { id: 'original', label: 'Raw', show: !!deferredDocument?.original_content },
+    { id: 'metadata', label: 'Metadata', show: true },
     { id: 'embedding', label: 'Embedding Vector', show: true },
   ]
 
@@ -134,24 +152,32 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
       <div className="glass-card rounded-none border-b border-neutral-800/50 px-8 py-6">
         <div className="flex items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="heading-3 mb-3 truncate">
-              {formatUri(document.uri)}
-            </h1>
+            <div className="flex items-center gap-3 mb-3">
+              <h1 className="heading-3 truncate">
+                {deferredDocument ? formatUri(deferredDocument.uri) : formatUri(document.uri)}
+              </h1>
+              {loading && deferredDocument && (
+                <div className="flex items-center gap-2 text-sm text-neutral-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <span className="badge-primary">
                 <Tag className="h-3 w-3" />
-                {document.model_name}
+                {deferredDocument?.model_name ?? document.model_name}
               </span>
-              {document.task_type && (
+              {(deferredDocument?.task_type ?? document.task_type) && (
                 <span className="badge-accent">
                   <Layers className="h-3 w-3" />
-                  {document.task_type}
+                  {deferredDocument?.task_type ?? document.task_type}
                 </span>
               )}
-              {document.converted_format && (
+              {(deferredDocument?.converted_format ?? document.converted_format) && (
                 <span className="badge-success">
                   <FileCode className="h-3 w-3" />
-                  Converted to {document.converted_format}
+                  Converted to {deferredDocument?.converted_format ?? document.converted_format}
                 </span>
               )}
             </div>
@@ -205,104 +231,141 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
         <div className="max-w-5xl mx-auto">
           {/* Metadata Tab */}
           {activeTab === 'metadata' && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
-              <div className="grid grid-cols-2 gap-6 text-sm">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Created</div>
-                    <div className="text-neutral-300">{formatDate(document.created_at)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Updated</div>
-                    <div className="text-neutral-300">{formatDate(document.updated_at)}</div>
-                  </div>
-                </div>
-                <div className="col-span-2 flex items-start gap-3">
-                  <FileText className="h-4 w-4 text-accent-400 mt-1" />
-                  <div className="flex-1">
-                    <div className="text-neutral-500 text-xs mb-1">URI</div>
-                    <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
-                      {document.uri}
-                    </code>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Layers className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                    <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
-                  </div>
+            <Suspense fallback={
+              <div className="animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading metadata...</span>
                 </div>
               </div>
-            </div>
+            }>
+              {deferredDocument && (
+                <div className="animate-fade-in">
+                  <div className="grid grid-cols-2 gap-6 text-sm">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Created</div>
+                        <div className="text-neutral-300">{formatDate(deferredDocument.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Updated</div>
+                        <div className="text-neutral-300">{formatDate(deferredDocument.updated_at)}</div>
+                      </div>
+                    </div>
+                    <div className="col-span-2 flex items-start gap-3">
+                      <FileText className="h-4 w-4 text-accent-400 mt-1" />
+                      <div className="flex-1">
+                        <div className="text-neutral-500 text-xs mb-1">URI</div>
+                        <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
+                          {deferredDocument.uri}
+                        </code>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                        <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Suspense>
           )}
 
           {/* Content Tab */}
           {activeTab === 'content' && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">
-                {document.converted_format ? 'Converted Content (Markdown)' : 'Content'}
-              </h2>
-
-              {renderMarkdown && isMarkdownContent ? (
-                <Suspense fallback={
-                  <div className="flex-center p-12">
-                    <div className="spinner h-8 w-8" />
-                    <span className="ml-3 text-neutral-500">Rendering markdown...</span>
-                  </div>
-                }>
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <MarkdownRenderer content={document.text} />
-                  </div>
-                </Suspense>
-              ) : (
-                <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
-                  {document.text}
-                </pre>
+            <Suspense fallback={
+              <div className="animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading content...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument && (
+                <div className="animate-fade-in">
+                  {renderMarkdown && isMarkdownContent ? (
+                    <Suspense fallback={
+                      <div className="flex-center p-12">
+                        <div className="spinner h-8 w-8" />
+                        <span className="ml-3 text-neutral-500">Rendering markdown...</span>
+                      </div>
+                    }>
+                      <div className="markdown-container">
+                        <MarkdownRenderer content={deferredDocument.text} />
+                      </div>
+                    </Suspense>
+                  ) : (
+                    <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                      {deferredDocument.text}
+                    </pre>
+                  )}
+                </div>
               )}
-            </div>
+            </Suspense>
           )}
 
           {/* Original Content Tab */}
-          {activeTab === 'original' && document.original_content && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
-              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
-                {document.original_content}
-              </pre>
-            </div>
+          {activeTab === 'original' && (
+            <Suspense fallback={
+              <div className="animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading original content...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument?.original_content && (
+                <div className="animate-fade-in">
+                  <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                    {deferredDocument.original_content}
+                  </pre>
+                </div>
+              )}
+            </Suspense>
           )}
 
           {/* Embedding Vector Tab */}
           {activeTab === 'embedding' && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Hash className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                    <div className="text-neutral-300 font-mono">{document.embedding.length}</div>
+            <Suspense fallback={
+              <div className="animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading embedding vector...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument && (
+                <div className="animate-fade-in">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Hash className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                        <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
+                      </div>
+                    </div>
+                    {deferredDocument.embedding.length > 0 && (
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
+                        <div className="code-block">
+                          <code className="text-xs">
+                            [{deferredDocument.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                            {deferredDocument.embedding.length > 10 ? ', ...' : ''}]
+                          </code>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {document.embedding.length > 0 && (
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
-                    <div className="code-block">
-                      <code className="text-xs">
-                        [{document.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
-                        {document.embedding.length > 10 ? ', ...' : ''}]
-                      </code>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              )}
+            </Suspense>
           )}
         </div>
       </div>
