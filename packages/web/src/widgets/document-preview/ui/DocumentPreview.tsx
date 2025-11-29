@@ -291,10 +291,6 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             }>
               {deferredDocument && (
                 <div className="glass-card p-6 animate-fade-in">
-                  <h2 className="heading-6 mb-4 text-gradient-primary">
-                    Content
-                  </h2>
-
                   {renderMarkdown && isMarkdownContent ? (
                     <Suspense fallback={
                       <div className="flex-center p-12">
