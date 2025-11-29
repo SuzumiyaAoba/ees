@@ -141,7 +141,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
 
   const tabs: { id: TabType; label: string; show: boolean }[] = [
     { id: 'content', label: 'Content', show: true },
-    { id: 'original', label: 'Original Content', show: !!deferredDocument?.original_content },
+    { id: 'original', label: 'raw', show: !!deferredDocument?.original_content },
     { id: 'metadata', label: 'Metadata', show: true },
     { id: 'embedding', label: 'Embedding Vector', show: true },
   ]
@@ -324,7 +324,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             }>
               {deferredDocument?.original_content && (
                 <div className="animate-fade-in">
-                  <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
+                  <h2 className="heading-6 mb-4 text-gradient-accent">raw</h2>
                   <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                     {deferredDocument.original_content}
                   </pre>
