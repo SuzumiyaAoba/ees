@@ -229,105 +229,149 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-5xl mx-auto">
           {/* Metadata Tab */}
-          {activeTab === 'metadata' && deferredDocument && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
-              <div className="grid grid-cols-2 gap-6 text-sm">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Created</div>
-                    <div className="text-neutral-300">{formatDate(deferredDocument.created_at)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Updated</div>
-                    <div className="text-neutral-300">{formatDate(deferredDocument.updated_at)}</div>
-                  </div>
-                </div>
-                <div className="col-span-2 flex items-start gap-3">
-                  <FileText className="h-4 w-4 text-accent-400 mt-1" />
-                  <div className="flex-1">
-                    <div className="text-neutral-500 text-xs mb-1">URI</div>
-                    <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
-                      {deferredDocument.uri}
-                    </code>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Layers className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                    <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
-                  </div>
+          {activeTab === 'metadata' && (
+            <Suspense fallback={
+              <div className="glass-card p-6 animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading metadata...</span>
                 </div>
               </div>
-            </div>
+            }>
+              {deferredDocument && (
+                <div className="glass-card p-6 animate-fade-in">
+                  <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
+                  <div className="grid grid-cols-2 gap-6 text-sm">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Created</div>
+                        <div className="text-neutral-300">{formatDate(deferredDocument.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Updated</div>
+                        <div className="text-neutral-300">{formatDate(deferredDocument.updated_at)}</div>
+                      </div>
+                    </div>
+                    <div className="col-span-2 flex items-start gap-3">
+                      <FileText className="h-4 w-4 text-accent-400 mt-1" />
+                      <div className="flex-1">
+                        <div className="text-neutral-500 text-xs mb-1">URI</div>
+                        <code className="text-neutral-300 text-xs break-all font-mono bg-neutral-900/50 px-2 py-1 rounded">
+                          {deferredDocument.uri}
+                        </code>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                        <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Suspense>
           )}
 
           {/* Content Tab */}
-          {activeTab === 'content' && deferredDocument && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">
-                {deferredDocument.converted_format ? 'Converted Content (Markdown)' : 'Content'}
-              </h2>
+          {activeTab === 'content' && (
+            <Suspense fallback={
+              <div className="glass-card p-6 animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading content...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument && (
+                <div className="glass-card p-6 animate-fade-in">
+                  <h2 className="heading-6 mb-4 text-gradient-primary">
+                    {deferredDocument.converted_format ? 'Converted Content (Markdown)' : 'Content'}
+                  </h2>
 
-              {renderMarkdown && isMarkdownContent ? (
-                <Suspense fallback={
-                  <div className="flex-center p-12">
-                    <div className="spinner h-8 w-8" />
-                    <span className="ml-3 text-neutral-500">Rendering markdown...</span>
-                  </div>
-                }>
-                  <div className="markdown-container">
-                    <MarkdownRenderer content={deferredDocument.text} />
-                  </div>
-                </Suspense>
-              ) : (
-                <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
-                  {deferredDocument.text}
-                </pre>
+                  {renderMarkdown && isMarkdownContent ? (
+                    <Suspense fallback={
+                      <div className="flex-center p-12">
+                        <div className="spinner h-8 w-8" />
+                        <span className="ml-3 text-neutral-500">Rendering markdown...</span>
+                      </div>
+                    }>
+                      <div className="markdown-container">
+                        <MarkdownRenderer content={deferredDocument.text} />
+                      </div>
+                    </Suspense>
+                  ) : (
+                    <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                      {deferredDocument.text}
+                    </pre>
+                  )}
+                </div>
               )}
-            </div>
+            </Suspense>
           )}
 
           {/* Original Content Tab */}
-          {activeTab === 'original' && deferredDocument?.original_content && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
-              <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
-                {deferredDocument.original_content}
-              </pre>
-            </div>
+          {activeTab === 'original' && (
+            <Suspense fallback={
+              <div className="glass-card p-6 animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading original content...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument?.original_content && (
+                <div className="glass-card p-6 animate-fade-in">
+                  <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
+                  <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
+                    {deferredDocument.original_content}
+                  </pre>
+                </div>
+              )}
+            </Suspense>
           )}
 
           {/* Embedding Vector Tab */}
-          {activeTab === 'embedding' && deferredDocument && (
-            <div className="glass-card p-6 animate-fade-in">
-              <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Hash className="h-4 w-4 text-accent-400" />
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
-                    <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
+          {activeTab === 'embedding' && (
+            <Suspense fallback={
+              <div className="glass-card p-6 animate-fade-in">
+                <div className="flex-center p-12">
+                  <div className="spinner h-8 w-8" />
+                  <span className="ml-3 text-neutral-500">Loading embedding vector...</span>
+                </div>
+              </div>
+            }>
+              {deferredDocument && (
+                <div className="glass-card p-6 animate-fade-in">
+                  <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Hash className="h-4 w-4 text-accent-400" />
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Dimensions</div>
+                        <div className="text-neutral-300 font-mono">{deferredDocument.embedding.length}</div>
+                      </div>
+                    </div>
+                    {deferredDocument.embedding.length > 0 && (
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
+                        <div className="code-block">
+                          <code className="text-xs">
+                            [{deferredDocument.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
+                            {deferredDocument.embedding.length > 10 ? ', ...' : ''}]
+                          </code>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {deferredDocument.embedding.length > 0 && (
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-2">First 10 values</div>
-                    <div className="code-block">
-                      <code className="text-xs">
-                        [{deferredDocument.embedding.slice(0, 10).map(v => v.toFixed(6)).join(', ')}
-                        {deferredDocument.embedding.length > 10 ? ', ...' : ''}]
-                      </code>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              )}
+            </Suspense>
           )}
         </div>
       </div>
