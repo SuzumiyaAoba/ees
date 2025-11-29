@@ -241,7 +241,6 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             }>
               {deferredDocument && (
                 <div className="animate-fade-in">
-                  <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
                   <div className="grid grid-cols-2 gap-6 text-sm">
                     <div className="flex items-center gap-3">
                       <Calendar className="h-4 w-4 text-accent-400" />
@@ -324,7 +323,6 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             }>
               {deferredDocument?.original_content && (
                 <div className="animate-fade-in">
-                  <h2 className="heading-6 mb-4 text-gradient-accent">Raw</h2>
                   <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                     {deferredDocument.original_content}
                   </pre>
@@ -345,7 +343,6 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
             }>
               {deferredDocument && (
                 <div className="animate-fade-in">
-                  <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <Hash className="h-4 w-4 text-accent-400" />
