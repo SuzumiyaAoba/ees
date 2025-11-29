@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef, useDeferredValue, startTransition } from 'react'
 import MarkdownIt from 'markdown-it'
 import frontMatter from 'markdown-it-front-matter'
+import markdownItKatex from 'markdown-it-katex'
 import { load as parseYaml } from 'js-yaml'
 import { bundledLanguages, createHighlighter, type Highlighter } from 'shiki'
+import 'katex/dist/katex.min.css'
 
 interface MarkdownRendererProps {
   content: string
@@ -106,6 +108,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               console.error('Failed to parse front matter:', error)
             }
           })
+          md.use(markdownItKatex)
           const renderedHtml = md.render(deferredContent)
           // Use startTransition for non-urgent state updates
           startTransition(() => {
@@ -157,6 +160,8 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           console.error('Failed to parse front matter:', error)
         }
       })
+
+      md.use(markdownItKatex)
 
       const renderedHtml = md.render(text)
 
