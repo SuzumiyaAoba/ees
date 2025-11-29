@@ -291,7 +291,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
               {deferredDocument && (
                 <div className="glass-card p-6 animate-fade-in">
                   <h2 className="heading-6 mb-4 text-gradient-primary">
-                    {deferredDocument.converted_format ? 'Converted Content (Markdown)' : 'Content'}
+                    Content
                   </h2>
 
                   {renderMarkdown && isMarkdownContent ? (
