@@ -232,7 +232,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
           {/* Metadata Tab */}
           {activeTab === 'metadata' && (
             <Suspense fallback={
-              <div className="glass-card p-6 animate-fade-in">
+              <div className="animate-fade-in">
                 <div className="flex-center p-12">
                   <div className="spinner h-8 w-8" />
                   <span className="ml-3 text-neutral-500">Loading metadata...</span>
@@ -240,7 +240,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
               </div>
             }>
               {deferredDocument && (
-                <div className="glass-card p-6 animate-fade-in">
+                <div className="animate-fade-in">
                   <h2 className="heading-6 mb-4 text-gradient-primary">Metadata</h2>
                   <div className="grid grid-cols-2 gap-6 text-sm">
                     <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
           {/* Content Tab */}
           {activeTab === 'content' && (
             <Suspense fallback={
-              <div className="glass-card p-6 animate-fade-in">
+              <div className="animate-fade-in">
                 <div className="flex-center p-12">
                   <div className="spinner h-8 w-8" />
                   <span className="ml-3 text-neutral-500">Loading content...</span>
@@ -290,7 +290,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
               </div>
             }>
               {deferredDocument && (
-                <div className="glass-card p-6 animate-fade-in">
+                <div className="animate-fade-in">
                   {renderMarkdown && isMarkdownContent ? (
                     <Suspense fallback={
                       <div className="flex-center p-12">
@@ -315,7 +315,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
           {/* Original Content Tab */}
           {activeTab === 'original' && (
             <Suspense fallback={
-              <div className="glass-card p-6 animate-fade-in">
+              <div className="animate-fade-in">
                 <div className="flex-center p-12">
                   <div className="spinner h-8 w-8" />
                   <span className="ml-3 text-neutral-500">Loading original content...</span>
@@ -323,7 +323,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
               </div>
             }>
               {deferredDocument?.original_content && (
-                <div className="glass-card p-6 animate-fade-in">
+                <div className="animate-fade-in">
                   <h2 className="heading-6 mb-4 text-gradient-accent">Original Content (Org-mode)</h2>
                   <pre className="code-block whitespace-pre-wrap break-words overflow-x-auto">
                     {deferredDocument.original_content}
@@ -336,7 +336,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
           {/* Embedding Vector Tab */}
           {activeTab === 'embedding' && (
             <Suspense fallback={
-              <div className="glass-card p-6 animate-fade-in">
+              <div className="animate-fade-in">
                 <div className="flex-center p-12">
                   <div className="spinner h-8 w-8" />
                   <span className="ml-3 text-neutral-500">Loading embedding vector...</span>
@@ -344,7 +344,7 @@ export function DocumentPreview({ documentId }: DocumentPreviewProps) {
               </div>
             }>
               {deferredDocument && (
-                <div className="glass-card p-6 animate-fade-in">
+                <div className="animate-fade-in">
                   <h2 className="heading-6 mb-4 text-gradient-primary">Embedding Vector</h2>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
